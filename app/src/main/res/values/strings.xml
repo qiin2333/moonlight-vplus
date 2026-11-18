@@ -1151,6 +1151,12 @@
     <string name="game_menu_perf_metrics">Display metrics</string>
     <string name="game_menu_perf_health">Health status</string>
     <string name="game_menu_perf_health_summary">Show overall status</string>
+    <string name="game_menu_perf_move_up">Move up</string>
+    <string name="game_menu_perf_move_down">Move down</string>
+    <string name="game_menu_perf_move_left">Move left</string>
+    <string name="game_menu_perf_move_right">Move right</string>
+    <string name="game_menu_perf_move_center">Center</string>
+    <string name="game_menu_perf_move_reset">Reset position</string>
     <string name="game_menu_perf_single_tap">Tap to change style</string>
     <string name="game_menu_perf_double_tap">Double-tap to change layout</string>
     <string name="game_menu_perf_long_press">Long-press for metric details</string>

@@ -75,6 +75,15 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
+/** One-shot position actions for the in-stream return menu. */
+enum class PerfOverlayMoveDirection {
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN,
+    CENTER
+}
+
 class PerformanceOverlayManager(
     private val activity: Activity,
     private val prefConfig: PreferenceConfiguration,
@@ -231,6 +240,70 @@ class PerformanceOverlayManager(
     fun setPerfOverlayDisplayItems(items: Set<String>) {
         PerfOverlayDisplayItemsPreference.setDisplayItems(activity, items.toSet())
         refreshPerformanceOverlayConfig()
+    }
+
+    val isPerfOverlayMovable: Boolean
+        get() = performanceOverlayView != null && currentHudLayout != PerfHudLayout.DOCK
+
+    fun movePerfOverlay(direction: PerfOverlayMoveDirection) {
+        val overlay = performanceOverlayView ?: return
+        if (!isPerfOverlayMovable || isDraggingPerfOverlay) return
+
+        val parent = overlay.parent as? View ?: return
+        val lp = overlay.layoutParams as? FrameLayout.LayoutParams ?: return
+        if (parent.width <= 0 || parent.height <= 0) return
+        if (lp.gravity != Gravity.NO_GRAVITY) convertGravityToMargins(overlay, lp)
+
+        val (availableWidth, availableHeight) = measureOverlayInParent(overlay, parent, lp)
+        val maxLeft = maxOf(0, availableWidth - overlay.width)
+        val maxTop = maxOf(0, availableHeight - overlay.height)
+        val currentLeft = lp.leftMargin.coerceIn(0, maxLeft)
+        val currentTop = lp.topMargin.coerceIn(0, maxTop)
+        val stepX = maxOf(dp(32f), maxLeft / 8)
+        val stepY = maxOf(dp(32f), maxTop / 8)
+
+        val left = when (direction) {
+            PerfOverlayMoveDirection.LEFT -> currentLeft - stepX
+            PerfOverlayMoveDirection.RIGHT -> currentLeft + stepX
+            else -> currentLeft
+        }.coerceIn(0, maxLeft)
+        val top = when (direction) {
+            PerfOverlayMoveDirection.UP -> currentTop - stepY
+            PerfOverlayMoveDirection.DOWN -> currentTop + stepY
+            else -> currentTop
+        }.coerceIn(0, maxTop)
+
+        lp.leftMargin = left
+        lp.topMargin = top
+        dragGuideX = if (direction == PerfOverlayMoveDirection.CENTER) SnapGuide.CENTER else null
+        dragGuideY = if (direction == PerfOverlayMoveDirection.CENTER) SnapGuide.CENTER else null
+        dragRelativeX = if (maxLeft > 0) left.toFloat() / maxLeft else 0.5f
+        dragRelativeY = if (maxTop > 0) top.toFloat() / maxTop else 0.5f
+        dragMaxLeft = maxLeft
+        dragMaxTop = maxTop
+        saveDragPosition(overlay)
+    }
+
+    fun resetPerfOverlayPosition() {
+        if (!isPerfOverlayMovable) return
+        cancelOverlayInteraction()
+        ++overlayStyleGeneration
+        dragRelativeX = 0.5f
+        dragRelativeY = 0.5f
+        dragGuideX = null
+        dragGuideY = null
+        dragMaxLeft = 0
+        dragMaxTop = 0
+        overlayPrefs.edit {
+            remove("has_custom_position")
+            remove("left_margin")
+            remove("top_margin")
+            remove(KEY_RELATIVE_X)
+            remove(KEY_RELATIVE_Y)
+            remove(KEY_GUIDE_X)
+            remove(KEY_GUIDE_Y)
+        }
+        refreshOverlayNow()
     }
     private val hudAnchorListener = View.OnLayoutChangeListener     { v, l, t, r, b, oL, oT, oR, oB ->
             onHudOverlayResized(v, l, t, r, b, oL, oT, oR, oB)

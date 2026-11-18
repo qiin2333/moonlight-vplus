@@ -936,6 +936,12 @@
     <string name="game_menu_perf_metrics">显示指标</string>
     <string name="game_menu_perf_health">健康状态提示</string>
     <string name="game_menu_perf_health_summary">显示整体状态</string>
+    <string name="game_menu_perf_move_up">上移</string>
+    <string name="game_menu_perf_move_down">下移</string>
+    <string name="game_menu_perf_move_left">左移</string>
+    <string name="game_menu_perf_move_right">右移</string>
+    <string name="game_menu_perf_move_center">居中</string>
+    <string name="game_menu_perf_move_reset">恢复默认位置</string>
     <string name="game_menu_perf_single_tap">单击切换样式</string>
     <string name="game_menu_perf_double_tap">双击切换布局</string>
     <string name="game_menu_perf_long_press">长按查看指标说明</string>

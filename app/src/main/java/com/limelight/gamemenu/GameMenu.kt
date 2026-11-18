@@ -44,6 +44,7 @@ import com.limelight.CustomKeyData
 import com.limelight.CustomKeyRepository
 import com.limelight.Game
 import com.limelight.LimeLog
+import com.limelight.PerfOverlayMoveDirection
 import com.limelight.QuickActionRegistry
 import com.limelight.R
 import com.limelight.StreamActionExecutor
@@ -2716,6 +2717,30 @@ class GameMenu(
                     }
                 )
             ),
+            *if (game.isPerfOverlayMovable) {
+                arrayOf(
+                    performanceAction(R.string.game_menu_perf_move_up) {
+                        game.movePerfOverlay(PerfOverlayMoveDirection.UP)
+                    },
+                    performanceAction(R.string.game_menu_perf_move_down) {
+                        game.movePerfOverlay(PerfOverlayMoveDirection.DOWN)
+                    },
+                    performanceAction(R.string.game_menu_perf_move_left) {
+                        game.movePerfOverlay(PerfOverlayMoveDirection.LEFT)
+                    },
+                    performanceAction(R.string.game_menu_perf_move_right) {
+                        game.movePerfOverlay(PerfOverlayMoveDirection.RIGHT)
+                    },
+                    performanceAction(R.string.game_menu_perf_move_center) {
+                        game.movePerfOverlay(PerfOverlayMoveDirection.CENTER)
+                    },
+                    performanceAction(R.string.game_menu_perf_move_reset) {
+                        game.resetPerfOverlayPosition()
+                    }
+                )
+            } else {
+                emptyArray()
+            },
             MenuOption(
                 label = getString(R.string.game_menu_perf_metrics),
                 isWithGameFocus = false,
@@ -2757,6 +2782,18 @@ class GameMenu(
         isKeepDialog = true,
         subtitle = summary?.let(::getString),
         inlineControl = InlineControl.Toggle(checked)
+    )
+
+    private fun performanceAction(
+        label: Int,
+        action: () -> Unit
+    ): MenuOption = MenuOption(
+        label = getString(label),
+        isWithGameFocus = false,
+        runnable = Runnable(action),
+        iconKey = null,
+        isShowIcon = false,
+        isKeepDialog = true
     )
 
     private fun buildPerformanceMetricsOptions(): List<MenuOption> {

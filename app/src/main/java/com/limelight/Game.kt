@@ -3696,6 +3696,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     val isPerfOverlayDocked: Boolean
         get() = performanceOverlayManager?.isPerfOverlayDocked == true
 
+    val isPerfOverlayMovable: Boolean
+        get() = performanceOverlayMode != PerformanceOverlayMode.HIDDEN &&
+            performanceOverlayManager?.isPerfOverlayMovable == true
+
     fun setPerfOverlayStyle(style: PerfHudDensity) {
         performanceOverlayManager?.setPerfOverlayStyle(style)
     }
@@ -3734,6 +3738,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun setPerfOverlayDisplayItems(items: Set<String>) {
         performanceOverlayManager?.setPerfOverlayDisplayItems(items)
+    }
+
+    fun movePerfOverlay(direction: PerfOverlayMoveDirection) {
+        performanceOverlayManager?.movePerfOverlay(direction)
+    }
+
+    fun resetPerfOverlayPosition() {
+        performanceOverlayManager?.resetPerfOverlayPosition()
     }
 
     fun toggleMicrophoneButton() {
