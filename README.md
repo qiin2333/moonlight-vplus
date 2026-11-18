@@ -1,33 +1,45 @@
 <!-- thor-gyro-fork:start -->
-# Moonlight V+ â€” AYN Thor gyro fork
+# Moonlight V+ — AYN Thor gyro fork
 
-Personal fork of [qiin2333/moonlight-vplus](https://github.com/qiin2333/moonlight-vplus) for streaming PC games to an **AYN Thor** with **native DualShock 4 gyro** that stays smooth and uninterrupted while the Thor's own buttons, triggers and sticks are in use. No mouse emulation.
+Personal fork of [qiin2333/moonlight-vplus](https://github.com/qiin2333/moonlight-vplus) for streaming PC games to an **AYN Thor** with **native DualShock 4 gyro** that keeps working while the Thor's own sticks and buttons are in use. No mouse emulation. Works with stock Foundation Sunshine.
 
-Host side: [Zach200910/foundation-sunshine](https://github.com/Zach200910/foundation-sunshine) (Foundation Sunshine with matching gyro fixes).
+## The problem
 
-## What was wrong
+While the left stick was moved or held, the Thor's gyro and accelerometer intermittently froze on the PC (measured: 25% of the time while the stick was moving, 12% while held off-centre, 0% while centred). During each freeze the game kept applying the last rotation rate, so the camera drifted.
 
-- **Gyro dropouts.** Gyro and accelerometer samples travel as unreliable ENet packets. With ENet's default congestion throttle, short Wi-Fi latency spikes, which are more frequent while buttons and sticks generate reliable traffic, drove the throttle to zero and silently discarded almost every motion packet for seconds at a time.
-- **Drift.** A capture of the virtual DS4 on the PC showed gyro and accelerometer freezing together for 40â€“185 ms at a time while the left stick was in use. Meanwhile the host kept replaying the last rotation speed, so the camera kept turning.
+## Root cause
 
-## Patches
+Moonlight sends gyro/accel samples as **unreliable** ENet packets and stick/button state as **reliable** packets. ENet's packet throttle discards unreliable packets whenever it decides the link is congested, and it re-evaluates that decision on every acknowledged reliable packet. Stick movement sends a reliable packet per change (about 60/s), so normal Wi-Fi round-trip jitter quickly drove the throttle to 0, at which point only 1 in 32 motion packets got through.
 
-The patch files live in the repository root and are applied by the Android CI workflow at build time (see the Apply â€¦ steps in .github/workflows/android-ci.yml).
+The freeze lengths measured on the PC matched ENet's throttle arithmetic exactly: about 149 ms at throttle 0 (1 of 32 packets passes) and 42/42/65 ms at throttle 2 (3 of 32 pass), at the measured 4.67 ms motion-packet spacing.
 
-| Patch | Applies to | What it does | Status |
-|---|---|---|---|
-| `gyro-throttle.patch` | moonlight-common-c | Pins ENet's packet throttle so it never discards gyro/accel packets | Tested: fixed the dropouts |
-| `gyro-rate-thread-250.patch` | app | Samples motion at 250 Hz (host asks for 100 Hz in DS4 mode) and reads sensors on a dedicated thread | Untested |
-| `gyro-raw-sensor.patch` | app | Uses the Thor's uncalibrated gyro (no Android bias steps); calibrate in Steam | Untested |
-| `gyro-priority-core.patch` | moonlight-common-c | Runs the input send / control threads above video decode and display | Untested |
-| `gyro-priority-app.patch` | app | Runs the sensor thread at the same top priority (needs the 250 Hz patch) | Untested |
-| `second-screen-trackpad.patch` | app | Turns the Thor's bottom screen into the DS4 touchpad (left/right halves, tap to click) | Experimental |
+## The fix
 
-Which patches a given build contains is defined by the workflow file, not this table.
+`gyro-throttle.patch` adds one call in `startControlStream()` in `moonlight-common-c/src/ControlStream.c`, after the connection is established:
+
+```c
+enet_peer_throttle_configure(peer, ENET_PEER_PACKET_THROTTLE_INTERVAL,
+                             ENET_PEER_PACKET_THROTTLE_ACCELERATION, 0);
+```
+
+With a deceleration of 0 the throttle can never drop below its maximum, so motion packets are never discarded. Both ends use unlimited bandwidth, so ENet's bandwidth limiter cannot lower it either. No added latency, no ongoing CPU cost, no other controller behaviour changes.
+
+The patch is applied in the `build-apks` job of `.github/workflows/android-ci.yml` (right after its Checkout step), so it is compiled into the APK. Verified in build #12 and confirmed fixed on the device.
+
+## Other patch files in this repository (not applied)
+
+These are earlier experiments. The build does not use them.
+
+| Patch | What it does |
+|---|---|
+| `gyro-rate-thread-250.patch` / `gyro-rate-thread.patch` | Samples motion at 250 / 200 Hz and reads sensors on a dedicated thread |
+| `gyro-raw-sensor.patch` | Uses the uncalibrated gyro |
+| `gyro-priority-core.patch` / `gyro-priority-app.patch` | Raises input thread priorities |
+| `second-screen-trackpad.patch` | Bottom screen as the DS4 touchpad (experimental) |
 
 ## Building
 
-Actions â†’ **Android CI** â†’ Run workflow, then install the `app-nonroot-debug-apk` artifact. It installs next to the official app and needs to be paired again.
+Actions → **Android CI** → Run workflow (or push to `master`), then install the `app-nonroot-debug-apk` artifact. It installs as `com.limelight.vplus_debug`, next to the official app, and needs to be paired again.
 
 Everything below this line is the upstream README.
 <!-- thor-gyro-fork:end -->
