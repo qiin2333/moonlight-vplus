@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -146,6 +147,7 @@ private fun MenuOptionRow(
     }
     val emphasizedCrownAction = option.isCrownControl &&
         (option.iconKey == "crown_profiles" || option.iconKey == "crown_layout")
+    val isPerformanceEntry = option.focusKey == PERF_ENTRY_FOCUS_KEY
     val showChevronAfterTitle = option.showChevron && inlineControl != null
     val hasDedicatedToggleAction = inlineControl is GameMenu.InlineControl.Toggle &&
         inlineControl.toggleAction != null
@@ -234,7 +236,13 @@ private fun MenuOptionRow(
         }
         Column(
             modifier = Modifier
-                .weight(if (inlineControl is GameMenu.InlineControl.Segmented) 0.42f else 1f)
+                .weight(
+                    when {
+                        inlineControl is GameMenu.InlineControl.Segmented && isPerformanceEntry -> 0.58f
+                        inlineControl is GameMenu.InlineControl.Segmented -> 0.42f
+                        else -> 1f
+                    }
+                )
                 .then(labelModifier)
                 .padding(vertical = GameMenuDimens.compact)
         ) {
@@ -298,21 +306,34 @@ private fun MenuOptionRow(
             }
             is GameMenu.InlineControl.Segmented -> {
                 Spacer(Modifier.width(GameMenuDimens.section))
-                InlineSegmentedControl(
-                    segments = inlineControl.segments,
-                    onSegmentClick = onSegmentClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(36.dp),
-                    denseLabels = option.focusKey == PERF_ENTRY_FOCUS_KEY ||
-                        option.focusKey == PERF_MODE_FOCUS_KEY,
-                    initialFocusRequester = performanceSegmentsFocusRequester.takeIf {
-                        option.focusKey == PERF_ENTRY_FOCUS_KEY
-                    },
-                    leftExitRequester = performanceEntryFocusRequester.takeIf {
-                        option.focusKey == PERF_ENTRY_FOCUS_KEY
+                if (isPerformanceEntry) {
+                    Box(
+                        modifier = Modifier
+                            .weight(0.42f)
+                            .height(36.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        InlineSegmentedControl(
+                            segments = inlineControl.segments,
+                            onSegmentClick = onSegmentClick,
+                            modifier = Modifier.fillMaxSize(),
+                            denseLabels = true,
+                            initialFocusRequester = performanceSegmentsFocusRequester,
+                            leftExitRequester = performanceEntryFocusRequester
+                        )
                     }
-                )
+                } else {
+                    InlineSegmentedControl(
+                        segments = inlineControl.segments,
+                        onSegmentClick = onSegmentClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp),
+                        denseLabels = option.focusKey == PERF_MODE_FOCUS_KEY,
+                        initialFocusRequester = null,
+                        leftExitRequester = null
+                    )
+                }
             }
             null -> if (option.showChevron) MenuChevron()
         }
