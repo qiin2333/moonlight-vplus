@@ -310,4 +310,19 @@
     <string name="summary_checkbox_reverse_resolution">Csak akkor engedélyezze, ha a kép tájolása vagy méretei hibásak; ütközhet az eszközforgatás követésével.</string>
     <string name="summary_checkbox_rotable_screen">Automatikusan szinkronizálja a stream elrendezését, amikor az eszköz álló és fekvő tájolás között vált.</string>
     <string name="layout_page_device_text_1a70f">Érintés váltása</string>
+    <string name="game_menu_perf_metrics">Megjelenítendő mutatók</string>
+    <string name="game_menu_perf_health">A stream állapotjelzője</string>
+    <string name="game_menu_perf_health_summary">Általános állapot megjelenítése</string>
+    <string name="game_menu_perf_single_tap">Egyszeri koppintás a stílus váltásához</string>
+    <string name="game_menu_perf_double_tap">Dupla koppintás az elrendezés váltásához</string>
+    <string name="game_menu_perf_long_press">Hosszan nyomva megjelennek a mutatók magyarázatai</string>
+    <string name="game_menu_perf_metric_summary">A Mini stílus a mutatók rögzített készletét jeleníti meg.</string>
+    <string name="game_menu_perf_orientation_fixed">Ez a stílus rögzített elrendezést használ. A kiválasztott tájolás a Normál stílusra váltva lép érvénybe.</string>
+    <string name="game_menu_perf_orientation_docked">A kiválasztott tájolás a dokkolt elrendezés elhagyása után lép érvénybe.</string>
+    <string name="game_menu_perf_fixed_layout">Rögzített elrendezés</string>
+    <string name="game_menu_perf_docked_layout">Dokkolt</string>
+    <string name="game_menu_perf_orientation_portrait">Álló tájolásban az elrendezés mindig függőleges.</string>
+    <string name="perf_sheet_previous_page">Előző oldal</string>
+    <string name="perf_sheet_next_page">Következő oldal</string>
+    <string name="perf_sheet_settings">Beállítások</string>
 </resources>

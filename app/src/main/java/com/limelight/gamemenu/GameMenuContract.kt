@@ -40,13 +40,17 @@ internal data class GameMenuComposeUiState(
     val isSubmenu: Boolean = false,
     val pageLayout: GameMenuPageLayout = GameMenuPageLayout.STANDARD,
     val pageGeneration: Int = 0,
+    val pageFocusRequest: Int = 0,
+    val initialFocusOptionKey: String? = null,
     val controllerNavigationActive: Boolean = false
 )
 
 internal enum class GameMenuPageLayout {
     STANDARD,
     TOUCH_MODE,
-    MICROPHONE
+    MICROPHONE,
+    PERF_OVERLAY,
+    PERF_METRICS
 }
 
 enum class GameMenuOptionPresentation {

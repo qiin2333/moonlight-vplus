@@ -91,6 +91,8 @@ class PerfHudView @JvmOverloads constructor(
 
     private var contentW = 0f
     private var contentH = 0f
+    private var lastMaxW = UNBOUNDED
+    private var lastWidthMode = MeasureSpec.UNSPECIFIED
 
     init {
         applyTextSize()
@@ -106,13 +108,15 @@ class PerfHudView @JvmOverloads constructor(
         invalidate()
     }
 
-    fun setSnapshot(snapshot: PerfHudSnapshot) {
+    fun setSnapshot(snapshot: PerfHudSnapshot, recordHistory: Boolean = true) {
         this.snapshot = snapshot
-        if (snapshot.renderedFps > 0f) fpsHistory.add(snapshot.renderedFps)
+        if (recordHistory && snapshot.renderedFps > 0f) fpsHistory.add(snapshot.renderedFps)
         // 每秒刷新一次：尺寸不变时只重绘，避免整个串流界面跟着重新布局
         if (width > 0 && height > 0) {
-            render(null, width.toFloat())
-            val sameWidth = hudLayout == PerfHudLayout.DOCK || ceil(contentW).toInt() == width
+            render(null, if (hudLayout == PerfHudLayout.PANEL) lastMaxW else width.toFloat())
+            val sameWidth = hudLayout == PerfHudLayout.DOCK ||
+                (hudLayout == PerfHudLayout.PANEL && lastWidthMode == MeasureSpec.EXACTLY) ||
+                ceil(contentW).toInt() == width
             if (sameWidth && ceil(contentH).toInt() == height) {
                 invalidate()
                 return
@@ -202,7 +206,7 @@ class PerfHudView @JvmOverloads constructor(
         hudLayout = savedLayout
         this.detailed = savedDetailed
         // 恢复当前布局的尺寸和命中区域
-        render(null, if (width > 0) width.toFloat() else UNBOUNDED)
+        render(null, if (width > 0) width.toFloat() else lastMaxW)
         return h
     }
 
@@ -210,6 +214,8 @@ class PerfHudView @JvmOverloads constructor(
         val mode = MeasureSpec.getMode(widthMeasureSpec)
         val size = MeasureSpec.getSize(widthMeasureSpec)
         val maxW = if (mode == MeasureSpec.UNSPECIFIED) UNBOUNDED else size.toFloat()
+        lastMaxW = maxW
+        lastWidthMode = mode
         render(null, maxW)
         val w = if (mode == MeasureSpec.EXACTLY) size else ceil(contentW).toInt()
         setMeasuredDimension(w, ceil(contentH).toInt())
@@ -598,26 +604,33 @@ class PerfHudView @JvmOverloads constructor(
 
     /** 横屏详细面板：状态文案 + 大号 FPS + 历史曲线 + 延迟链 + 明细。 */
     private fun renderPanel(c: Canvas?, maxW: Float) {
-        val w = min(em * PANEL_WIDTH_EM, maxW)
         val padX = em * 0.9f
         val padY = em * 0.75f
+        val rows = detailRows(includeResolution = true)
+        val hasBody = visibility.fps || visibility.onePercentLow || visibility.latency || rows.isNotEmpty()
+        val moodText = visibleMoodText()
+        val desiredWidth = if (moodText.isEmpty() && !hasBody) moonBadgeWidth() + padX * 2 else em * PANEL_WIDTH_EM
+        val w = min(desiredWidth, maxW)
         val inner = w - padX * 2
         var top = padY
 
-        top = drawMoodHeader(c, padX, top, inner, rightText = null) + em * 0.5f
+        top = drawMoodHeader(c, padX, top, inner, rightText = null, moodText = moodText)
+        var gap = em * 0.5f
         if (visibility.fps || visibility.onePercentLow) {
+            top += gap
             top = drawBigFps(c, padX, top, inner) + em * 0.25f
-            top = drawSparkline(c, padX, top, inner, em * 2.2f) + em * 0.6f
+            top = drawSparkline(c, padX, top, inner, em * 2.2f)
+            gap = em * 0.6f
         }
         if (visibility.latency) {
-            top = drawLatencyChain(c, padX, top, inner, withLegend = true) + em * 0.6f
+            top += gap
+            top = drawLatencyChain(c, padX, top, inner, withLegend = true)
+            gap = em * 0.6f
         }
-        val rows = detailRows(includeResolution = true)
         if (rows.isNotEmpty()) {
+            top += gap
             top = drawDivider(c, padX, top, inner) + em * 0.5f
             top = drawKvRows(c, rows, padX, top, inner)
-        } else {
-            top -= em * 0.6f
         }
         contentW = w
         contentH = top + padY
@@ -633,8 +646,8 @@ class PerfHudView @JvmOverloads constructor(
         var top = padY
 
         val right = if (visibility.stream) streamSummary(s) else null
-        top = drawMoodHeader(c, padX, top, inner, right) + em * 0.6f
-        top = drawTiles(c, padX, top, inner)
+        top = drawMoodHeader(c, padX, top, inner, right)
+        top = drawTiles(c, padX, top + em * 0.6f, inner) ?: top
         if (visibility.latency) {
             top += em * 0.7f
             top = drawLatencyChain(c, padX, top, inner, withLegend = detailed)
@@ -660,7 +673,12 @@ class PerfHudView @JvmOverloads constructor(
 
     // ---------------------------------------------------------------- blocks
 
-    private fun drawMoodHeader(c: Canvas?, left: Float, top: Float, inner: Float, rightText: String?): Float {
+    private fun visibleMoodText(): String =
+        if (visibility.health) strings.mood(snapshot.mood).takeUnless { it.isBlank() } ?: "" else ""
+
+    private fun drawMoodHeader(
+        c: Canvas?, left: Float, top: Float, inner: Float, rightText: String?, moodText: String = visibleMoodText()
+    ): Float {
         val s = snapshot
         val lh = lineHeight(valuePaint)
         val base = top - valuePaint.fontMetrics.ascent
@@ -668,22 +686,28 @@ class PerfHudView @JvmOverloads constructor(
         x += em * 0.45f
 
         var rightW = 0f
-        if (rightText != null) {
-            val avail = (left + inner - x) * 0.5f
+        if (!rightText.isNullOrEmpty()) {
+            val remaining = (left + inner - x).coerceAtLeast(0f)
+            val avail = if (moodText.isNotEmpty()) remaining * 0.5f else remaining
             val shown = ellipsize(rightText, labelPaint, avail)
             val tw = labelPaint.measureText(shown)
             val rx = left + inner - tw
             run(c, shown, rx, base, labelPaint, DIM)
-            hit(rx, top, rx + tw, top + lh, PerfHudTarget.RESOLUTION)
+            if (shown.isNotEmpty()) {
+                hit(rx, top, rx + tw, top + lh,
+                    if (visibility.resolution) PerfHudTarget.RESOLUTION else PerfHudTarget.DECODER)
+            }
             rightW += tw + em * 0.6f
         }
-        val moodColor = when (s.mood) {
-            PerfMood.SMOOTH, PerfMood.FULL_MOON_SMOOTH, PerfMood.WARMING_UP -> TXT
-            else -> sevColor(s.overallSeverity.worst(s.batterySeverity))
+        if (moodText.isNotEmpty()) {
+            val moodColor = when (s.mood) {
+                PerfMood.SMOOTH, PerfMood.FULL_MOON_SMOOTH, PerfMood.WARMING_UP -> TXT
+                else -> sevColor(s.overallSeverity.worst(s.batterySeverity))
+            }
+            val mood = ellipsize(moodText, valuePaint, left + inner - rightW - x)
+            val end = x + run(c, mood, x, base, valuePaint, moodColor)
+            if (mood.isNotEmpty()) hit(x, top, end, top + lh, PerfHudTarget.DIAGNOSIS)
         }
-        val mood = ellipsize(strings.mood(s.mood), valuePaint, left + inner - rightW - x)
-        val end = x + run(c, mood, x, base, valuePaint, moodColor)
-        hit(x, top, end, top + lh, PerfHudTarget.DIAGNOSIS)
         return top + lh
     }
 
@@ -843,7 +867,7 @@ class PerfHudView @JvmOverloads constructor(
         return y + lh
     }
 
-    private fun drawTiles(c: Canvas?, left: Float, top: Float, inner: Float): Float {
+    private fun drawTiles(c: Canvas?, left: Float, top: Float, inner: Float): Float? {
         val s = snapshot
         data class Tile(val value: String, val label: String, val color: Int, val target: PerfHudTarget)
         val tiles = ArrayList<Tile>(4)
@@ -863,7 +887,7 @@ class PerfHudView @JvmOverloads constructor(
             val v = if (s.onePercentLowFps > 0f) fps0(s.onePercentLowFps) else "—"
             tiles += Tile(v, strings.onePercentLow, sevColor(s.onePercentLowSeverity), PerfHudTarget.ONE_PERCENT_LOW)
         }
-        if (tiles.isEmpty()) return top - em * 0.6f
+        if (tiles.isEmpty()) return null
 
         val gap = em * 0.5f
         val tileW = (inner - gap * (tiles.size - 1)) / tiles.size
@@ -1051,7 +1075,7 @@ class PerfHudView @JvmOverloads constructor(
         val iconBase = cy - (fm.ascent + fm.descent) / 2
         if (c != null) {
             val r = w / 2 - dp
-            val color = sevColor(snapshot.overallSeverity)
+            val color = if (visibility.health) sevColor(snapshot.overallSeverity) else DIM
             fillPaint.color = (color and 0x00FFFFFF) or (0x40 shl 24)
             c.drawCircle(cx, cy, r, fillPaint)
             strokePaint.color = color

@@ -355,4 +355,19 @@
     <string name="summary_checkbox_reverse_resolution">이미지 방향이나 크기가 잘못된 경우에만 사용하세요. 기기 회전 따르기와 충돌할 수 있습니다.</string>
     <string name="summary_checkbox_rotable_screen">기기가 세로와 가로 방향 사이를 전환할 때 스트림 레이아웃을 자동으로 동기화합니다.</string>
     <string name="layout_page_device_text_1a70f">터치 입력 전환</string>
+    <string name="game_menu_perf_metrics">표시할 지표</string>
+    <string name="game_menu_perf_health">스트림 상태 표시</string>
+    <string name="game_menu_perf_health_summary">전체 상태 표시</string>
+    <string name="game_menu_perf_single_tap">한 번 탭하여 스타일 전환</string>
+    <string name="game_menu_perf_double_tap">두 번 탭하여 레이아웃 전환</string>
+    <string name="game_menu_perf_long_press">길게 눌러 지표 설명 보기</string>
+    <string name="game_menu_perf_metric_summary">미니 스타일은 정해진 지표를 표시합니다.</string>
+    <string name="game_menu_perf_orientation_fixed">이 스타일은 고정 레이아웃을 사용합니다. 선택한 방향은 표준 스타일로 전환하면 적용됩니다.</string>
+    <string name="game_menu_perf_orientation_docked">선택한 방향은 도킹 레이아웃을 벗어나면 적용됩니다.</string>
+    <string name="game_menu_perf_fixed_layout">고정 레이아웃</string>
+    <string name="game_menu_perf_docked_layout">도킹</string>
+    <string name="game_menu_perf_orientation_portrait">화면이 세로 방향일 때 레이아웃은 항상 세로로 표시됩니다.</string>
+    <string name="perf_sheet_previous_page">이전 페이지</string>
+    <string name="perf_sheet_next_page">다음 페이지</string>
+    <string name="perf_sheet_settings">설정</string>
 </resources>

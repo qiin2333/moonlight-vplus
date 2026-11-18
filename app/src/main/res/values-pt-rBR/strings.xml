@@ -321,4 +321,19 @@
     <string name="summary_checkbox_reverse_resolution">Ative somente quando a orientação ou as dimensões da imagem estiverem incorretas; pode entrar em conflito com Seguir rotação da tela.</string>
     <string name="summary_checkbox_rotable_screen">Sincroniza automaticamente o layout do streaming quando o dispositivo alterna entre as orientações retrato e paisagem.</string>
     <string name="layout_page_device_text_1a70f">Alternar toque</string>
+    <string name="game_menu_perf_metrics">Métricas a exibir</string>
+    <string name="game_menu_perf_health">Indicador de estado da transmissão</string>
+    <string name="game_menu_perf_health_summary">Exibir estado geral</string>
+    <string name="game_menu_perf_single_tap">Um toque para mudar o estilo</string>
+    <string name="game_menu_perf_double_tap">Dois toques para mudar o layout</string>
+    <string name="game_menu_perf_long_press">Toque e segure para ver a explicação das métricas</string>
+    <string name="game_menu_perf_metric_summary">O estilo Mini exibe um conjunto fixo de métricas.</string>
+    <string name="game_menu_perf_orientation_fixed">Este estilo usa um layout fixo. A orientação escolhida é aplicada ao mudar para o estilo Padrão.</string>
+    <string name="game_menu_perf_orientation_docked">A orientação escolhida é aplicada ao sair do layout encaixado.</string>
+    <string name="game_menu_perf_fixed_layout">Layout fixo</string>
+    <string name="game_menu_perf_docked_layout">Encaixado</string>
+    <string name="game_menu_perf_orientation_portrait">No modo retrato, o layout é sempre vertical.</string>
+    <string name="perf_sheet_previous_page">Página anterior</string>
+    <string name="perf_sheet_next_page">Próxima página</string>
+    <string name="perf_sheet_settings">Configurações</string>
 </resources>

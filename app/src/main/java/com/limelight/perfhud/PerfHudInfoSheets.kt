@@ -19,6 +19,8 @@ class PerfHudInfoSheets(
     private val snapshot: () -> PerfHudSnapshot?,
     private val isHudStyle: () -> Boolean,
     private val anchor: () -> View?,
+    private val showFallback: (PerfHudTarget) -> Unit,
+    private val onOpenSettings: () -> Unit,
     private val moodText: (PerfMood) -> String,
     private val fpsHeader: () -> View
 ) {
@@ -56,6 +58,22 @@ class PerfHudInfoSheets(
     ) {
         val (titleIcon, name) = PerfHudSheetText.splitIcon(title)
         val live = PerfHudInsights.liveValue(target, snapshot(), Locale.getDefault())
+        val pageIndex = PAGE_TARGETS.indexOf(target)
+        val navigation = if (pageIndex >= 0) {
+            Triple(
+                PerfHudSheet.Action(activity.getString(R.string.perf_sheet_previous_page)) {
+                    navigateTo(PAGE_TARGETS[(pageIndex + PAGE_TARGETS.size - 1) % PAGE_TARGETS.size])
+                },
+                PerfHudSheet.Action(activity.getString(R.string.perf_sheet_next_page)) {
+                    navigateTo(PAGE_TARGETS[(pageIndex + 1) % PAGE_TARGETS.size])
+                },
+                PerfHudSheet.Action(activity.getString(R.string.perf_sheet_settings)) {
+                    onOpenSettings()
+                }
+            )
+        } else {
+            null
+        }
         sheet.show(
             PerfHudSheet.Spec(
                 title = name,
@@ -66,10 +84,20 @@ class PerfHudInfoSheets(
                 subtitle = subtitle,
                 blocks = blocks,
                 header = header,
-                actions = extraActions + PerfHudSheet.Action(activity.getString(R.string.yes), primary = true)
+                previousAction = navigation?.first,
+                nextAction = navigation?.second,
+                settingsAction = navigation?.third,
+                actions = extraActions +
+                    PerfHudSheet.Action(activity.getString(R.string.yes), primary = true)
             ),
             anchor()
         )
+    }
+
+    private fun navigateTo(target: PerfHudTarget) {
+        dismiss()
+        if (showFor(target)) return
+        showFallback(target)
     }
 
     fun showMoonPhase() {
@@ -193,6 +221,21 @@ class PerfHudInfoSheets(
                 R.string.perf_host_latency_title, R.string.perf_host_latency_info, R.string.perf_hud_host_latency_info),
             PerfHudTarget.ONE_PERCENT_LOW to Triple(
                 R.string.perf_one_percent_low_title, R.string.perf_one_percent_low_info, R.string.perf_hud_one_percent_low_info)
+        )
+
+        val PAGE_TARGETS = listOf(
+            PerfHudTarget.MOON,
+            PerfHudTarget.RESOLUTION,
+            PerfHudTarget.DECODER,
+            PerfHudTarget.FPS,
+            PerfHudTarget.LATENCY,
+            PerfHudTarget.NETWORK,
+            PerfHudTarget.DECODE,
+            PerfHudTarget.HOST,
+            PerfHudTarget.LOSS,
+            PerfHudTarget.ONE_PERCENT_LOW,
+            PerfHudTarget.BATTERY,
+            PerfHudTarget.DIAGNOSIS
         )
     }
 }

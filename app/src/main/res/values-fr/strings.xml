@@ -351,4 +351,19 @@
     <string name="summary_checkbox_reverse_resolution">Activez uniquement si l’orientation ou les dimensions de l’image sont incorrectes ; peut entrer en conflit avec la rotation de l’appareil.</string>
     <string name="summary_checkbox_rotable_screen">Synchronise automatiquement la disposition du flux lorsque l’appareil passe du mode portrait au mode paysage, ou inversement.</string>
     <string name="layout_page_device_text_1a70f">Activer ou désactiver le tactile</string>
+    <string name="game_menu_perf_metrics">Métriques à afficher</string>
+    <string name="game_menu_perf_health">Indicateur de l’état du flux</string>
+    <string name="game_menu_perf_health_summary">Afficher l’état général</string>
+    <string name="game_menu_perf_single_tap">Toucher une fois pour changer de style</string>
+    <string name="game_menu_perf_double_tap">Toucher deux fois pour changer la disposition</string>
+    <string name="game_menu_perf_long_press">Appuyer longuement pour voir les explications des métriques</string>
+    <string name="game_menu_perf_metric_summary">Le style Mini affiche un ensemble fixe de métriques.</string>
+    <string name="game_menu_perf_orientation_fixed">Ce style utilise une disposition fixe. L’orientation choisie s’applique dans le style Standard.</string>
+    <string name="game_menu_perf_orientation_docked">L’orientation choisie s’applique après avoir quitté la disposition ancrée.</string>
+    <string name="game_menu_perf_fixed_layout">Disposition fixe</string>
+    <string name="game_menu_perf_docked_layout">Ancrée</string>
+    <string name="game_menu_perf_orientation_portrait">En mode portrait, la disposition est toujours verticale.</string>
+    <string name="perf_sheet_previous_page">Page précédente</string>
+    <string name="perf_sheet_next_page">Page suivante</string>
+    <string name="perf_sheet_settings">Paramètres</string>
 </resources>

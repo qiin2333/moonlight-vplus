@@ -6,6 +6,7 @@ import android.app.Dialog
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -56,6 +57,7 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.CustomFrameRatesStore
+import com.limelight.preferences.PerfOverlayDisplayItemsPreference
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchModePreset
 import com.limelight.ui.UiDismissKeyHandler
@@ -63,6 +65,7 @@ import com.limelight.ui.isGamepadNavigationSource
 import com.limelight.ui.showAppInfoSheet
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.KeyCodeMapper
+import com.limelight.utils.UiHelper
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.ArrayDeque
@@ -75,6 +78,40 @@ internal const val GAME_MENU_KEYCODE_DPAD_UP_LEFT = 268
 internal const val GAME_MENU_KEYCODE_DPAD_UP_RIGHT = 269
 internal const val GAME_MENU_KEYCODE_DPAD_DOWN_LEFT = 270
 internal const val GAME_MENU_KEYCODE_DPAD_DOWN_RIGHT = 271
+
+internal const val PERF_ENTRY_FOCUS_KEY = "perf_entry"
+internal const val PERF_STYLE_FOCUS_KEY = "perf_style"
+internal const val PERF_MODE_FOCUS_KEY = "perf_mode"
+internal const val PERF_METRICS_FOCUS_KEY = "perf_metrics"
+
+internal fun GameMenuPageLayout.isPerformancePage(): Boolean =
+    this == GameMenuPageLayout.PERF_OVERLAY || this == GameMenuPageLayout.PERF_METRICS
+
+internal fun performancePageFocusKey(from: GameMenuPageLayout, to: GameMenuPageLayout): String? =
+    when {
+        from == GameMenuPageLayout.PERF_METRICS && to == GameMenuPageLayout.PERF_OVERLAY -> PERF_METRICS_FOCUS_KEY
+        from == GameMenuPageLayout.PERF_OVERLAY && to == GameMenuPageLayout.STANDARD -> PERF_ENTRY_FOCUS_KEY
+        to == GameMenuPageLayout.PERF_OVERLAY -> PERF_STYLE_FOCUS_KEY
+        else -> null
+    }
+
+internal fun performanceStyleLabel(style: PerfHudDensity): Int = when (style) {
+    PerfHudDensity.MINI -> R.string.perf_overlay_style_mini
+    PerfHudDensity.STANDARD -> R.string.perf_overlay_style_standard
+    PerfHudDensity.DETAILED -> R.string.perf_overlay_style_detailed
+    PerfHudDensity.CLASSIC -> R.string.perf_overlay_style_classic
+}
+
+internal fun performanceMetricEntries(
+    names: List<CharSequence>,
+    values: List<CharSequence>,
+    hasBattery: Boolean
+): List<Pair<CharSequence, String>> = names.zip(values)
+    .map { (name, value) -> name to value.toString() }
+    .filter { (_, value) -> hasBattery || value != "battery" }
+
+internal fun togglePerformanceMetric(current: Set<String>, value: String): Set<String> =
+    if (value in current) current - value else current + value
 
 internal fun mapGameMenuConfirmKeyCode(keyCode: Int): Int {
     return when (keyCode) {
@@ -590,7 +627,8 @@ class GameMenu(
         val showChevron: Boolean = false,
         val inlineControl: InlineControl? = null,
         val selected: Boolean = false,
-        val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT
+        val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT,
+        val focusKey: String? = null
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -994,19 +1032,19 @@ class GameMenu(
                 deviceQuickOptions = device?.getGameMenuQuickOptions().orEmpty(),
                 crownToggleText = getCrownToggleText(),
                 isSubmenu = false,
-                pageLayout = GameMenuPageLayout.STANDARD
+                pageLayout = GameMenuPageLayout.STANDARD,
+                initialFocusOptionKey = null
             )
         }
     }
 
     private fun refreshCurrentMenuPage() {
-        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.MICROPHONE) {
-            return
-        }
-        if (composeUiState?.value?.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
-            showTouchModeMenu()
-        } else {
-            rebuildAndReplaceMenu()
+        when (composeUiState?.value?.pageLayout) {
+            GameMenuPageLayout.MICROPHONE -> return
+            GameMenuPageLayout.TOUCH_MODE -> showTouchModeMenu()
+            GameMenuPageLayout.PERF_OVERLAY -> refreshPerformancePage()
+            GameMenuPageLayout.PERF_METRICS -> refreshPerformanceMetricsPage()
+            else -> rebuildAndReplaceMenu()
         }
     }
 
@@ -2022,9 +2060,13 @@ class GameMenu(
 
     private fun showMenuPage(page: MenuPage, pushCurrent: Boolean = false, replaceCurrent: Boolean = false) {
         val state = composeUiState ?: return
+        val previousLayout = state.value.pageLayout
+        val performanceTransition = previousLayout != page.layout &&
+            (previousLayout.isPerformancePage() || page.layout.isPerformancePage())
+        if (performanceTransition) prepareForInputOwnerChange()
         if (state.value.pageLayout == GameMenuPageLayout.MICROPHONE && page.layout != GameMenuPageLayout.MICROPHONE) {
             microphoneMenuController.stop()
-            prepareForInputOwnerChange()
+            if (!performanceTransition) prepareForInputOwnerChange()
         }
         val restoreMicrophoneEntry = state.value.pageLayout == GameMenuPageLayout.MICROPHONE &&
             page.layout == GameMenuPageLayout.STANDARD
@@ -2039,7 +2081,11 @@ class GameMenu(
                 state.value.pageGeneration + 1
             } else {
                 page.generation
-            }
+            },
+            initialFocusOptionKey = performancePageFocusKey(previousLayout, page.layout),
+            pageFocusRequest = if (performanceTransition && state.value.controllerNavigationActive) {
+                state.value.pageFocusRequest + 1
+            } else state.value.pageFocusRequest
         )
         if (controllerNavigationIsCurrent()) {
             hardwareFocusRequestState?.let { request -> request.intValue++ }
@@ -2049,12 +2095,25 @@ class GameMenu(
     private fun navigateBack(): Boolean {
         if (menuStack.isEmpty()) return false
         val page = menuStack.pop()
-        showMenuPage(page)
+        val currentLayout = composeUiState?.value?.pageLayout
+        val freshPage = when {
+            currentLayout == GameMenuPageLayout.PERF_METRICS &&
+                page.layout == GameMenuPageLayout.PERF_OVERLAY ->
+                page.copy(options = buildPerformancePageOptions())
+            currentLayout == GameMenuPageLayout.PERF_OVERLAY &&
+                page.layout == GameMenuPageLayout.STANDARD ->
+                page.copy(options = mutableListOf<MenuOption>().also(::buildNormalMenuOptions))
+            else -> page
+        }
+        showMenuPage(freshPage)
         return true
     }
 
+    // Game routes USB axes through this existing capability check. Performance pages
+    // use the same right-stick scrolling contract as the microphone list.
     fun usesMicrophoneInput(): Boolean = activeChildDialog == null &&
-        composeUiState?.value?.pageLayout == GameMenuPageLayout.MICROPHONE
+        (composeUiState?.value?.pageLayout == GameMenuPageLayout.MICROPHONE ||
+            composeUiState?.value?.pageLayout?.isPerformancePage() == true)
 
     private fun stopMicrophoneScroll() {
         handler.removeCallbacks(microphoneScroll)
@@ -2479,24 +2538,14 @@ class GameMenu(
         normalOptions.add(MenuOption(
             label = getString(R.string.game_menu_toggle_performance_overlay).trim(),
             isWithGameFocus = false,
-            runnable = null,
+            runnable = Runnable { showPerformancePage() },
             iconKey = "game_menu_toggle_performance_overlay",
             isShowIcon = true,
             isKeepDialog = true,
+            showChevron = true,
+            focusKey = PERF_ENTRY_FOCUS_KEY,
             inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments())
         ))
-
-        if (game.performanceOverlayMode != Game.PerformanceOverlayMode.HIDDEN) {
-            normalOptions.add(MenuOption(
-                label = getString(R.string.game_menu_perf_overlay_style).trim(),
-                isWithGameFocus = false,
-                runnable = null,
-                iconKey = "game_menu_perf_overlay_style",
-                isShowIcon = true,
-                isKeepDialog = true,
-                inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments())
-            ))
-        }
 
         if (game.prefConfig.onscreenController) {
             normalOptions.add(MenuOption(
@@ -2573,6 +2622,165 @@ class GameMenu(
                 runnable = Runnable { game.setPerfOverlayStyle(style) }
             )
         }
+    }
+
+    internal fun showPerformancePage() {
+        showSubMenu(
+            getString(R.string.game_menu_toggle_performance_overlay),
+            buildPerformancePageOptions().toTypedArray(),
+            GameMenuPageLayout.PERF_OVERLAY
+        )
+    }
+
+    private fun performanceOverlaySummary(): String {
+        val style = game.perfOverlayStyle
+        val portrait = game.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        val layout = when {
+            game.isPerfOverlayDocked -> getString(R.string.game_menu_perf_docked_layout)
+            style == PerfHudDensity.MINI || style == PerfHudDensity.DETAILED ->
+                getString(R.string.game_menu_perf_fixed_layout)
+            style == PerfHudDensity.CLASSIC && portrait -> getString(R.string.orientation_vertical)
+            game.prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL ->
+                getString(R.string.orientation_vertical)
+            else -> getString(R.string.orientation_horizontal)
+        }
+        return game.getString(R.string.network_quality_menu_summary, getString(performanceStyleLabel(style)), layout)
+    }
+
+    private fun showPerformanceMetricsPage() {
+        showSubMenu(
+            getString(R.string.game_menu_perf_metrics),
+            buildPerformanceMetricsOptions().toTypedArray(),
+            GameMenuPageLayout.PERF_METRICS
+        )
+    }
+
+    private fun refreshPerformancePage() {
+        composeUiState?.let { state ->
+            state.value = state.value.copy(options = buildPerformancePageOptions())
+        }
+    }
+
+    private fun refreshPerformanceMetricsPage() {
+        composeUiState?.let { state ->
+            state.value = state.value.copy(options = buildPerformanceMetricsOptions())
+        }
+    }
+
+    private fun buildPerformancePageOptions(): List<MenuOption> {
+        val style = game.perfOverlayStyle
+        val orientation = game.prefConfig.perfOverlayOrientation
+        val portrait = game.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        val orientationSummary = when {
+            game.isPerfOverlayDocked -> R.string.game_menu_perf_orientation_docked
+            style == PerfHudDensity.CLASSIC && portrait -> R.string.game_menu_perf_orientation_portrait
+            style == PerfHudDensity.MINI || style == PerfHudDensity.DETAILED -> R.string.game_menu_perf_orientation_fixed
+            else -> null
+        }
+        return listOf(
+            MenuOption(
+                label = getString(R.string.game_menu_toggle_performance_overlay).trim(),
+                isWithGameFocus = false,
+                runnable = null,
+                iconKey = null,
+                isShowIcon = false,
+                isKeepDialog = true,
+                inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments()),
+                focusKey = PERF_MODE_FOCUS_KEY
+            ),
+            MenuOption(
+                label = getString(R.string.game_menu_perf_overlay_style),
+                isWithGameFocus = false,
+                runnable = null,
+                iconKey = null,
+                isShowIcon = false,
+                isKeepDialog = true,
+                inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments()),
+                focusKey = PERF_STYLE_FOCUS_KEY
+            ),
+            MenuOption(
+                label = getString(R.string.title_perf_overlay_orientation),
+                isWithGameFocus = false,
+                runnable = null,
+                iconKey = null,
+                isShowIcon = false,
+                isKeepDialog = true,
+                subtitle = orientationSummary?.let(::getString),
+                inlineControl = InlineControl.Segmented(
+                    listOf(
+                        PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL to R.string.orientation_horizontal,
+                        PreferenceConfiguration.PerfOverlayOrientation.VERTICAL to R.string.orientation_vertical
+                    ).map { (value, label) ->
+                        SegmentOption(getString(label), value == orientation,
+                            Runnable { game.setPerfOverlayOrientation(value) })
+                    }
+                )
+            ),
+            MenuOption(
+                label = getString(R.string.game_menu_perf_metrics),
+                isWithGameFocus = false,
+                runnable = Runnable { showPerformanceMetricsPage() },
+                iconKey = null,
+                isShowIcon = false,
+                isKeepDialog = true,
+                subtitle = getString(R.string.game_menu_perf_metric_summary),
+                showChevron = true,
+                focusKey = PERF_METRICS_FOCUS_KEY
+            ),
+            performanceToggle(R.string.game_menu_perf_health, game.perfOverlayHealthVisible,
+                R.string.game_menu_perf_health_summary) {
+                game.setPerfOverlayHealthVisible(!game.perfOverlayHealthVisible)
+            },
+            performanceToggle(R.string.game_menu_perf_single_tap, game.perfOverlaySingleTapEnabled) {
+                game.setPerfOverlaySingleTapEnabled(!game.perfOverlaySingleTapEnabled)
+            },
+            performanceToggle(R.string.game_menu_perf_double_tap, game.perfOverlayDoubleTapEnabled) {
+                game.setPerfOverlayDoubleTapEnabled(!game.perfOverlayDoubleTapEnabled)
+            },
+            performanceToggle(R.string.game_menu_perf_long_press, game.perfOverlayLongPressEnabled) {
+                game.setPerfOverlayLongPressEnabled(!game.perfOverlayLongPressEnabled)
+            }
+        )
+    }
+
+    private fun performanceToggle(
+        label: Int,
+        checked: Boolean,
+        summary: Int? = null,
+        action: () -> Unit
+    ): MenuOption = MenuOption(
+        label = getString(label),
+        isWithGameFocus = false,
+        runnable = Runnable(action),
+        iconKey = null,
+        isShowIcon = false,
+        isKeepDialog = true,
+        subtitle = summary?.let(::getString),
+        inlineControl = InlineControl.Toggle(checked)
+    )
+
+    private fun buildPerformanceMetricsOptions(): List<MenuOption> {
+        val selected = PerfOverlayDisplayItemsPreference.getSelectedItems(game)?.toSet()
+            ?: PerfOverlayDisplayItemsPreference.getDefaultDisplayItems(game)
+        val names = game.resources.getTextArray(R.array.perf_overlay_display_items_names)
+        val values = game.resources.getTextArray(R.array.perf_overlay_display_items_values)
+        return performanceMetricEntries(names.toList(), values.toList(), UiHelper.hasDisplayableBattery(game))
+            .map { (name, value) ->
+                MenuOption(
+                    label = name.toString(),
+                    isWithGameFocus = false,
+                    runnable = Runnable {
+                        val current = PerfOverlayDisplayItemsPreference.getSelectedItems(game)?.toSet()
+                            ?: PerfOverlayDisplayItemsPreference.getDefaultDisplayItems(game)
+                        game.setPerfOverlayDisplayItems(togglePerformanceMetric(current, value))
+                    },
+                    iconKey = null,
+                    isShowIcon = false,
+                    isKeepDialog = true,
+                    inlineControl = InlineControl.Toggle(value in selected),
+                    focusKey = value
+                )
+            }
     }
 
     /**

@@ -461,7 +461,7 @@
     <string name="tip_hdr_colors">💡 Consejo: Ajustar la resolución puede balancear calidad y rendimiento, encontrar la configuración perfecta~</string>
     <string name="tip_home_saves">💡 Consejo: Los 5 pequeños tiburones en la página de inicio pueden guardar y cambiar rápidamente las configuraciones de transmisión~</string>
     <string name="tip_long_press_controller">💡 Consejo: Presión larga en una aplicación para elegir transmisión de pantalla virtual, ¡súper conveniente!</string>
-    <string name="tip_performance_overlay">💡 Consejo: Toca el HUD de rendimiento para alternar entre Mini / Estándar / Detallado, doble toque para cambiar entre horizontal y vertical, mantén pulsada una métrica para ver su explicación y arrástralo a cualquier posición~</string>
+    <string name="tip_performance_overlay">💡 Consejo: personaliza la superposición de rendimiento y sus gestos en el menú del juego.</string>
     <string name="tip_touch_modes">💡 Consejo: Puedes cambiar modos de toque en el menú del juego. El toque multi-punto mejorado es adecuado para juegos móviles, el modo panel táctil es genial para trabajo de oficina. Encuentra el método de operación que mejor te convenga~</string>
     <string name="tip_virtual_display">💡 Consejo: La función de pantalla virtual puede crear espacios de pantalla independientes, especialmente adecuada para escenarios de multi-tarea, haciendo la transmisión más flexible~</string>
     <string name="tip_volume_keys">💡 Consejo: Usar WiFi de 5GHz proporciona una mejor experiencia, ¡velocidades súper rápidas~</string>
@@ -592,4 +592,19 @@
     <string name="mouse_axis_correction_180">Girar 180 grados</string>
     <string name="mouse_axis_correction_270">Girar 270 grados</string>
     <string name="layout_page_device_text_1a70f">Alternar entrada táctil</string>
+    <string name="game_menu_perf_metrics">Métricas que mostrar</string>
+    <string name="game_menu_perf_health">Indicador del estado de la transmisión</string>
+    <string name="game_menu_perf_health_summary">Mostrar el estado general</string>
+    <string name="game_menu_perf_single_tap">Un toque para cambiar de estilo</string>
+    <string name="game_menu_perf_double_tap">Doble toque para cambiar la disposición</string>
+    <string name="game_menu_perf_long_press">Mantener pulsado para ver la explicación de las métricas</string>
+    <string name="game_menu_perf_metric_summary">El estilo Mini muestra un conjunto fijo de métricas.</string>
+    <string name="game_menu_perf_orientation_fixed">Este estilo usa una disposición fija. La orientación elegida se aplica al cambiar al estilo Estándar.</string>
+    <string name="game_menu_perf_orientation_docked">La orientación elegida se aplica al salir de la disposición acoplada.</string>
+    <string name="game_menu_perf_fixed_layout">Disposición fija</string>
+    <string name="game_menu_perf_docked_layout">Acoplada</string>
+    <string name="game_menu_perf_orientation_portrait">En modo vertical, la disposición es siempre vertical.</string>
+    <string name="perf_sheet_previous_page">Página anterior</string>
+    <string name="perf_sheet_next_page">Página siguiente</string>
+    <string name="perf_sheet_settings">Ajustes</string>
 </resources>

@@ -264,4 +264,19 @@
     <string name="summary_checkbox_reverse_resolution">Aktiver bare når bilderetningen eller -dimensjonene er feil; kan komme i konflikt med å følge enhetens rotasjon.</string>
     <string name="summary_checkbox_rotable_screen">Synkroniserer strømmelayouten automatisk når enheten bytter mellom stående og liggende retning.</string>
     <string name="layout_page_device_text_1a70f">Slå berøring av/på</string>
+    <string name="game_menu_perf_metrics">Måleverdier som skal vises</string>
+    <string name="game_menu_perf_health">Indikator for strømmetilstand</string>
+    <string name="game_menu_perf_health_summary">Vis samlet tilstand</string>
+    <string name="game_menu_perf_single_tap">Trykk én gang for å endre stil</string>
+    <string name="game_menu_perf_double_tap">Dobbelttrykk for å endre oppsett</string>
+    <string name="game_menu_perf_long_press">Trykk og hold for å se forklaringer på måleverdiene</string>
+    <string name="game_menu_perf_metric_summary">Ministilen viser et fast sett med måleverdier.</string>
+    <string name="game_menu_perf_orientation_fixed">Denne stilen har et fast oppsett. Den valgte retningen brukes når du bytter til standardstilen.</string>
+    <string name="game_menu_perf_orientation_docked">Den valgte retningen brukes når oppsettet ikke lenger er forankret.</string>
+    <string name="game_menu_perf_fixed_layout">Fast oppsett</string>
+    <string name="game_menu_perf_docked_layout">Forankret</string>
+    <string name="game_menu_perf_orientation_portrait">I stående skjermvisning er oppsettet alltid loddrett.</string>
+    <string name="perf_sheet_previous_page">Forrige side</string>
+    <string name="perf_sheet_next_page">Neste side</string>
+    <string name="perf_sheet_settings">Innstillinger</string>
 </resources>

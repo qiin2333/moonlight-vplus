@@ -493,9 +493,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             MicrophoneButtonPositionController.attach(this, it)
         }
 
-        performanceOverlayManager = PerformanceOverlayManager(this, prefConfig) { enabled ->
-            jitterMonitorManager?.setEnabled(enabled)
-        }
+        performanceOverlayManager = PerformanceOverlayManager(
+            this,
+            prefConfig,
+            onJitterMonitorChanged = { enabled -> jitterMonitorManager?.setEnabled(enabled) },
+            onOpenSettings = { showPerformanceOverlayMenu() }
+        )
         performanceOverlayManager?.initialize()
 
         jitterMonitorManager = JitterMonitorManager(this, prefConfig)
@@ -1938,6 +1941,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onPause() {
+        performanceOverlayManager?.cancelOverlayInteraction()
         if (::prefConfig.isInitialized && prefConfig.screenDs5Touchpad &&
             ::touchInputHandler.isInitialized && ::controllerHandler.isInitialized
         ) {
@@ -3422,11 +3426,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         return showGameMenuInternal(device, openedFromUsbShortcut = false)
     }
 
+    fun showPerformanceOverlayMenu(): Boolean {
+        return showGameMenuInternal(null, openedFromUsbShortcut = false) { menu ->
+            menu.showPerformancePage()
+        }
+    }
+
     private fun showGameMenuInternal(
         device: GameInputDevice?,
-        openedFromUsbShortcut: Boolean
+        openedFromUsbShortcut: Boolean,
+        directPage: ((GameMenu) -> Unit)? = null
     ): Boolean {
         if (isApplyingDisplaySettings) return true
+        if (directPage != null) return showGameMenuDialog(device, afterShow = directPage)
+
         return when (crownSessionController.backKeyMenuMode) {
             BackKeyMenuMode.CROWN_MODE -> {
                 if (controllerManager != null && prefConfig.enableCrownFeatures) {
@@ -3441,36 +3454,47 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 false
             }
             BackKeyMenuMode.NO_MENU_LOCKED -> false
-            BackKeyMenuMode.GAME_MENU -> {
-                val existingMenu = activeGameMenu
-                if (existingMenu?.isShowing() == true) {
-                    true
-                } else {
-                    existingMenu?.dismiss()
-                    activeGameMenu = null
+            BackKeyMenuMode.GAME_MENU -> showGameMenuDialog(device, openedFromUsbShortcut = openedFromUsbShortcut)
+        }
+    }
 
-                    val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
-                        if (activeGameMenu === dismissedMenu) {
-                            activeGameMenu = null
-                            updateKeyboardInterception()
-                        }
-                        if (::controllerHandler.isInitialized) {
-                            controllerHandler.onExternalGameMenuDismissed()
-                        }
-                        // Preserve the opener-specific dismissal callback. USB contexts are also
-                        // covered by the handler-wide reset above; their callback is idempotent.
-                        device?.onGameMenuDismissed()
-                    }
-                    activeGameMenu = menu
-                    updateKeyboardInterception()
-                    val opened = activeGameMenu?.isShowing() == true
-                    if (opened && !openedFromUsbShortcut && ::controllerHandler.isInitialized) {
-                        controllerHandler.onExternalGameMenuOpened()
-                    }
-                    opened
-                }
+    private fun showGameMenuDialog(
+        device: GameInputDevice?,
+        openedFromUsbShortcut: Boolean = false,
+        afterShow: ((GameMenu) -> Unit)? = null
+    ): Boolean {
+        val existingMenu = activeGameMenu
+        if (existingMenu?.isShowing() == true) {
+            afterShow?.invoke(existingMenu)
+            return true
+        }
+
+        existingMenu?.dismiss()
+        activeGameMenu = null
+        performanceOverlayManager?.cancelOverlayInteraction()
+
+        val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->
+            if (activeGameMenu === dismissedMenu) {
+                activeGameMenu = null
+                updateKeyboardInterception()
+            }
+            if (::controllerHandler.isInitialized) {
+                controllerHandler.onExternalGameMenuDismissed()
+            }
+            // Preserve the opener-specific dismissal callback. USB contexts are also
+            // covered by the handler-wide reset above; their callback is idempotent.
+            device?.onGameMenuDismissed()
+        }
+        activeGameMenu = menu
+        updateKeyboardInterception()
+        val opened = activeGameMenu?.isShowing() == true
+        if (opened) {
+            afterShow?.invoke(menu)
+            if (!openedFromUsbShortcut && device == null && ::controllerHandler.isInitialized) {
+                controllerHandler.onExternalGameMenuOpened()
             }
         }
+        return opened
     }
 
     override fun showGameMenuFromUsb(device: GameInputDevice): Boolean {
@@ -3669,8 +3693,47 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     val perfOverlayStyle: PerfHudDensity
         get() = prefConfig.perfOverlayStyle
 
+    val isPerfOverlayDocked: Boolean
+        get() = performanceOverlayManager?.isPerfOverlayDocked == true
+
     fun setPerfOverlayStyle(style: PerfHudDensity) {
         performanceOverlayManager?.setPerfOverlayStyle(style)
+    }
+
+    val perfOverlayHealthVisible: Boolean
+        get() = performanceOverlayManager?.perfOverlayHealthVisible ?: true
+
+    val perfOverlaySingleTapEnabled: Boolean
+        get() = performanceOverlayManager?.perfOverlaySingleTapEnabled ?: false
+
+    val perfOverlayDoubleTapEnabled: Boolean
+        get() = performanceOverlayManager?.perfOverlayDoubleTapEnabled ?: false
+
+    val perfOverlayLongPressEnabled: Boolean
+        get() = performanceOverlayManager?.perfOverlayLongPressEnabled ?: true
+
+    fun setPerfOverlayHealthVisible(enabled: Boolean) {
+        performanceOverlayManager?.setPerfOverlayHealthVisible(enabled)
+    }
+
+    fun setPerfOverlaySingleTapEnabled(enabled: Boolean) {
+        performanceOverlayManager?.setPerfOverlaySingleTapEnabled(enabled)
+    }
+
+    fun setPerfOverlayDoubleTapEnabled(enabled: Boolean) {
+        performanceOverlayManager?.setPerfOverlayDoubleTapEnabled(enabled)
+    }
+
+    fun setPerfOverlayLongPressEnabled(enabled: Boolean) {
+        performanceOverlayManager?.setPerfOverlayLongPressEnabled(enabled)
+    }
+
+    fun setPerfOverlayOrientation(orientation: PreferenceConfiguration.PerfOverlayOrientation) {
+        performanceOverlayManager?.setPerfOverlayOrientation(orientation)
+    }
+
+    fun setPerfOverlayDisplayItems(items: Set<String>) {
+        performanceOverlayManager?.setPerfOverlayDisplayItems(items)
     }
 
     fun toggleMicrophoneButton() {

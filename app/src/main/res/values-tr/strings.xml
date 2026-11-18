@@ -251,4 +251,19 @@
     <string name="summary_checkbox_reverse_resolution">Yalnızca görüntü yönü veya boyutları hatalı olduğunda etkinleştirin; cihaz döndürmeyi izleme ayarıyla çakışabilir.</string>
     <string name="summary_checkbox_rotable_screen">Cihaz dikey ve yatay yön arasında geçiş yaptığında akış düzenini otomatik olarak senkronize eder.</string>
     <string name="layout_page_device_text_1a70f">Dokunmayı değiştir</string>
+    <string name="game_menu_perf_metrics">Gösterilecek metrikler</string>
+    <string name="game_menu_perf_health">Akış durumu göstergesi</string>
+    <string name="game_menu_perf_health_summary">Genel durumu göster</string>
+    <string name="game_menu_perf_single_tap">Stili değiştirmek için bir kez dokun</string>
+    <string name="game_menu_perf_double_tap">Düzeni değiştirmek için iki kez dokun</string>
+    <string name="game_menu_perf_long_press">Metrik açıklamalarını görmek için basılı tut</string>
+    <string name="game_menu_perf_metric_summary">Mini stil, sabit bir metrik kümesi gösterir.</string>
+    <string name="game_menu_perf_orientation_fixed">Bu stil sabit bir düzen kullanır. Seçilen yön, Standart stile geçildiğinde uygulanır.</string>
+    <string name="game_menu_perf_orientation_docked">Seçilen yön, sabitlenmiş düzenden çıkıldığında uygulanır.</string>
+    <string name="game_menu_perf_fixed_layout">Sabit düzen</string>
+    <string name="game_menu_perf_docked_layout">Sabitlenmiş</string>
+    <string name="game_menu_perf_orientation_portrait">Dikey ekran yönünde düzen her zaman dikeydir.</string>
+    <string name="perf_sheet_previous_page">Önceki sayfa</string>
+    <string name="perf_sheet_next_page">Sonraki sayfa</string>
+    <string name="perf_sheet_settings">Ayarlar</string>
 </resources>

@@ -6,9 +6,8 @@ import android.view.HapticFeedbackConstants
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +37,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
@@ -46,6 +51,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -71,12 +83,26 @@ internal fun MenuOptionColumn(
     initialFocusRequester: FocusRequester? = null,
     optionFocusModifier: Modifier = Modifier,
     inlineControlsFocusable: Boolean = true,
-    initialFocusIconKey: String? = null
+    initialFocusIconKey: String? = null,
+    initialFocusOptionKey: String? = null,
+    linearNavigation: Boolean = false,
+    topFocusRequester: FocusRequester? = null
 ) {
-    val initialFocusIndex = options.indexOfFirst { it.iconKey == initialFocusIconKey }
-        .takeIf { initialFocusIconKey != null && it >= 0 } ?: 0
+    val initialFocusIndex = options.indexOfFirst { it.focusKey == initialFocusOptionKey }
+        .takeIf { initialFocusOptionKey != null && it >= 0 }
+        ?: options.indexOfFirst { it.iconKey == initialFocusIconKey }
+            .takeIf { initialFocusIconKey != null && it >= 0 } ?: 0
+    val focusRequesters = remember(options.size, initialFocusIndex, initialFocusRequester) {
+        List(options.size) { index ->
+            initialFocusRequester?.takeIf { index == initialFocusIndex } ?: FocusRequester()
+        }
+    }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
         options.forEachIndexed { index, option ->
+            val navigation = if (linearNavigation) Modifier.focusProperties {
+                up = focusRequesters.getOrNull(index - 1) ?: topFocusRequester ?: FocusRequester.Cancel
+                down = focusRequesters.getOrNull(index + 1) ?: FocusRequester.Cancel
+            } else Modifier
             MenuOptionRow(
                 option = option,
                 iconRes = iconForOption(option.iconKey),
@@ -84,8 +110,11 @@ internal fun MenuOptionColumn(
                 onInlineToggle = onInlineToggle,
                 onSegmentClick = onSegmentClick,
                 modifier = optionFocusModifier,
-                initialFocusRequester = initialFocusRequester.takeIf { index == initialFocusIndex },
-                inlineControlsFocusable = inlineControlsFocusable
+                initialFocusRequester = if (linearNavigation) focusRequesters[index]
+                    else initialFocusRequester.takeIf { index == initialFocusIndex },
+                inlineControlsFocusable = inlineControlsFocusable,
+                linearNavigation = linearNavigation,
+                navigationModifier = navigation
             )
         }
     }
@@ -100,11 +129,21 @@ private fun MenuOptionRow(
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
     modifier: Modifier = Modifier,
     initialFocusRequester: FocusRequester? = null,
-    inlineControlsFocusable: Boolean = true
+    inlineControlsFocusable: Boolean = true,
+    linearNavigation: Boolean = false,
+    navigationModifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val shape = GameMenuCardShape
     val inlineControl = option.inlineControl
+    val focusModifier = if (linearNavigation) navigationModifier else modifier
+    val performanceEntryFocusRequester = remember { FocusRequester() }
+    val performanceSegmentsFocusRequester = remember { FocusRequester() }
+    if (linearNavigation && inlineControl is GameMenu.InlineControl.Segmented) {
+        PerformanceSegmentedOption(option, inlineControl, onSegmentClick,
+            initialFocusRequester, modifier = navigationModifier)
+        return
+    }
     val emphasizedCrownAction = option.isCrownControl &&
         (option.iconKey == "crown_profiles" || option.iconKey == "crown_layout")
     val showChevronAfterTitle = option.showChevron && inlineControl != null
@@ -122,35 +161,36 @@ private fun MenuOptionRow(
         onClick()
     }
     val initialFocusModifier = initialFocusRequester?.let {
-        Modifier.focusRequester(it).then(modifier)
+        Modifier.focusRequester(it).then(focusModifier).then(if (linearNavigation) modifier else Modifier)
     } ?: Modifier
     val rowInteraction = when {
         inlineControl is GameMenu.InlineControl.Toggle &&
             hasDedicatedToggleAction &&
             !inlineControlsFocusable ->
-            initialFocusModifier
+            focusModifier
+                .then(initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
                 .gamepadFocusOutline(shape)
-                .toggleable(
-                    value = inlineControl.checked,
-                    role = Role.Switch,
-                    onValueChange = {
-                        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        onInlineToggle(inlineControl)
-                    }
+                .semantics(mergeDescendants = true) {
+                    role = Role.Switch
+                    toggleableState = if (inlineControl.checked) ToggleableState.On else ToggleableState.Off
+                }
+                .gameMenuActivatable(
+                    hapticFeedback = hapticFeedback,
+                    action = { onInlineToggle(inlineControl) },
+                    inputKey = inlineControl
                 )
-                .focusable()
         inlineControl is GameMenu.InlineControl.Toggle && !hasDedicatedToggleAction ->
             initialFocusModifier
                 .gamepadFocusOutline(shape)
-                .toggleable(
-                    value = inlineControl.checked,
-                    role = Role.Switch,
-                    onValueChange = { activate() }
-                )
+                .semantics(mergeDescendants = true) {
+                    role = Role.Switch
+                    toggleableState = if (inlineControl.checked) ToggleableState.On else ToggleableState.Off
+                }
+                .gameMenuActivatable(hapticFeedback, activate, inlineControl)
         inlineControl !is GameMenu.InlineControl.Segmented && option.runnable != null ->
             initialFocusModifier
                 .gamepadFocusOutline(shape)
-                .clickable(onClick = activate)
+                .gameMenuActivatable(hapticFeedback, activate, option)
         else -> Modifier
     }
 
@@ -161,7 +201,7 @@ private fun MenuOptionRow(
             .clip(shape)
             .background(colorResource(R.color.game_menu_list_item_normal))
             .border(GameMenuDimens.surfaceStroke, borderColor, shape)
-            .then(modifier)
+            .then(if (linearNavigation) Modifier else modifier)
             .then(rowInteraction)
             .padding(horizontal = GameMenuDimens.section),
         verticalAlignment = Alignment.CenterVertically
@@ -182,8 +222,13 @@ private fun MenuOptionRow(
             inlineControl is GameMenu.InlineControl.Segmented && option.runnable != null
         ) {
             initialFocusModifier
+                .then(if (option.focusKey == PERF_ENTRY_FOCUS_KEY) {
+                    Modifier.focusRequester(performanceEntryFocusRequester).focusProperties {
+                        right = performanceSegmentsFocusRequester
+                    }
+                } else Modifier)
                 .gamepadFocusOutline(GameMenuControlShape)
-                .clickable(onClick = activate)
+                .gameMenuActivatable(hapticFeedback, activate, option)
         } else {
             Modifier
         }
@@ -207,7 +252,7 @@ private fun MenuOptionRow(
                         option.isCrownControl -> FontWeight.Medium
                         else -> FontWeight.Normal
                     },
-                    maxLines = if (emphasizedCrownAction) 2 else 1,
+                    maxLines = if (linearNavigation) Int.MAX_VALUE else if (emphasizedCrownAction) 2 else 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = if (showChevronAfterTitle) {
                         Modifier.weight(1f, fill = false)
@@ -225,7 +270,7 @@ private fun MenuOptionRow(
                     text = it,
                     color = colorResource(R.color.game_menu_text_secondary),
                     fontSize = 11.sp,
-                    maxLines = if (option.selected || !option.showChevron) 3 else 1,
+                    maxLines = if (linearNavigation) Int.MAX_VALUE else if (option.selected || !option.showChevron) 3 else 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -258,7 +303,15 @@ private fun MenuOptionRow(
                     onSegmentClick = onSegmentClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(36.dp)
+                        .height(36.dp),
+                    denseLabels = option.focusKey == PERF_ENTRY_FOCUS_KEY ||
+                        option.focusKey == PERF_MODE_FOCUS_KEY,
+                    initialFocusRequester = performanceSegmentsFocusRequester.takeIf {
+                        option.focusKey == PERF_ENTRY_FOCUS_KEY
+                    },
+                    leftExitRequester = performanceEntryFocusRequester.takeIf {
+                        option.focusKey == PERF_ENTRY_FOCUS_KEY
+                    }
                 )
             }
             null -> if (option.showChevron) MenuChevron()
@@ -272,6 +325,73 @@ private fun MenuOptionRow(
                 modifier = Modifier.padding(start = GameMenuDimens.compact)
             )
         }
+    }
+}
+
+/**
+ * Keep controller focus, keyboard confirmation, touch, and semantics on one
+ * focus target. Higher-level click/toggle modifiers create delegated targets
+ * that can diverge from the node checked by tests and focus restoration.
+ */
+private fun Modifier.gameMenuActivatable(
+    hapticFeedback: (Int) -> Unit,
+    action: () -> Unit,
+    inputKey: Any?
+): Modifier = semantics(mergeDescendants = true) {
+    onClick(label = null) {
+        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        action()
+        true
+    }
+}.focusable().onKeyEvent { event ->
+    val confirmed = event.type == KeyEventType.KeyUp && event.key in setOf(
+        Key.DirectionCenter,
+        Key.Enter,
+        Key.NumPadEnter,
+        Key.ButtonA
+    )
+    if (!confirmed) {
+        false
+    } else {
+        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        action()
+        true
+    }
+}.pointerInput(inputKey) {
+    detectTapGestures {
+        hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        action()
+    }
+}
+
+@Composable
+private fun PerformanceSegmentedOption(
+    option: GameMenu.MenuOption,
+    control: GameMenu.InlineControl.Segmented,
+    onSegmentClick: (GameMenu.SegmentOption) -> Unit,
+    focusRequester: FocusRequester?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GameMenuCardShape)
+            .background(colorResource(R.color.game_menu_list_item_normal))
+            .border(GameMenuDimens.surfaceStroke, colorResource(R.color.game_menu_list_item_border), GameMenuCardShape)
+            .padding(horizontal = GameMenuDimens.section, vertical = GameMenuDimens.compact)
+    ) {
+        Text(option.label, color = colorResource(R.color.game_menu_text_primary), fontSize = 13.sp)
+        option.subtitle?.takeIf { it.isNotBlank() }?.let {
+            Text(it, color = colorResource(R.color.game_menu_text_secondary), fontSize = 11.sp)
+        }
+        InlineSegmentedControl(
+            segments = control.segments,
+            onSegmentClick = onSegmentClick,
+            modifier = Modifier.fillMaxWidth().height(36.dp),
+            initialFocusRequester = focusRequester,
+            verticalNavigationModifier = modifier,
+            compactLabels = false
+        )
     }
 }
 
@@ -320,12 +440,22 @@ internal fun InlineToggle(
 internal fun InlineSegmentedControl(
     segments: List<GameMenu.SegmentOption>,
     onSegmentClick: (GameMenu.SegmentOption) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialFocusRequester: FocusRequester? = null,
+    verticalNavigationModifier: Modifier = Modifier,
+    leftExitRequester: FocusRequester? = null,
+    compactLabels: Boolean = true,
+    denseLabels: Boolean = false
 ) {
     val hapticFeedback = LocalGameMenuHapticFeedback.current
     val accent = appAccentColor()
-    val focusRequesters = remember(segments.size) { List(segments.size) { FocusRequester() } }
-    val usesDenseLabels = segments.size >= 5
+    val initialIndex = segments.indexOfFirst { it.selected }.takeIf { it >= 0 } ?: 0
+    val focusRequesters = remember(segments.size, initialIndex, initialFocusRequester) {
+        List(segments.size) { index ->
+            initialFocusRequester?.takeIf { index == initialIndex } ?: FocusRequester()
+        }
+    }
+    val usesDenseLabels = denseLabels || segments.size >= 4
     val labelHorizontalPadding = if (usesDenseLabels) 0.dp else 2.dp
     val labelAutoSize = remember(usesDenseLabels) {
         if (usesDenseLabels) {
@@ -357,24 +487,49 @@ internal fun InlineSegmentedControl(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = segment.label
+                        role = Role.RadioButton
+                        selected = segment.selected
+                        onClick(label = null) {
+                            hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            onSegmentClick(segment)
+                            true
+                        }
+                    }
                     .focusRequester(focusRequesters[index])
-                    .segmentedFocusNavigation(targets, focusRequesters)
+                    .then(verticalNavigationModifier)
+                    .segmentedFocusNavigation(targets, focusRequesters, leftExitRequester)
                     .clip(segmentShape)
                     .background(background)
                     .gamepadFocusOutline(segmentShape)
-                    .selectable(
-                        selected = segment.selected,
-                        role = Role.RadioButton,
-                        onClick = {
+                    .focusable()
+                    .onKeyEvent { event ->
+                        val confirmed = event.type == KeyEventType.KeyUp && event.key in setOf(
+                            Key.DirectionCenter,
+                            Key.Enter,
+                            Key.NumPadEnter,
+                            Key.ButtonA
+                        )
+                        if (!confirmed) {
+                            false
+                        } else {
+                            hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            onSegmentClick(segment)
+                            true
+                        }
+                    }
+                    .pointerInput(segment) {
+                        detectTapGestures {
                             hapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             onSegmentClick(segment)
                         }
-                    )
+                    }
                     .padding(horizontal = labelHorizontalPadding),
                 contentAlignment = Alignment.Center
             ) {
                 BasicText(
-                    text = compactSegmentLabel(segment.label),
+                    text = if (compactLabels) compactSegmentLabel(segment.label) else segment.label,
                     style = TextStyle(
                         color = if (segment.selected) {
                             accent
@@ -432,12 +587,13 @@ internal fun segmentedFocusTargets(
 
 internal fun Modifier.segmentedFocusNavigation(
     targets: SegmentedFocusTargets,
-    focusRequesters: List<FocusRequester>
+    focusRequesters: List<FocusRequester>,
+    leftExitRequester: FocusRequester? = null
 ): Modifier = focusProperties {
-    left = targets.left?.let(focusRequesters::get) ?: FocusRequester.Default
+    left = targets.left?.let(focusRequesters::get) ?: leftExitRequester ?: FocusRequester.Default
     right = targets.right?.let(focusRequesters::get) ?: FocusRequester.Default
-    up = targets.up?.let(focusRequesters::get) ?: FocusRequester.Default
-    down = targets.down?.let(focusRequesters::get) ?: FocusRequester.Default
+    targets.up?.let { up = focusRequesters[it] }
+    targets.down?.let { down = focusRequesters[it] }
 }
 
 internal fun compactSegmentLabel(label: String): String {

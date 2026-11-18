@@ -314,4 +314,19 @@
     <string name="summary_checkbox_reverse_resolution">Povolte pouze při nesprávné orientaci nebo rozměrech obrazu; může být v konfliktu s otáčením podle zařízení.</string>
     <string name="summary_checkbox_rotable_screen">Automaticky synchronizuje rozložení streamu při přepnutí zařízení mezi orientací na výšku a na šířku.</string>
     <string name="layout_page_device_text_1a70f">Přepínač dotyku</string>
+    <string name="game_menu_perf_metrics">Zobrazované metriky</string>
+    <string name="game_menu_perf_health">Indikátor stavu streamu</string>
+    <string name="game_menu_perf_health_summary">Zobrazit celkový stav</string>
+    <string name="game_menu_perf_single_tap">Jedním klepnutím změnit styl</string>
+    <string name="game_menu_perf_double_tap">Dvojitým klepnutím změnit rozložení</string>
+    <string name="game_menu_perf_long_press">Podržením zobrazit vysvětlení metrik</string>
+    <string name="game_menu_perf_metric_summary">Styl Mini zobrazuje pevnou sadu metrik.</string>
+    <string name="game_menu_perf_orientation_fixed">Tento styl používá pevné rozložení. Vybraná orientace se použije po přepnutí na standardní styl.</string>
+    <string name="game_menu_perf_orientation_docked">Vybraná orientace se použije po opuštění ukotveného rozložení.</string>
+    <string name="game_menu_perf_fixed_layout">Pevné rozložení</string>
+    <string name="game_menu_perf_docked_layout">Ukotveno</string>
+    <string name="game_menu_perf_orientation_portrait">V orientaci na výšku je rozložení vždy svislé.</string>
+    <string name="perf_sheet_previous_page">Předchozí stránka</string>
+    <string name="perf_sheet_next_page">Další stránka</string>
+    <string name="perf_sheet_settings">Nastavení</string>
 </resources>

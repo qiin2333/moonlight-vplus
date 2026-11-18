@@ -22,6 +22,14 @@
 -keep class com.limelight.gamemenu.TouchPointerSensitivity** { *; }
 -keep class com.limelight.gamemenu.TouchPointerPreset** { *; }
 -keep class com.limelight.gamemenu.GameMenuCardsKt { *; }
+# Performance-overlay tests invoke menu composables and HUD models across APKs.
+-keep class com.limelight.gamemenu.GameMenuOptionsKt { *; }
+-keep class com.limelight.gamemenu.SegmentedFocusTargets { *; }
+-keep class com.limelight.gamemenu.GameMenu$MenuOption { *; }
+-keep class com.limelight.gamemenu.GameMenu$SegmentOption { *; }
+-keep class com.limelight.gamemenu.GameMenu$InlineControl** { *; }
+-keep class com.limelight.PerformanceOverlayManager { *; }
+-keep class com.limelight.perfhud.** { *; }
 # USB panel instrumentation renders state and exercises controller navigation.
 -keep class com.limelight.UsbDevicePanelKt { *; }
 -keep class com.limelight.UsbPanelDevice { *; }
