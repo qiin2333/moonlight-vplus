@@ -1,0 +1,1511 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>王冠 UI 重设计 · Moonlight V+</title>
+<style>
+/* ============================================================
+   Page chrome
+   ============================================================ */
+:root, [data-theme="light"]{
+  color-scheme: light;
+  --page:#f2eef2;
+  --page-2:#faf7fa;
+  --surface:rgba(255,255,255,.76);
+  --surface-solid:#ffffff;
+  --surface-sunk:rgba(31,32,38,.055);
+  --line:rgba(29,27,32,.12);
+  --line-strong:rgba(29,27,32,.22);
+  --ink:#1f2026;
+  --ink-2:#4e5158;
+  --ink-3:#7d8088;
+  --accent:#ff6b9d;
+  --accent-ink:#b8406c;
+  --accent-soft:rgba(255,107,157,.10);
+  --accent-focus:rgba(255,107,157,.20);
+  --on-accent:#20161b;
+  --danger:#b04a5a;
+  --shadow-panel:0 26px 64px rgba(24,12,26,.34), 0 2px 10px rgba(24,12,26,.14);
+  --shadow-card:0 12px 34px rgba(48,30,52,.09);
+  --r-s:8px; --r-m:12px; --r-l:16px; --r-xl:20px; --r-2xl:24px;
+  --font:"Segoe UI Variable Text","Segoe UI","Noto Sans SC","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+}
+html[data-site-theme="dark"], [data-theme="dark"]{
+  color-scheme: dark;
+  --page:#14151a;
+  --page-2:#191a20;
+  --surface:#1c1d22;
+  --surface-solid:#23242b;
+  --surface-sunk:rgba(255,255,255,.06);
+  --line:rgba(255,255,255,.18);
+  --line-strong:rgba(255,255,255,.30);
+  --ink:#f7f3f7;
+  --ink-2:#c9d0d8;
+  --ink-3:#98a0aa;
+  --accent:#ff8fa3;
+  --accent-ink:#ffa9b9;
+  --accent-soft:rgba(255,107,157,.20);
+  --accent-focus:rgba(255,107,157,.38);
+  --on-accent:#20161b;
+  --danger:#ff9aaa;
+  --shadow-panel:0 26px 64px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.3);
+  --shadow-card:0 12px 34px rgba(0,0,0,.32);
+}
+*{box-sizing:border-box}
+html{background:var(--page);scroll-behavior:smooth}
+body{
+  margin:0;color:var(--ink);font-family:var(--font);
+  background:
+    radial-gradient(70% 50% at 8% 0%, rgba(255,176,205,.30), transparent 62%),
+    radial-gradient(55% 45% at 96% 6%, rgba(178,205,235,.30), transparent 60%),
+    radial-gradient(60% 60% at 60% 100%, rgba(214,190,235,.26), transparent 65%),
+    var(--page);
+  -webkit-font-smoothing:antialiased;
+  transition:background .25s ease,color .25s ease;
+}
+html[data-site-theme="dark"] body{
+  background:
+    radial-gradient(70% 50% at 8% 0%, rgba(120,60,90,.28), transparent 62%),
+    radial-gradient(55% 45% at 96% 6%, rgba(50,80,120,.30), transparent 60%),
+    radial-gradient(60% 60% at 60% 100%, rgba(90,70,120,.22), transparent 65%),
+    var(--page);
+}
+.page{max-width:1460px;margin:0 auto;padding:44px 44px 96px}
+h1,h2,h3,h4,p,ul{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0}
+
+/* ---------- cover ---------- */
+.cover{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:end;padding-bottom:34px}
+.kicker{display:flex;align-items:center;gap:10px;color:var(--accent-ink);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+.kicker .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+h1{margin-top:14px;font-size:clamp(34px,4.4vw,56px);line-height:1.04;letter-spacing:-.025em;font-weight:750}
+h1 span{color:var(--accent-ink)}
+.lede{margin-top:16px;max-width:760px;color:var(--ink-2);font-size:14px;line-height:1.75}
+.lede b{color:var(--ink);font-weight:650}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chips span{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:11px;color:var(--ink-2)}
+.chips span.hot{border-color:rgba(255,107,157,.4);background:var(--accent-soft);color:var(--accent-ink);font-weight:650}
+.cover-side{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.theme-toggle{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:12px;cursor:pointer;box-shadow:var(--shadow-card)}
+.theme-toggle svg{width:15px;height:15px}
+.cover-note{font-size:11px;color:var(--ink-3);text-align:right;line-height:1.6}
+
+/* ---------- section ---------- */
+.section{margin-top:70px}
+.section-head{border-top:1px solid var(--line);padding-top:22px;margin-bottom:26px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px}
+.section-num{font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--accent-ink);padding-top:5px}
+.section-title{font-size:23px;font-weight:720;letter-spacing:-.01em}
+.section-desc{margin-top:8px;max-width:860px;color:var(--ink-2);font-size:13px;line-height:1.7}
+
+/* ---------- diagnosis ---------- */
+.diag-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.diag{padding:18px 18px 16px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-card)}
+.diag .n{font-size:10px;letter-spacing:.12em;font-weight:800;color:var(--accent-ink)}
+.diag b{display:block;margin-top:9px;font-size:14px;font-weight:680}
+.diag p{margin-top:7px;font-size:12px;line-height:1.65;color:var(--ink-2)}
+.diag .code{margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--ink-3);line-height:1.5;word-break:break-all}
+
+/* ---------- tokens ---------- */
+.token-block{border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface);padding:20px;box-shadow:var(--shadow-card)}
+.token-block h3{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+.swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.sw{border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;background:var(--surface-solid)}
+.sw .fill{height:48px}
+.sw .meta{padding:8px 10px 9px;font-size:10px;line-height:1.45;color:var(--ink-3)}
+.sw .meta b{display:block;font-size:11px;color:var(--ink);font-weight:650}
+.sw .meta code{font-family:var(--mono);font-size:9px}
+.token-split{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+.type-list{margin-top:14px}
+.type-row{display:grid;grid-template-columns:78px 1fr auto;gap:14px;align-items:baseline;padding:11px 0;border-top:1px solid var(--line)}
+.type-row:first-of-type{border-top:0}
+.type-row .lab{font-size:10px;letter-spacing:.08em;color:var(--ink-3);font-weight:800}
+.type-row .spec{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.geom-list{margin-top:14px;display:grid;gap:12px}
+.geom-row{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;font-size:11px;color:var(--ink-2)}
+.geom-row .lab{font-size:10px;letter-spacing:.08em;color:var(--ink-3);font-weight:800}
+.bars{display:flex;gap:6px;align-items:center}
+.bars i{display:block;height:22px;border-radius:6px;background:var(--accent-soft);border:1px solid rgba(255,107,157,.3)}
+.note-line{margin-top:14px;font-size:11px;line-height:1.65;color:var(--ink-3)}
+
+/* ---------- component board ---------- */
+.comp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px}
+.comp{border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);padding:16px;box-shadow:var(--shadow-card)}
+.comp h4{font-size:11px;letter-spacing:.09em;color:var(--ink-3);font-weight:800;text-transform:uppercase;margin-bottom:14px}
+.comp-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.comp-cap{margin-top:12px;font-size:10px;color:var(--ink-3);line-height:1.5}
+
+/* ============================================================
+   Device frames
+   ============================================================ */
+.frame{
+  position:relative;overflow:hidden;border-radius:26px;background:#0b0c11;
+  box-shadow:0 34px 80px rgba(30,20,36,.26), 0 0 0 1px rgba(20,15,25,.10);
+  isolation:isolate;
+}
+.frame.land{width:100%;aspect-ratio:16/9}
+.frame.port{width:390px;height:844px;border-radius:40px;box-shadow:0 30px 70px rgba(30,20,36,.24), 0 0 0 1px rgba(20,15,25,.10), inset 0 0 0 2px rgba(255,255,255,.05)}
+.frame.port::after{content:"";position:absolute;left:50%;bottom:8px;width:126px;height:5px;margin-left:-63px;border-radius:3px;background:rgba(20,20,24,.35);z-index:60}
+html[data-site-theme="dark"] .frame.port::after{background:rgba(255,255,255,.35)}
+
+/* game scene */
+.scene{position:absolute;inset:0;overflow:hidden;background:
+  radial-gradient(90% 70% at 76% 4%, #2b3b55 0%, rgba(43,59,85,0) 58%),
+  radial-gradient(80% 70% at 12% 96%, #3b2434 0%, rgba(59,36,52,0) 55%),
+  linear-gradient(168deg,#141d2b 0%,#0b0e15 58%,#100d15 100%);}
+.scene .moon{position:absolute;left:9%;top:11%;width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle at 38% 34%, #ffe9f1 0%, #f7c2d4 44%, rgba(247,194,212,0) 72%);
+  opacity:.5;filter:blur(1px)}
+.scene .glow{position:absolute;left:2%;top:2%;width:46%;height:52%;
+  background:radial-gradient(closest-side, rgba(255,167,199,.22), transparent 72%);filter:blur(10px)}
+.scene .ridge{position:absolute;border-radius:50%;filter:blur(.5px)}
+.scene .ridge.a{left:-12%;bottom:-38%;width:76%;height:62%;background:linear-gradient(160deg,#1b2434,#0e121b)}
+.scene .ridge.b{right:-16%;bottom:-46%;width:86%;height:70%;background:linear-gradient(200deg,#231a27,#0c0e15)}
+.scene .streak{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent)}
+.scene .tag{position:absolute;left:16px;top:14px;font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.30);font-weight:600}
+.scene .tag i{font-style:normal;color:rgba(255,255,255,.16)}
+.scrim{position:absolute;inset:0;background:rgba(8,9,14,.52);backdrop-filter:blur(2px);z-index:70}
+
+/* ============================================================
+   UI atoms (inside frames)
+   ============================================================ */
+.u-mark{width:34px;height:34px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink);border:1px solid rgba(255,107,157,.22)}
+.u-mark svg{width:19px;height:19px}
+.u-panel{position:absolute;top:18px;right:18px;bottom:18px;width:380px;display:flex;flex-direction:column;
+  border-radius:var(--r-xl);background:rgba(252,251,253,.965);border:1px solid rgba(255,255,255,.62);
+  box-shadow:var(--shadow-panel);overflow:hidden;backdrop-filter:blur(20px);color:#1f2026}
+[data-theme="dark"] .u-panel{background:rgba(28,29,34,.96);border-color:rgba(255,255,255,.14);color:#f7f3f7}
+.u-panel.wide{width:664px;left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);height:auto;max-height:calc(100% - 34px)}
+.u-panel.insp{width:398px}
+.u-head{display:flex;align-items:center;gap:11px;padding:14px 14px 12px 16px;flex:0 0 auto}
+.u-head .txt{min-width:0;flex:1}
+.u-title{font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u-sub{margin-top:2px;font-size:10.5px;color:#5a5d64;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme="dark"] .u-sub{color:#c9d0d8}
+.u-iconbtn{width:32px;height:32px;flex:0 0 auto;border-radius:10px;display:grid;place-items:center;color:#4e5158;background:transparent}
+.u-iconbtn svg{width:17px;height:17px}
+.u-iconbtn.soft{background:rgba(31,32,38,.05)}
+[data-theme="dark"] .u-iconbtn{color:#c9d0d8}
+.u-iconbtn.danger{color:#b04a5a}
+[data-theme="dark"] .u-iconbtn.danger{color:#ff9aaa}
+
+.u-body{position:relative;flex:1;min-height:0;overflow:hidden;padding:2px 16px 10px;display:flex;flex-direction:column;gap:12px}
+.u-body > *{flex:0 0 auto}
+.u-body.fade::after{content:"";position:absolute;left:1px;right:1px;bottom:0;height:30px;background:linear-gradient(rgba(252,251,253,0),rgba(252,251,253,.98));pointer-events:none}
+[data-theme="dark"] .u-body.fade::after{background:linear-gradient(rgba(28,29,34,0),rgba(28,29,34,.98))}
+.u-foot{flex:0 0 auto;padding:10px 16px 14px;border-top:1px solid rgba(29,27,32,.10);display:flex;gap:8px;align-items:center;background:linear-gradient(rgba(252,251,253,.4),rgba(252,251,253,.9))}
+[data-theme="dark"] .u-foot{border-color:rgba(255,255,255,.14);background:none}
+.u-foot .u-hint{flex:1;font-size:10px;line-height:1.4;color:#6c6f77}
+[data-theme="dark"] .u-foot .u-hint{color:#98a0aa}
+
+/* section label + card */
+.u-label{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#b8406c;padding:0 2px;margin:2px 0 -4px}
+[data-theme="dark"] .u-label{color:#ffa9b9}
+.u-card{border-radius:var(--r-l);background:rgba(255,255,255,.70);border:1px solid rgba(29,27,32,.10);padding:2px 12px}
+[data-theme="dark"] .u-card{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.13)}
+.u-card.flush{padding:0 12px}
+
+/* rows */
+.u-row{display:flex;align-items:center;gap:11px;min-height:52px;padding:9px 0}
+.u-row + .u-row{border-top:1px solid rgba(29,27,32,.08)}
+[data-theme="dark"] .u-row + .u-row{border-color:rgba(255,255,255,.10)}
+.u-row.tight{min-height:40px;padding:5px 0}
+.u-ic{width:30px;height:30px;flex:0 0 auto;border-radius:9px;display:grid;place-items:center;background:rgba(31,32,38,.045);color:#4e5158}
+.u-ic svg{width:16px;height:16px}
+.u-ic.accent{background:rgba(255,107,157,.13);color:#b8406c}
+[data-theme="dark"] .u-ic{background:rgba(255,255,255,.07);color:#c9d0d8}
+[data-theme="dark"] .u-ic.accent{background:rgba(255,107,157,.22);color:#ffa9b9}
+.u-txt{min-width:0;flex:1}
+.u-lbl{font-size:13px;line-height:1.35;font-weight:560;color:#1f2026}
+[data-theme="dark"] .u-lbl{color:#f7f3f7}
+.u-desc{margin-top:2px;font-size:10.5px;line-height:1.4;color:#5f626a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme="dark"] .u-desc{color:#98a0aa}
+.u-chev{width:16px;height:16px;flex:0 0 auto;color:#8a8d95}
+[data-theme="dark"] .u-chev{color:#8f97a1}
+.u-row .u-value{font-size:11px;color:#5f626a;font-variant-numeric:tabular-nums}
+[data-theme="dark"] .u-row .u-value{color:#98a0aa}
+
+/* switch */
+.u-sw{width:36px;height:18px;flex:0 0 auto;border-radius:9px;position:relative;background:rgba(255,107,157,.10);border:.75px solid rgba(29,27,32,.22);transition:background .18s}
+.u-sw::after{content:"";position:absolute;top:1.1px;left:1.1px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.24);transition:transform .18s}
+.u-sw.on{background:rgba(255,107,157,.82);border-color:rgba(255,107,157,.46)}
+.u-sw.on::after{transform:translateX(17.5px)}
+.u-sw.off-dis{opacity:.45}
+
+/* profile card */
+.u-profile{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--r-l);border:1px solid rgba(29,27,32,.10);background:rgba(255,255,255,.72)}
+[data-theme="dark"] .u-profile{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.13)}
+.u-thumb{width:46px;height:46px;flex:0 0 auto;border-radius:12px;overflow:hidden;position:relative;background:linear-gradient(160deg,#232b3a,#101420);border:1px solid rgba(255,255,255,.10)}
+.u-thumb .mini{position:absolute;border-radius:50%;background:rgba(255,255,255,.30);box-shadow:0 0 0 1px rgba(255,255,255,.22)}
+.u-thumb .mini.a{left:7px;top:26px;width:13px;height:13px}
+.u-thumb .mini.b{right:8px;bottom:8px;width:9px;height:9px;background:rgba(255,143,163,.65)}
+.u-thumb .mini.c{right:20px;bottom:9px;width:6px;height:6px;background:rgba(255,255,255,.5)}
+.u-thumb .mini.d{left:8px;top:8px;width:16px;height:5px;border-radius:3px;background:rgba(255,255,255,.22)}
+.u-badge{display:inline-flex;align-items:center;gap:4px;padding:2.5px 7px;border-radius:999px;background:rgba(255,107,157,.13);color:#b8406c;font-size:9.5px;font-weight:700;line-height:1.3}
+.u-badge svg{width:9px;height:9px}
+[data-theme="dark"] .u-badge{background:rgba(255,107,157,.24);color:#ffc2cf}
+
+/* segmented */
+.u-seg{display:flex;gap:2px;padding:3px;border-radius:12px;background:rgba(31,32,38,.055);border:1px solid rgba(29,27,32,.06)}
+[data-theme="dark"] .u-seg{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}
+.u-seg button{flex:1;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:560;color:#5f626a;white-space:nowrap}
+.u-seg button svg{width:13px;height:13px;opacity:.75}
+.u-seg button.on{background:#fff;color:#1f2026;font-weight:680;box-shadow:0 1px 3px rgba(20,15,25,.14);}
+[data-theme="dark"] .u-seg button{color:#aeb6c0}
+[data-theme="dark"] .u-seg button.on{background:rgba(255,255,255,.12);color:#fff;box-shadow:none}
+
+/* buttons */
+.u-btn{height:42px;padding:0 15px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:650;
+  background:rgba(31,32,38,.055);border:1px solid rgba(29,27,32,.13);color:#1f2026;white-space:nowrap}
+.u-btn svg{width:15px;height:15px}
+.u-btn.primary{background:#ff6b9d;border-color:rgba(255,107,157,.7);color:#20161b}
+.u-btn.ghost{background:transparent;border-color:transparent;color:#4e5158}
+.u-btn.block{width:100%}
+.u-btn.sm{height:34px;padding:0 12px;font-size:11px;border-radius:10px}
+.u-btn.danger{color:#b04a5a;border-color:rgba(176,74,90,.25);background:rgba(176,74,90,.07)}
+[data-theme="dark"] .u-btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#f7f3f7}
+[data-theme="dark"] .u-btn.primary{background:#ff8fa3;border-color:rgba(255,143,163,.8);color:#20161b}
+[data-theme="dark"] .u-btn.ghost{background:transparent;border-color:transparent;color:#c9d0d8}
+[data-theme="dark"] .u-btn.danger{background:rgba(255,154,170,.10);border-color:rgba(255,154,170,.3);color:#ff9aaa}
+.u-foot .u-btn{flex:1}
+
+/* fields */
+.u-field{display:flex;align-items:center;gap:8px;height:38px;padding:0 11px;border-radius:10px;background:rgba(31,32,38,.045);border:1px solid rgba(29,27,32,.10);font-size:12px;color:#1f2026}
+[data-theme="dark"] .u-field{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#f7f3f7}
+.u-field .val{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-field .unit{font-size:10px;color:#7d8088}
+.u-field svg{width:14px;height:14px;color:#7d8088}
+.u-field.mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+
+/* slider */
+.u-slider{padding:4px 0 2px}
+.u-slider .top{display:flex;align-items:center;gap:8px;min-height:24px}
+.u-slider .name{flex:1;font-size:11.5px;color:#4e5158}
+[data-theme="dark"] .u-slider .name{color:#c9d0d8}
+.u-slider .num{min-width:44px;height:24px;padding:0 7px;border-radius:7px;background:rgba(31,32,38,.055);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:650;font-variant-numeric:tabular-nums;color:#1f2026}
+[data-theme="dark"] .u-slider .num{background:rgba(255,255,255,.08);color:#f7f3f7}
+.u-slider .track{position:relative;height:4px;border-radius:2px;background:rgba(31,32,38,.11);margin:8px 2px 5px}
+[data-theme="dark"] .u-slider .track{background:rgba(255,255,255,.14)}
+.u-slider .fill{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:#ff6b9d}
+[data-theme="dark"] .u-slider .fill{background:#ff8fa3}
+.u-slider .knob{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#fff;border:1px solid rgba(255,107,157,.75);box-shadow:0 1px 3px rgba(0,0,0,.22)}
+.u-slider .ends{display:flex;justify-content:space-between;font-size:9px;color:#8a8d95;font-variant-numeric:tabular-nums}
+[data-theme="dark"] .u-slider .ends{color:#8f97a1}
+.u-slider.compact .name{font-size:10.5px}
+.u-grid2{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}
+.u-grid2 .u-slider{border-top:0}
+
+/* color row */
+.u-color{display:flex;align-items:center;gap:9px;height:44px}
+.u-color + .u-color{border-top:1px solid rgba(29,27,32,.08)}
+[data-theme="dark"] .u-color + .u-color{border-color:rgba(255,255,255,.10)}
+.u-swatch{width:22px;height:22px;border-radius:7px;border:1px solid rgba(29,27,32,.22);position:relative;overflow:hidden}
+.u-swatch .checker{position:absolute;inset:0;background-image:linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%);background-size:8px 8px;background-position:0 0,4px 4px}
+.u-color .name{flex:1;font-size:11.5px;color:#4e5158}
+[data-theme="dark"] .u-color .name{color:#c9d0d8}
+.u-color .hex{font-family:var(--mono);font-size:10px;color:#5f626a;padding:4px 7px;border-radius:6px;background:rgba(31,32,38,.05)}
+[data-theme="dark"] .u-color .hex{background:rgba(255,255,255,.07);color:#c9d0d8}
+
+/* chips */
+.u-chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;font-size:10.5px;font-weight:600;color:#4e5158;background:rgba(31,32,38,.05);border:1px solid rgba(29,27,32,.08);white-space:nowrap}
+.u-chip.on{background:rgba(255,107,157,.13);border-color:rgba(255,107,157,.32);color:#b8406c}
+.u-chip svg{width:11px;height:11px}
+[data-theme="dark"] .u-chip{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#c9d0d8}
+[data-theme="dark"] .u-chip.on{background:rgba(255,107,157,.22);border-color:rgba(255,107,157,.4);color:#ffc2cf}
+
+/* keyboard */
+.u-kb{display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:14px;background:rgba(31,32,38,.05);border:1px solid rgba(29,27,32,.07)}
+[data-theme="dark"] .u-kb{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09)}
+.u-kb-row{display:flex;gap:4px}
+.u-key{flex:1;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:560;color:#3c3f46;
+  background:#fff;border:1px solid rgba(29,27,32,.13);box-shadow:0 1px 0 rgba(20,15,25,.06)}
+.u-key.w15{flex:1.5}.u-key.w2{flex:2}.u-key.w25{flex:2.5}.u-key.w6{flex:6}
+.u-key.mod{background:rgba(31,32,38,.04);color:#5f626a}
+.u-key.sel{background:rgba(255,107,157,.16);border-color:#ff6b9d;color:#a83a63;font-weight:750;box-shadow:0 0 0 1px rgba(255,107,157,.35)}
+.u-key.lock{background:rgba(255,107,157,.30);border-color:rgba(255,107,157,.55);color:#8d2f52;position:relative}
+.u-key.lock::after{content:"";position:absolute;top:5px;right:5px;width:4px;height:4px;border-radius:50%;background:#a83a63}
+[data-theme="dark"] .u-key{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14);color:#e8ecf1;box-shadow:none}
+[data-theme="dark"] .u-key.mod{background:rgba(255,255,255,.06);color:#aeb6c0}
+[data-theme="dark"] .u-key.sel{background:rgba(255,107,157,.35);border-color:#ff8fa3;color:#ffe3ea}
+[data-theme="dark"] .u-key.lock{background:rgba(255,107,157,.5);border-color:#ff8fa3;color:#2a1219}
+
+/* gamepad diagram */
+.u-pad{position:relative;height:268px;margin:2px auto 0;width:560px;border-radius:18px;background:rgba(31,32,38,.045);border:1px solid rgba(29,27,32,.07)}
+[data-theme="dark"] .u-pad{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.10)}
+.u-pad .body{position:absolute;left:10px;right:10px;top:54px;bottom:10px;border-radius:104px;background:linear-gradient(165deg,rgba(255,255,255,.98),rgba(255,255,255,.70));border:1px solid rgba(29,27,32,.13);box-shadow:inset 0 -10px 26px rgba(20,15,25,.05)}
+[data-theme="dark"] .u-pad .body{background:linear-gradient(165deg,rgba(255,255,255,.13),rgba(255,255,255,.04));border-color:rgba(255,255,255,.14);box-shadow:none}
+.u-pad .pill{position:absolute;top:14px;height:26px;min-width:52px;padding:0 9px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:650;letter-spacing:.03em;color:#3c3f46;background:#fff;border:1px solid rgba(29,27,32,.14)}
+[data-theme="dark"] .u-pad .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.16);color:#e8ecf1}
+.u-pad .pill.lt{left:34px}.u-pad .pill.lb{left:96px}
+.u-pad .pill.rb{right:96px}.u-pad .pill.rt{right:34px}
+.u-pad .cross{position:absolute;left:52px;top:92px;width:96px;height:96px}
+.u-pad .cross i{position:absolute;width:30px;height:30px;border-radius:9px;background:#fff;border:1px solid rgba(29,27,32,.14);display:grid;place-items:center;font-size:7px;color:#5f626a}
+[data-theme="dark"] .u-pad .cross i{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.16);color:#c9d0d8}
+.u-pad .cross i.up{left:33px;top:0}.u-pad .cross i.down{left:33px;top:66px}.u-pad .cross i.left{left:0;top:33px}.u-pad .cross i.right{left:66px;top:33px}
+.u-pad .face{position:absolute;left:384px;top:92px;width:108px;height:108px}
+.u-pad .face i{position:absolute;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#3c3f46;background:#fff;border:1px solid rgba(29,27,32,.14)}
+[data-theme="dark"] .u-pad .face i{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.16);color:#e8ecf1}
+.u-pad .face i.y{left:36px;top:0}.u-pad .face i.x{left:0;top:36px}.u-pad .face i.b{left:72px;top:36px}.u-pad .face i.a{left:36px;top:72px}
+.u-pad .face i.sel{background:rgba(255,107,157,.20);border-color:#ff6b9d;color:#a83a63;box-shadow:0 0 0 2px rgba(255,107,157,.28)}
+[data-theme="dark"] .u-pad .face i.sel{background:rgba(255,143,163,.34);border-color:#ff8fa3;color:#2a1219}
+.u-pad .stick{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid rgba(29,27,32,.14);background:rgba(255,255,255,.85)}
+[data-theme="dark"] .u-pad .stick{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16)}
+.u-pad .stick::after{content:"";position:absolute;inset:19px;border-radius:50%;border:1px solid rgba(29,27,32,.16);background:rgba(31,32,38,.04)}
+.u-pad .stick.l{left:160px;top:128px}.u-pad .stick.r{left:306px;top:128px}
+.u-pad .sys{position:absolute;left:50%;top:156px;transform:translateX(-50%);display:flex;gap:8px}
+.u-pad .sys i{width:20px;height:20px;border-radius:50%;border:1px solid rgba(29,27,32,.16);background:rgba(255,255,255,.7)}
+.u-pad .sys i.bar{width:26px;border-radius:9px}
+[data-theme="dark"] .u-pad .sys i{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.16)}
+
+/* dialog */
+.u-dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:366px;border-radius:22px;
+  background:rgba(253,251,253,.985);border:1px solid rgba(255,255,255,.6);box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden;color:#1f2026;z-index:71}
+.u-dialog .d-head{padding:20px 20px 0}
+.u-dialog .d-title{font-size:16px;font-weight:720}
+.u-dialog .d-sub{margin-top:4px;font-size:10.5px;line-height:1.5;color:#5f626a}
+.u-dialog .d-body{padding:14px 20px 4px;display:flex;flex-direction:column;gap:9px}
+.u-dialog .d-foot{display:flex;gap:8px;padding:16px 20px 18px}
+.u-opt{display:flex;align-items:center;gap:10px;height:50px;padding:0 11px;border-radius:12px;border:1px solid rgba(29,27,32,.10);background:rgba(255,255,255,.6)}
+.u-opt.on{border-color:rgba(255,107,157,.45);background:rgba(255,107,157,.09)}
+.u-opt .o-txt{flex:1;min-width:0}
+.u-opt .o-t{font-size:12.5px;font-weight:600}
+.u-opt .o-s{font-size:9.5px;color:#6c6f77;margin-top:1px}
+.u-opt .u-thumb{width:34px;height:34px;border-radius:9px}
+.u-opt .check{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;border:1.5px solid rgba(29,27,32,.2);color:transparent}
+.u-opt.on .check{background:#ff6b9d;border-color:#ff6b9d;color:#20161b}
+.u-opt .check svg{width:11px;height:11px}
+
+/* toast */
+.u-toast{display:inline-flex;align-items:center;gap:9px;padding:11px 15px;border-radius:14px;background:rgba(24,22,28,.92);color:#fff;font-size:11.5px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.u-toast svg{width:14px;height:14px;color:#ffb3c8}
+.u-toast.light{background:rgba(253,251,253,.96);color:#1f2026;border:1px solid rgba(29,27,32,.12);box-shadow:0 10px 26px rgba(30,20,36,.16)}
+.u-toast.light svg{color:#b8406c}
+
+/* canvas editor */
+.u-toolbar{position:absolute;left:50%;top:16px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:5px;border-radius:16px;
+  background:rgba(253,251,253,.96);border:1px solid rgba(255,255,255,.6);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.u-toolbar .tb{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#4e5158}
+.u-toolbar .tb svg{width:17px;height:17px}
+.u-toolbar .tb.on{background:rgba(255,107,157,.16);color:#b8406c}
+.u-toolbar .sep{width:1px;height:20px;background:rgba(29,27,32,.12);margin:0 3px}
+.u-toolbar .done{height:34px;padding:0 14px;border-radius:10px;background:#ff6b9d;color:#20161b;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.u-hintbar{position:absolute;left:18px;bottom:18px;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:rgba(16,14,20,.62);color:rgba(255,255,255,.86);font-size:10.5px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12)}
+.u-hintbar svg{width:13px;height:13px;color:#ffb3c8}
+.u-fab{position:absolute;right:18px;bottom:18px;display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 16px;border-radius:999px;background:#ff6b9d;color:#20161b;font-size:11.5px;font-weight:700;box-shadow:0 10px 26px rgba(255,107,157,.35)}
+.u-fab svg{width:14px;height:14px}
+.u-stage{position:absolute;inset:0}
+.u-ctrl{position:absolute;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(2px);display:grid;place-items:center;color:rgba(255,255,255,.9);font-size:10px;font-weight:650}
+.u-ctrl.sq{border-radius:14px}
+.u-ctrl.dim{opacity:.72}
+.u-selected{position:absolute;border-radius:16px;border:1.5px solid #ff6b9d;box-shadow:0 0 0 4px rgba(255,107,157,.18)}
+.u-selected .handle{position:absolute;width:8px;height:8px;border-radius:50%;background:#ff6b9d;box-shadow:0 0 0 2px #fff}
+.u-selected .h1{left:-4px;top:-4px}.u-selected .h2{right:-4px;top:-4px}
+.u-selected .h3{left:-4px;bottom:-4px}.u-selected .h4{right:-4px;bottom:-4px}
+.u-size{position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);padding:3px 7px;border-radius:6px;background:rgba(16,14,20,.8);color:#fff;font-size:9px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-dotgrid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.18) 1px, transparent 1px);background-size:24px 24px;opacity:.5}
+
+/* mini layout preview (store) */
+.u-mp{position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#1d2534,#0d1118);border:1px solid rgba(255,255,255,.10)}
+.u-mp .dot{position:absolute;border-radius:50%;background:rgba(255,255,255,.26);border:1px solid rgba(255,255,255,.30)}
+.u-mp .bar{position:absolute;border-radius:3px;background:rgba(255,255,255,.22)}
+.u-mp .arc{position:absolute;border-radius:50%;border:1px dashed rgba(255,255,255,.18)}
+.u-mp .accentdot{background:rgba(255,143,163,.62);border-color:rgba(255,143,163,.75)}
+
+/* phone chrome */
+.p-status{position:absolute;left:0;right:0;top:0;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:11px;font-weight:650;color:var(--ink);z-index:40}
+.p-status .r{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:.04em}
+.p-status svg{width:12px;height:12px}
+.p-wall{position:absolute;inset:0;background:
+  radial-gradient(70% 45% at 12% 0%, #ffd3e2 0%, rgba(255,211,226,0) 60%),
+  radial-gradient(60% 45% at 94% 12%, #cfe0f7 0%, rgba(207,224,247,0) 62%),
+  radial-gradient(70% 55% at 46% 100%, #e6d8f2 0%, rgba(230,216,242,0) 66%),
+  linear-gradient(180deg,#faf6f8,#f3eff4 60%,#efeaf1)}
+[data-theme="dark"] .p-wall{background:
+  radial-gradient(70% 45% at 12% 0%, rgba(150,70,105,.5), transparent 60%),
+  radial-gradient(60% 45% at 94% 12%, rgba(60,90,140,.42), transparent 62%),
+  radial-gradient(70% 55% at 46% 100%, rgba(100,78,140,.36), transparent 66%),
+  linear-gradient(180deg,#191a20,#14151a)}
+.p-appbar{position:absolute;left:0;right:0;top:44px;height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;z-index:30;color:var(--ink)}
+.p-appbar .t{flex:1;font-size:21px;font-weight:730;letter-spacing:-.02em}
+.p-appbar .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2)}
+.p-appbar .ic svg{width:19px;height:19px}
+.p-scroll{position:absolute;left:0;right:0;top:104px;bottom:0;padding:0 16px 26px;overflow:hidden;z-index:20}
+.p-group-label{font-size:19px;font-weight:730;color:var(--accent-ink);letter-spacing:-.01em;margin:12px 2px 10px}
+.p-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-card);overflow:hidden}
+.p-card + .p-card{margin-top:12px}
+.p-card > .u-mp:first-child{border-radius:18px 18px 0 0}
+.p-rows{padding:2px 14px}
+.p-row{display:flex;align-items:center;gap:11px;min-height:54px;padding:9px 0}
+.p-row + .p-row{border-top:1px solid var(--line)}
+.p-row .txt{flex:1;min-width:0}
+.p-row .t{font-size:14px;font-weight:560;color:var(--ink)}
+.p-row .s{margin-top:2px;font-size:11px;color:var(--ink-2);line-height:1.4}
+.p-row .chev{width:16px;height:16px;color:var(--ink-3);flex:0 0 auto}
+.p-hero{padding:16px;border-radius:22px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow-card);position:relative;overflow:hidden}
+.p-hero::before{content:"";position:absolute;right:-40px;top:-56px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,157,.22),transparent 70%)}
+.p-bottombar{position:absolute;left:14px;right:14px;bottom:16px;height:58px;border-radius:19px;background:var(--surface);border:1px solid var(--line);box-shadow:0 14px 34px rgba(40,25,45,.16);display:flex;align-items:center;padding:5px;z-index:50;backdrop-filter:blur(18px)}
+.p-bottombar .navi{flex:1;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;font-weight:620;color:var(--ink-2)}
+.p-bottombar .navi svg{width:17px;height:17px}
+.p-bottombar .navi.on{background:var(--accent-focus);color:var(--accent-ink)}
+.p-sticky{position:absolute;left:0;right:0;bottom:0;padding:12px 16px 20px;background:linear-gradient(transparent,var(--page-2) 34%);display:flex;gap:9px;align-items:center;z-index:45}
+.p-sticky .u-btn{height:46px}
+.p-sticky .icon{width:46px;height:46px;flex:0 0 auto;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--ink-2)}
+.p-sticky .icon svg{width:18px;height:18px}
+.p-sticky .u-btn.primary{flex:1}
+
+/* store grid */
+.store-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.store-card{border:1px solid var(--line);border-radius:16px;background:var(--surface-solid);overflow:hidden;box-shadow:0 6px 18px rgba(48,30,52,.07)}
+.store-card .cp{height:84px}
+.store-card .cb{padding:9px 10px 11px}
+.store-card .ct{font-size:12.5px;font-weight:650;line-height:1.3;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-card .cm{margin-top:3px;font-size:9.5px;color:var(--ink-2);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-card .cf{margin-top:7px;display:flex;align-items:center;justify-content:space-between;font-size:9px;color:var(--ink-3)}
+.store-card .cf .dl{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink)}
+.store-card .cf svg{width:12px;height:12px}
+.store-card .cf .cf-chev{width:18px;height:18px;display:grid;place-items:center;color:var(--ink-3)}
+.store-search{display:flex;gap:8px;align-items:center;margin-top:4px}
+.store-search .f{flex:1;height:42px;border-radius:13px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;font-size:12px;color:var(--ink-3);box-shadow:var(--shadow-card)}
+.store-search .f svg{width:15px;height:15px;color:var(--accent-ink)}
+.store-search .b{width:42px;height:42px;border-radius:13px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-2);box-shadow:var(--shadow-card)}
+.store-search .b svg{width:16px;height:16px}
+.chip-row{display:flex;gap:7px;margin-top:10px;overflow:hidden}
+
+/* screen layout */
+.screens{display:grid;gap:34px}
+.screen{display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:30px;align-items:start}
+.screen.full{grid-template-columns:minmax(0,1fr)}
+.screen-head{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:-8px}
+.screen-id{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--accent-ink)}
+.screen-name{font-size:15px;font-weight:700;margin-left:10px}
+.screen-tag{margin-left:auto;font-size:10.5px;color:var(--ink-3)}
+.aside{position:sticky;top:26px;padding:18px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-card)}
+.aside h4{font-size:10px;letter-spacing:.11em;color:var(--ink-3);font-weight:800;text-transform:uppercase;margin-bottom:11px}
+.aside ul{list-style:none;display:grid;gap:9px;padding:0}
+.aside li{position:relative;padding-left:13px;font-size:11.5px;line-height:1.55;color:var(--ink-2)}
+.aside li::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.aside li b{color:var(--ink);font-weight:650}
+.port-row{display:grid;grid-template-columns:repeat(3,390px);gap:26px;justify-content:center;margin-top:8px}
+.port-item{display:grid;gap:12px}
+.port-cap{display:grid;gap:6px}
+.port-cap .h{display:flex;align-items:baseline;gap:8px}
+.port-cap .id{font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--accent-ink)}
+.port-cap .n{font-size:13px;font-weight:680}
+.port-cap p{font-size:11px;line-height:1.6;color:var(--ink-2)}
+
+/* mapping table */
+.table-wrap{border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-card)}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{text-align:left;padding:11px 14px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-sunk);border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2);line-height:1.55}
+tr:last-child td{border-bottom:0}
+td b{color:var(--ink);font-weight:650}
+td code{font-family:var(--mono);font-size:10px;color:var(--accent-ink);background:var(--accent-soft);padding:1px 4px;border-radius:4px}
+.roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.step{padding:16px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-card)}
+.step .p{font-size:9.5px;font-weight:800;letter-spacing:.12em;color:var(--accent-ink)}
+.step b{display:block;margin-top:8px;font-size:13px}
+.step p{margin-top:6px;font-size:11px;line-height:1.6;color:var(--ink-2)}
+.footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;font-size:10.5px;color:var(--ink-3);line-height:1.6}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px;padding-top:16px;border-top:1px solid var(--line)}
+.toc a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:11px;color:var(--ink-2);text-decoration:none;transition:border-color .15s,color .15s}
+.toc a:hover{border-color:rgba(255,107,157,.5);color:var(--accent-ink)}
+.toc a b{font-size:9.5px;letter-spacing:.1em;color:var(--accent-ink)}
+.toc .jump{margin-left:auto;border-color:transparent;background:transparent;color:var(--ink-3)}
+
+svg{display:block}
+.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+@media (max-width:1400px){
+  .screen{grid-template-columns:minmax(0,1fr)}
+  .aside{position:static;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .aside h4{grid-column:1/-1}
+  .port-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .frame.port{width:100%;height:auto;aspect-ratio:390/844}
+}
+@media (max-width:1080px){
+  .diag-grid{grid-template-columns:1fr 1fr}
+  .token-split{grid-template-columns:1fr}
+  .comp-grid{grid-template-columns:1fr 1fr}
+  .port-row{grid-template-columns:1fr;justify-items:center}
+  .frame.port{width:390px;height:844px}
+  .roadmap{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .page{padding:24px 18px 60px}
+  .cover{grid-template-columns:1fr}
+  .cover-side{align-items:flex-start}
+  .diag-grid,.comp-grid{grid-template-columns:1fr}
+  .aside{grid-template-columns:1fr}
+  .screen-head{flex-wrap:wrap}
+  .frame.port{width:100%;height:auto;aspect-ratio:390/844}
+}
+</style>
+</head>
+<body>
+<main class="page" id="top">
+
+  <!-- ============ COVER ============ -->
+  <header class="cover">
+    <div>
+      <div class="kicker"><span class="dot"></span>Crown / 王冠 · UI Redesign</div>
+      <h1>把王冠，<span>收回应用的设计语言里</span></h1>
+      <p class="lede">
+        王冠现在有三套互不相干的视觉：主应用是<b>浅色玻璃面板 + 粉色强调</b>，串流面板是<b>320dp 的深色工具条</b>，超市又换成了<b>裸 Material 3 与另一套色板</b>。
+        这版方案不改功能，只做一件事：让王冠的所有界面回到同一套 <code>ui_shell_*</code> token、同一套字号层级、同一套圆角与留白规则，并把「配置 / 编辑 / 绑定 / 分享」重新组织成可读的层级。
+      </p>
+      <div class="chips">
+        <span class="hot">覆盖 13 个界面</span><span>浅色 / 夜间同源</span><span>View + Compose 双语汇</span><span>不改信息架构</span><span>全部指向现有资源语义</span>
+      </div>
+    </div>
+    <div class="cover-side">
+      <button class="theme-toggle" id="themeToggle" type="button">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/></svg>
+        <span id="themeLabel">切换夜间预览</span>
+      </button>
+      <div class="cover-note">所有尺寸按 dp 标注<br>面板宽度 380dp · 行高 52dp · 圆角 20dp</div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="目录">
+    <a href="#diag"><b>01</b> 诊断</a>
+    <a href="#system"><b>02</b> 设计系统</a>
+    <a href="#stream"><b>03</b> 串流内 · L1–L8</a>
+    <a href="#store"><b>04</b> 设置与超市 · P1–P5</a>
+    <a href="#mapping"><b>05</b> 落地方式</a>
+    <a class="jump" href="#top">回到顶部 ↑</a>
+  </nav>
+
+  <!-- ============ 01 DIAGNOSIS ============ -->
+  <section class="section" id="diag">
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <div>
+        <h2 class="section-title">为什么「不搭」：四个可量化的问题</h2>
+        <p class="section-desc">不是审美偏好问题，而是三套体系并存、token 各自为政、密度与字号失控。完整清单见 <code>docs/CROWN_UI_INVENTORY.md</code>。</p>
+      </div>
+    </div>
+    <div class="diag-grid">
+      <div class="diag">
+        <span class="n">A · 体系分裂</span>
+        <b>三套皮肤，三种语法</b>
+        <p>主应用是 View + <code>ui_shell_*</code> 浅色玻璃；串流王冠是另一套 320dp 深色工具条；超市是 Compose 且直接 <code>MaterialTheme{}</code> 默认主题，连 <code>DropdownMenu</code> 都是 Material 默认紫。</p>
+        <div class="code">CrownStoreActivity.kt:331 · page_config.xml · game_menu_*</div>
+      </div>
+      <div class="diag">
+        <span class="n">B · 色彩脱轨</span>
+        <b>夜间色板方向反了</b>
+        <p>超市夜间底色 <code>#4D464A</code>（褐灰），比卡片更亮；卡片 <code>#CC252833</code> 叠上去反而更黑，读作「凹洞」。主按钮夜间用近白字压浅粉，对比度约 <b>1.9:1</b>。</p>
+        <div class="code">crown_store_colors.xml · CrownActionButton:1296</div>
+      </div>
+      <div class="diag">
+        <span class="n">C · 密度与字号</span>
+        <b>13 个页面，18 种字号</b>
+        <p>属性页 60 多个 58dp 滑杆平铺，标签 11–12sp、按钮 10.5sp、键盘键 8–10sp；超市出现 8 个小数号（15.4 / 13.5 / 11.6 / 10.4…），毫无层级。</p>
+        <div class="code">page_*_clean.xml · CrownStoreActivity 字号</div>
+      </div>
+      <div class="diag">
+        <span class="n">D · 交互裸奔</span>
+        <b>原生控件 + 隐藏操作</b>
+        <p>配置用原生 Spinner、弹窗列表用 <code>simple_list_item_1</code>、输入框下划线；删除藏在长按里；卡片平铺 4 个同权按钮；32dp 图标按钮低于 48dp 触控标准。</p>
+        <div class="code">CrownConfigPickerDialog:43 · page_config.xml:53</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 DESIGN SYSTEM ============ -->
+  <section class="section" id="system">
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <div>
+        <h2 class="section-title">一套 token，两个主题</h2>
+        <p class="section-desc">颜色全部复用现有语义槽位，不新增品牌色；圆角沿用 4/8/12/16/20/24；字号收敛为 5 档，正文最小 11sp，触控最小 48dp。</p>
+      </div>
+    </div>
+
+    <div class="token-split">
+      <div class="token-block">
+        <h3>Surface &amp; accent</h3>
+        <div class="swatches">
+          <div class="sw"><div class="fill" style="background:#f6f3f6"></div><div class="meta"><b>页面底</b><code>#F6F3F6</code><br>settings_page_background</div></div>
+          <div class="sw"><div class="fill" style="background:rgba(255,255,255,.74);box-shadow:inset 0 0 0 1px rgba(29,27,32,.08)"></div><div class="meta"><b>面板 / 卡片</b><code>#F7FFFFFF</code><br>ui_shell_surface</div></div>
+          <div class="sw"><div class="fill" style="background:#ff6b9d"></div><div class="meta"><b>强调</b><code>#FF6B9D</code><br>ui_shell_accent</div></div>
+          <div class="sw"><div class="fill" style="background:rgba(255,107,157,.13)"></div><div class="meta"><b>强调底</b><code>#1AFF6B9D</code><br>accent_soft 10%</div></div>
+          <div class="sw"><div class="fill" style="background:#1f2026"></div><div class="meta"><b>主文字</b><code>#1F2026</code><br>ui_shell_text_primary</div></div>
+          <div class="sw"><div class="fill" style="background:#4e5158"></div><div class="meta"><b>次文字</b><code>#242830 82%</code><br>text_secondary</div></div>
+          <div class="sw"><div class="fill" style="background:rgba(29,27,32,.13)"></div><div class="meta"><b>描边</b><code>#261D1B20</code><br>ui_shell_outline</div></div>
+          <div class="sw"><div class="fill" style="background:#20161b"></div><div class="meta"><b>强调上文字</b><code>#20161B</code><br>add_pc_on_accent</div></div>
+        </div>
+        <div class="swatches" style="margin-top:12px">
+          <div class="sw"><div class="fill" style="background:#18191f"></div><div class="meta"><b>夜间底</b><code>#18191F</code><br>settings_page_background</div></div>
+          <div class="sw"><div class="fill" style="background:#1c1d22"></div><div class="meta"><b>夜间面板</b><code>#E61C1D22</code><br>ui_shell_surface</div></div>
+          <div class="sw"><div class="fill" style="background:#ff8fa3"></div><div class="meta"><b>夜间强调</b><code>#FF8FA3</code><br>ui_shell_accent</div></div>
+          <div class="sw"><div class="fill" style="background:#f7f3f7"></div><div class="meta"><b>夜间文字</b><code>#F7F3F7</code><br>ui_shell_text_primary</div></div>
+        </div>
+        <p class="note-line">超市的 <code>crown_store_*</code> 八个角色色全部删除，改为引用上表；夜间卡片比页面底更亮（#23242B &gt; #18191F），恢复「抬升」方向。</p>
+      </div>
+
+      <div class="token-block">
+        <h3>Type scale · 5 档</h3>
+        <div class="type-list">
+          <div class="type-row"><span class="lab">Display</span><span style="font-size:22px;font-weight:730;letter-spacing:-.02em">王冠超市</span><span class="spec">22 / 28 · 700</span></div>
+          <div class="type-row"><span class="lab">Title</span><span style="font-size:16px;font-weight:700">当前配置 · Apex</span><span class="spec">16 / 22 · 700</span></div>
+          <div class="type-row"><span class="lab">Body</span><span style="font-size:13px">拖动移动、双指缩放、对齐吸附</span><span class="spec">13 / 18 · 560</span></div>
+          <div class="type-row"><span class="lab">Label</span><span style="font-size:11px;color:var(--ink-2)">触控板灵敏度</span><span class="spec">11 / 15 · 560</span></div>
+          <div class="type-row"><span class="lab">Micro</span><span style="font-size:9.5px;letter-spacing:.13em;font-weight:800;color:var(--accent-ink)">QUICK CONTROL</span><span class="spec">9.5 · 800 · +13%</span></div>
+        </div>
+        <h3 style="margin-top:22px">Geometry</h3>
+        <div class="geom-list">
+          <div class="geom-row"><span class="lab">圆角</span><div class="bars"><i style="width:18px;border-radius:4px"></i><i style="width:26px;border-radius:8px"></i><i style="width:34px;border-radius:12px"></i><i style="width:42px;border-radius:16px"></i><i style="width:50px;border-radius:20px"></i><i style="width:58px;border-radius:24px"></i><span style="font-size:10px;color:var(--ink-3)">4 · 8 · 12 · 16 · 20 · 24</span></div></div>
+          <div class="geom-row"><span class="lab">行高</span><div class="bars"><i style="width:34px"></i><i style="width:40px"></i><i style="width:46px"></i><span style="font-size:10px;color:var(--ink-3)">紧凑 44 · 标准 52 · 分组头 9.5sp</span></div></div>
+          <div class="geom-row"><span class="lab">触控</span><div class="bars"><i style="width:26px;border-radius:50%"></i><i style="width:34px;border-radius:50%"></i><i style="width:42px;border-radius:50%"></i><span style="font-size:10px;color:var(--ink-3)">图标 32+8padding · 按钮 42 · 行 52</span></div></div>
+          <div class="geom-row"><span class="lab">栅格</span><div class="bars"><i style="width:14px"></i><i style="width:22px"></i><i style="width:30px"></i><i style="width:38px"></i><span style="font-size:10px;color:var(--ink-3)">4 / 8 / 12 / 16 / 20 / 24</span></div></div>
+        </div>
+        <p class="note-line">滑杆从 58–62dp 收到 40dp；属性页由单列平铺改为 2 列，滚动长度约减半。所有点击目标 ≥ 48dp。</p>
+      </div>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp">
+        <h4>Buttons</h4>
+        <div class="comp-row">
+          <span class="u-btn primary"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg>完成</span>
+          <span class="u-btn">取消</span>
+          <span class="u-btn ghost">稍后</span>
+          <span class="u-btn danger">删除</span>
+          <span class="u-iconbtn soft"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="u-iconbtn"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></span>
+        </div>
+        <p class="comp-cap">主操作只保留一个；危险操作用 danger 文字 + 极浅底，不再和主按钮同权。</p>
+      </div>
+      <div class="comp">
+        <h4>Switch · Slider</h4>
+        <div class="comp-row">
+          <span class="u-sw on"></span><span class="u-sw"></span><span class="u-sw off-dis"></span>
+          <span style="font-size:10px;color:var(--ink-3)">36×18dp · accent 82%</span>
+        </div>
+        <div style="margin-top:14px;max-width:280px">
+          <div class="u-slider"><div class="top"><span class="name">触控板灵敏度</span><span class="num">100</span></div><div class="track"><span class="fill" style="width:72%"></span><span class="knob" style="left:72%"></span></div><div class="ends"><span>1</span><span>1000</span></div></div>
+        </div>
+        <p class="comp-cap">数值变成可点的 pill；± 从缩放位图改为 36dp 图标按钮。</p>
+      </div>
+      <div class="comp">
+        <h4>Segmented · Chips</h4>
+        <div style="max-width:300px">
+          <div class="u-seg"><button class="on">布局</button><button>触控</button><button>反馈</button></div>
+        </div>
+        <div class="comp-row" style="margin-top:12px">
+          <span class="u-chip on">全部</span><span class="u-chip">最新</span><span class="u-chip">横屏</span>
+        </div>
+        <p class="comp-cap">分段控件替代 46dp 等宽箭头行；筛选 chip 替代无着色的排序下拉。</p>
+      </div>
+      <div class="comp">
+        <h4>Keycaps</h4>
+        <div class="comp-row" style="gap:6px">
+          <span class="u-key" style="flex:0 0 44px">Esc</span>
+          <span class="u-key mod" style="flex:0 0 50px">Ctrl</span>
+          <span class="u-key sel" style="flex:0 0 36px">E</span>
+          <span class="u-key lock" style="flex:0 0 44px">Shift</span>
+        </div>
+        <p class="comp-cap">常态 / 修饰 / 选中 / 锁定四态同源；锁定 = accent 30% + 角标，不再用另一套 selector。</p>
+      </div>
+      <div class="comp">
+        <h4>Rows · Fields</h4>
+        <div style="max-width:330px">
+          <div class="u-row tight" style="border-top:0"><span class="u-ic accent"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></span><div class="u-txt"><div class="u-lbl">编辑布局</div><div class="u-desc">拖动、缩放、对齐控件</div></div><svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+          <div class="u-row tight"><div class="u-txt"><div class="u-lbl">绑定按键</div></div><span class="u-field" style="width:120px;height:32px"><span class="val">A</span><svg class="i" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></span></div>
+        </div>
+        <p class="comp-cap">字段统一 38dp 圆角输入；不再出现下划线 EditText 与原生 Spinner。</p>
+      </div>
+      <div class="comp">
+        <h4>Feedback</h4>
+        <div class="comp-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+          <span class="u-toast"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg>已切换到 FPS 布局</span>
+          <span class="u-toast light"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor" stroke="none"/></svg>当前画面没有可采样的控件</span>
+        </div>
+        <p class="comp-cap">Toast 统一视觉重量；错误信息改内联提示，不再只靠 Toast。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 IN-STREAM ============ -->
+  <section class="section" id="stream">
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <div>
+        <h2 class="section-title">串流内：从「工具条」变成「面板」</h2>
+        <p class="section-desc">统一 380dp 侧栏、20dp 内缩、20dp 圆角；顶部是身份与状态，中间是分组，底部是唯一主操作。所有页面共用同一个 header / 分段 / 卡片 / 行组件。</p>
+      </div>
+    </div>
+    <div class="screens">
+
+      <!-- L1 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L1</span><span class="screen-name">王冠面板 · 概览</span><span class="screen-tag">串流中 · 380dp 侧栏</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="streak" style="top:38%"></span><span class="streak" style="top:61%;opacity:.6"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-panel">
+            <div class="u-head">
+              <span class="u-mark"><svg class="i" viewBox="0 0 24 24"><path d="M3.6 17.4h16.8M4.9 17.4 3.7 8.1l5 3.2L12 5.3l3.3 6 5-3.2-1.2 9.3"/></svg></span>
+              <div class="txt"><div class="u-title">王冠</div><div class="u-sub">Apex 布局 · 12 个控件</div></div>
+              <span class="u-iconbtn"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+            </div>
+            <div class="u-body">
+              <div class="u-profile">
+                <div class="u-thumb"><span class="mini a"></span><span class="mini b"></span><span class="mini c"></span><span class="mini d"></span></div>
+                <div class="u-txt">
+                  <div class="u-lbl">当前配置</div>
+                  <div class="u-desc">横屏 16:9 · 已适配当前串流</div>
+                </div>
+                <button class="u-btn sm">切换</button>
+              </div>
+              <div class="u-label">快速控制</div>
+              <div class="u-card">
+                <div class="u-row">
+                  <span class="u-ic accent"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V19.5"/></svg></span>
+                  <div class="u-txt"><div class="u-lbl">显示屏幕按键</div><div class="u-desc">退出编辑时恢复显示</div></div>
+                  <span class="u-sw on"></span>
+                </div>
+                <div class="u-row">
+                  <span class="u-ic accent"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2"/><circle cx="12" cy="12" r="2.4"/><path d="M12 4.8v2M12 17.2v2M4.8 12h2M17.2 12h2"/></svg></span>
+                  <div class="u-txt"><div class="u-lbl">触控输入</div><div class="u-desc">触控板 + 鼠标指针</div></div>
+                  <span class="u-sw on"></span>
+                </div>
+                <div class="u-row">
+                  <span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 9v6M7.5 6.5v11M16.5 6.5v11M20 9v6M12 8.5v7"/></svg></span>
+                  <div class="u-txt"><div class="u-lbl">震动反馈</div><div class="u-desc">设备震动与按键震动均已关闭</div></div>
+                  <span class="u-sw"></span>
+                </div>
+              </div>
+              <div class="u-label">当前方案</div>
+              <div class="u-card">
+                <div class="u-row">
+                  <span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="12" r="1.6"/><circle cx="15" cy="17" r="1.6"/></svg></span>
+                  <div class="u-txt"><div class="u-lbl">方案设置</div><div class="u-desc">触控灵敏度、滚轮速度、震动</div></div>
+                  <svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+                <div class="u-row">
+                  <span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg></span>
+                  <div class="u-txt"><div class="u-lbl">导入 / 导出配置</div><div class="u-desc">.crown 分享包或旧版 .mdat</div></div>
+                  <svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+              </div>
+            </div>
+            <div class="u-foot">
+              <button class="u-btn ghost">退出</button>
+              <button class="u-btn primary"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l4.2-1 10.3-10.3a2 2 0 0 0 0-2.8l-1.4-1.4a2 2 0 0 0-2.8 0L4 14.8 3 19l1 1Z"/></svg>编辑布局</button>
+            </div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>头部承载身份</b>：皇冠标记 + 当前配置名 + 控件数，替代只写「王冠」的标题条。</li>
+            <li><b>配置卡可切换</b>：46dp 缩略图给出布局气质，「切换」直接进入现有配置选择器。</li>
+            <li><b>开关分组</b>：显示 / 触控 / 震动三行一组，和设置页的开关语言一致。</li>
+            <li><b>唯一主操作</b>：「编辑布局」为 primary，「退出」降为 ghost，不再四个箭头行同权。</li>
+            <li><b>尺寸</b>：320→380dp；行 52dp；控件 36dp；字号 13/11 替代 13/10。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L2 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L2</span><span class="screen-name">方案设置 · 触控与反馈</span><span class="screen-tag">分段导航 + 分组卡片</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-panel">
+            <div class="u-head">
+              <span class="u-iconbtn soft"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span>
+              <div class="txt"><div class="u-title">方案设置</div><div class="u-sub">Apex 布局</div></div>
+              <span class="u-iconbtn"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+            </div>
+            <div class="u-body fade">
+              <div class="u-seg"><button>布局</button><button class="on">触控</button><button>反馈</button></div>
+              <div class="u-label">指针与触控</div>
+              <div class="u-card">
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">鼠标指针</div><div class="u-desc">在串流中显示鼠标指针</div></div><span class="u-sw on"></span></div>
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">触控板</div><div class="u-desc">使用虚拟触控板输入</div></div><span class="u-sw on"></span></div>
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">增强触控</div><div class="u-desc">支持双指手势与滚动</div></div><span class="u-sw"></span></div>
+              </div>
+              <div class="u-label">灵敏度</div>
+              <div class="u-card">
+                <div class="u-slider"><div class="top"><span class="name">触控板灵敏度</span><span class="num">100</span></div><div class="track"><span class="fill" style="width:52%"></span><span class="knob" style="left:52%"></span></div><div class="ends"><span>1</span><span>1000</span></div></div>
+                <div class="u-slider" style="border-top:1px solid rgba(29,27,32,.08);padding-top:10px"><div class="top"><span class="name">滚轮速度</span><span class="num">20</span></div><div class="track"><span class="fill" style="width:20%"></span><span class="knob" style="left:20%"></span></div><div class="ends"><span>1</span><span>100</span></div></div>
+              </div>
+              <div class="u-label">震动反馈</div>
+              <div class="u-card">
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">设备震动</div><div class="u-desc">转发主机震动到本机</div></div><span class="u-sw on"></span></div>
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">按键震动</div><div class="u-desc">按下屏幕按键时轻震</div></div><span class="u-sw on"></span></div>
+              </div>
+            </div>
+            <div class="u-foot">
+              <button class="u-btn ghost">恢复默认</button>
+              <button class="u-btn primary">完成</button>
+            </div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>原生 Spinner 退场</b>：配置切换移到概览卡的「切换」，页面内不再出现系统下拉。</li>
+            <li><b>滑杆重做</b>：标题 + 数值 pill + 轨道 + 端点值，单行 40dp；替代 62dp 的 ± 位图按钮条。</li>
+            <li><b>分段导航</b>：布局 / 触控 / 反馈 三段，替代纵向堆叠和「方案设置」再进一页。</li>
+            <li><b>分组标题</b>：9.5sp 字距 +13% 的 accent 小标题，替代 13sp 粗体大标题。</li>
+            <li><b>底部收口</b>：恢复默认（ghost）+ 完成（primary），不再四个同权图标。</li>
+            <li><b>面板内滚动</b>：内容超出时在面板内滚动，页脚操作固定；底缘渐隐提示还有内容。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L3 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L3</span><span class="screen-name">编辑布局 · 画布与选中态</span><span class="screen-tag">全屏画布 + 浮动工具条</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-stage">
+            <div class="u-dotgrid"></div>
+            <!-- resting controls -->
+            <div class="u-ctrl" style="left:8%;bottom:12%;width:104px;height:104px"><span style="opacity:.55">摇杆</span></div>
+            <div class="u-ctrl" style="left:calc(8% + 36px);bottom:calc(12% + 36px);width:36px;height:36px;border:none;background:rgba(255,255,255,.18)"></div>
+            <div class="u-ctrl sq dim" style="left:22%;bottom:16%;width:40px;height:40px">跳</div>
+            <div style="position:absolute;right:8%;bottom:12%;width:130px;height:130px">
+              <div class="u-ctrl dim" style="left:43px;top:0;width:44px;height:44px">Y</div>
+              <div class="u-ctrl dim" style="left:0;top:43px;width:44px;height:44px">X</div>
+              <div class="u-ctrl dim" style="left:86px;top:43px;width:44px;height:44px">B</div>
+              <div class="u-ctrl dim" style="left:43px;top:86px;width:44px;height:44px">A</div>
+            </div>
+            <!-- selected -->
+            <div class="u-selected" style="left:56%;top:46%;width:88px;height:88px">
+              <div class="u-ctrl sq" style="inset:0;width:100%;height:100%;border-radius:14px;background:rgba(255,107,157,.22);border-color:#ff6b9d;font-size:12px">攻击</div>
+              <span class="handle h1"></span><span class="handle h2"></span><span class="handle h3"></span><span class="handle h4"></span>
+              <span class="u-size">88 × 88 · 吸附 24</span>
+            </div>
+            <!-- toolbar -->
+            <div class="u-toolbar">
+              <span class="tb on" title="对齐吸附"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6"/></svg></span>
+              <span class="tb" title="网格"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg></span>
+              <span class="tb" title="自动配色"><svg class="i" viewBox="0 0 24 24"><path d="M12 3.5l1.7 4.4 4.4 1.7-4.4 1.7L12 15.7l-1.7-4.4L5.9 9.6l4.4-1.7L12 3.5Z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/></svg></span>
+              <span class="sep"></span>
+              <span class="tb" title="撤销"><svg class="i" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5 5 0 0 1 0 10h-2"/></svg></span>
+              <span class="done"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg>完成</span>
+            </div>
+            <div class="u-hintbar"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor" stroke="none"/></svg>拖动移动 · 双指缩放 · 对齐吸附已开启</div>
+            <div class="u-fab"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加控件</div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>选中态可读</b>：1.5dp accent 描边 + 4 个角手柄 + 尺寸/吸附信息，替代只靠拖动的无反馈。</li>
+            <li><b>工具条上移居中</b>：吸附 / 网格 / 自动配色 / 撤销 + 完成，替代右上角两个 32dp 图标。</li>
+            <li><b>添加控件变 FAB</b>：12 个平铺的「添加…」行收进底部主操作，弹层里再按类别分组。</li>
+            <li><b>提示常驻但不打扰</b>：底部胶囊只说明当前手势，可随 5 秒淡出。</li>
+            <li><b>画布不遮挡</b>：所有 chrome 距边缘 16–18dp，控件落在安全区内。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L4 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L4</span><span class="screen-name">控件属性 · Inspector</span><span class="screen-tag">380dp 侧栏 · 实时预览</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-stage">
+            <div class="u-dotgrid"></div>
+            <div class="u-ctrl" style="left:10%;bottom:14%;width:100px;height:100px"><span style="opacity:.5">摇杆</span></div>
+            <div class="u-ctrl dim" style="right:12%;bottom:16%;width:46px;height:46px">B</div>
+            <div class="u-selected" style="left:47%;top:42%;width:84px;height:84px"><div class="u-ctrl sq" style="inset:0;width:100%;height:100%;border-radius:16px;background:rgba(255,107,157,.22);border-color:#ff6b9d;font-size:12px">攻击</div><span class="handle h1"></span><span class="handle h2"></span><span class="handle h3"></span><span class="handle h4"></span></div>
+          </div>
+          <div class="u-panel insp">
+            <div class="u-head">
+              <div class="txt"><div class="u-title">攻击按钮</div><div class="u-sub">数字按钮 · 已选中 1 个控件</div></div>
+              <span class="u-iconbtn soft"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M6 15.5H5a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 5 3.5h9A1.5 1.5 0 0 1 15.5 5v1"/></svg></span>
+              <span class="u-iconbtn danger"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M9.5 7V5h5v2M7 7l1 12.5h8L17 7"/></svg></span>
+            </div>
+            <div class="u-body fade">
+              <div class="u-preview" style="position:relative;height:84px;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,#232b3a,#0e121a);border:1px solid rgba(255,255,255,.10)">
+                <div style="position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);display:flex;gap:12px;align-items:center">
+                  <div style="display:grid;gap:5px;justify-items:center"><span style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.34);display:grid;place-items:center;font-size:11px;color:#fff">攻击</span><span style="font-size:8px;color:rgba(255,255,255,.5)">常态</span></div>
+                  <div style="display:grid;gap:5px;justify-items:center"><span style="width:46px;height:46px;border-radius:12px;background:rgba(255,107,157,.4);border:1px solid #ff6b9d;display:grid;place-items:center;font-size:11px;color:#fff">攻击</span><span style="font-size:8px;color:rgba(255,255,255,.5)">按下</span></div>
+                </div>
+                <span style="position:absolute;right:8px;top:8px;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.12);font-size:8px;color:rgba(255,255,255,.7)">实时预览</span>
+              </div>
+              <div class="u-label">基础</div>
+              <div class="u-card">
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">显示文本</div></div><span class="u-field" style="width:132px;height:32px"><span class="val">攻击</span></span></div>
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">绑定按键</div><div class="u-desc">Mouse 1 · 长按重复触发</div></div><span class="u-field" style="width:132px;height:32px"><span class="val">Mouse 1</span><svg class="i" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></span></div>
+                <div class="u-row tight"><div class="u-txt"><div class="u-lbl">触控与动作</div><div class="u-desc">长按行为、重复频率 · 2 项</div></div><svg class="i u-chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></div>
+              </div>
+              <div class="u-label">位置与尺寸</div>
+              <div class="u-card">
+                <div class="u-grid2">
+                  <div class="u-slider compact"><div class="top"><span class="name">X</span><span class="num">82</span></div><div class="track"><span class="fill" style="width:82%"></span><span class="knob" style="left:82%"></span></div></div>
+                  <div class="u-slider compact"><div class="top"><span class="name">Y</span><span class="num">64</span></div><div class="track"><span class="fill" style="width:64%"></span><span class="knob" style="left:64%"></span></div></div>
+                  <div class="u-slider compact"><div class="top"><span class="name">宽度</span><span class="num">84</span></div><div class="track"><span class="fill" style="width:56%"></span><span class="knob" style="left:56%"></span></div></div>
+                  <div class="u-slider compact"><div class="top"><span class="name">高度</span><span class="num">84</span></div><div class="track"><span class="fill" style="width:56%"></span><span class="knob" style="left:56%"></span></div></div>
+                </div>
+              </div>
+              <div class="u-label">外观</div>
+              <div class="u-card">
+                <div class="u-grid2">
+                  <div class="u-slider compact"><div class="top"><span class="name">圆角</span><span class="num">16</span></div><div class="track"><span class="fill" style="width:32%"></span><span class="knob" style="left:32%"></span></div></div>
+                  <div class="u-slider compact"><div class="top"><span class="name">描边</span><span class="num">2</span></div><div class="track"><span class="fill" style="width:20%"></span><span class="knob" style="left:20%"></span></div></div>
+                </div>
+                <div class="u-color"><span class="u-swatch" style="background:#7a3b52"><span class="checker"></span></span><span class="name">背景颜色</span><span class="hex">#80000000</span><svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+                <div class="u-color"><span class="u-swatch" style="background:#ffffff"></span><span class="name">文字颜色</span><span class="hex">#FFFFFF</span><svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+              </div>
+            </div>
+            <div class="u-foot">
+              <button class="u-btn ghost">复制控件</button>
+              <button class="u-btn primary">完成</button>
+            </div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>先看再调</b>：顶部 88dp 实时预览常驻常态/按下两态，替代纯数值调参。</li>
+            <li><b>两列滑杆</b>：X/Y/宽/高 2×2，高度 40dp；属性页滚动长度减半。</li>
+            <li><b>颜色行</b>：色块 + 名称 + 等宽 hex + 箭头，点开取色器；替代只显示十六进制文本的「假输入框」。</li>
+            <li><b>渐进披露</b>：「触控与动作」折叠，默认只露高频项。</li>
+            <li><b>操作固定</b>：复制 / 完成移到页脚，删除降级为头部 danger 图标。</li>
+            <li><b>面板内滚动</b>：属性超出时在面板内滚动，页脚固定，底缘渐隐提示。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L5 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L5</span><span class="screen-name">输入绑定 · 键盘</span><span class="screen-tag">664dp 居中面板</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-panel wide">
+            <div class="u-head">
+              <span class="u-iconbtn soft"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span>
+              <div class="txt"><div class="u-title">选择输入</div><div class="u-sub">绑定到「攻击按钮」· 当前 Mouse 1</div></div>
+              <span class="u-iconbtn"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+            </div>
+            <div class="u-body">
+              <div class="u-seg">
+                <button><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>操作</button>
+                <button class="on"><svg class="i" viewBox="0 0 24 24"><rect x="2.8" y="6.5" width="18.4" height="11" rx="2.2"/><path d="M7 10h.01M10.2 10h.01M13.4 10h.01M16.6 10h.01M8 13.6h8"/></svg>键盘</button>
+                <button><svg class="i" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="4"/><path d="M12 7v3"/></svg>鼠标</button>
+                <button><svg class="i" viewBox="0 0 24 24"><path d="M7.4 8h9.2a5 5 0 0 1 4.9 4l.6 3.1A2.8 2.8 0 0 1 17 17l-2-2H9l-2 2a2.8 2.8 0 0 1-5-1.8l.6-3.2A5 5 0 0 1 7.4 8Z"/><path d="M8.4 11.5v3M6.9 13h3M15.6 12.2h.01M17.4 13.8h.01"/></svg>手柄</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+                <span class="u-chip on">主键盘</span><span class="u-chip">导航键</span><span class="u-chip">数字键盘</span>
+                <span style="margin-left:auto;font-size:9.5px;color:#7d8088">按住可连续录制 · 最多 5 个键</span>
+              </div>
+              <div class="u-kb">
+                <div class="u-kb-row"><span class="u-key w15">Esc</span><span class="u-key">1</span><span class="u-key">2</span><span class="u-key">3</span><span class="u-key">4</span><span class="u-key">5</span><span class="u-key">6</span><span class="u-key">7</span><span class="u-key">8</span><span class="u-key">9</span><span class="u-key">0</span><span class="u-key w15">⌫</span></div>
+                <div class="u-kb-row"><span class="u-key w15 mod">Tab</span><span class="u-key">Q</span><span class="u-key">W</span><span class="u-key sel">E</span><span class="u-key">R</span><span class="u-key">T</span><span class="u-key">Y</span><span class="u-key">U</span><span class="u-key">I</span><span class="u-key">O</span><span class="u-key">P</span><span class="u-key w15 mod">\</span></div>
+                <div class="u-kb-row"><span class="u-key w15 lock mod">Caps</span><span class="u-key">A</span><span class="u-key">S</span><span class="u-key">D</span><span class="u-key">F</span><span class="u-key">G</span><span class="u-key">H</span><span class="u-key">J</span><span class="u-key">K</span><span class="u-key">L</span><span class="u-key">;</span><span class="u-key w15 mod">Enter</span></div>
+                <div class="u-kb-row"><span class="u-key w25 mod">Shift</span><span class="u-key">Z</span><span class="u-key">X</span><span class="u-key">C</span><span class="u-key">V</span><span class="u-key">B</span><span class="u-key">N</span><span class="u-key">M</span><span class="u-key">,</span><span class="u-key">.</span><span class="u-key w2 mod">Shift</span></div>
+                <div class="u-kb-row"><span class="u-key w15 mod">Ctrl</span><span class="u-key w15 mod">Win</span><span class="u-key w15 mod">Alt</span><span class="u-key w6">Space</span><span class="u-key w15 mod">Alt</span><span class="u-key w15 mod">Ctrl</span></div>
+              </div>
+            </div>
+            <div class="u-foot">
+              <span class="u-hint">按下键盘上的按键即可绑定；带圆点的键表示已被其它控件占用</span>
+              <button class="u-btn ghost">取消</button>
+              <button class="u-btn primary">确认</button>
+            </div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>键帽统一</b>：30dp 高、8dp 圆角、1dp 描边；选中 accent 16%，锁定 accent 30% + 角标。</li>
+            <li><b>四种输入同构</b>：分段切换操作 / 键盘 / 鼠标 / 手柄，布局与底部动作不变。</li>
+            <li><b>子页 chip</b>：主键盘 / 导航 / 数字三页改为 chip，替代 42dp 的整条 tab。</li>
+            <li><b>提示进页脚</b>：绑定规则、占用说明不再挤在标题下方。</li>
+            <li><b>可读性</b>：键位文字 11sp（原 8–10sp），修饰键用底色区分而非仅字号。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L6 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L6</span><span class="screen-name">输入绑定 · 手柄</span><span class="screen-tag">同一套键帽语言</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-panel wide">
+            <div class="u-head">
+              <span class="u-iconbtn soft"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span>
+              <div class="txt"><div class="u-title">选择输入</div><div class="u-sub">绑定到「攻击按钮」· 当前 Mouse 1</div></div>
+              <span class="u-iconbtn"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+            </div>
+            <div class="u-body">
+              <div class="u-seg">
+                <button><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>操作</button>
+                <button><svg class="i" viewBox="0 0 24 24"><rect x="2.8" y="6.5" width="18.4" height="11" rx="2.2"/><path d="M7 10h.01M10.2 10h.01M13.4 10h.01M16.6 10h.01M8 13.6h8"/></svg>键盘</button>
+                <button><svg class="i" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="4"/><path d="M12 7v3"/></svg>鼠标</button>
+                <button class="on"><svg class="i" viewBox="0 0 24 24"><path d="M7.4 8h9.2a5 5 0 0 1 4.9 4l.6 3.1A2.8 2.8 0 0 1 17 17l-2-2H9l-2 2a2.8 2.8 0 0 1-5-1.8l.6-3.2A5 5 0 0 1 7.4 8Z"/><path d="M8.4 11.5v3M6.9 13h3M15.6 12.2h.01M17.4 13.8h.01"/></svg>手柄</button>
+              </div>
+              <div class="u-pad">
+                <div class="body"></div>
+                <span class="pill lt">LT</span><span class="pill lb">LB</span>
+                <span class="pill rb">RB</span><span class="pill rt">RT</span>
+                <div class="cross"><i class="up">▲</i><i class="left">◀</i><i class="right">▶</i><i class="down">▼</i></div>
+                <div class="stick l"></div><div class="stick r"></div>
+                <div class="face"><i class="y">Y</i><i class="x">X</i><i class="b">B</i><i class="a sel">A</i></div>
+                <div class="sys"><i></i><i class="bar"></i></div>
+              </div>
+            </div>
+            <div class="u-foot">
+              <span class="u-hint">移动摇杆 / 扳机可绑定为「轴」；按下 A 键确认</span>
+              <button class="u-btn ghost">取消</button>
+              <button class="u-btn primary">确认</button>
+            </div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>示意图重绘</b>：统一 1dp 描边、14–16dp 圆角、8dp 间距；替代 40×40 方块的拼贴。</li>
+            <li><b>选中可辨</b>：A 键选中态与键盘的「选中键」完全一致（accent 16% + 描边）。</li>
+            <li><b>轴可绑定</b>：摇杆与扳机是独立目标，不再只能选按键。</li>
+            <li><b>触摸/手柄双通路</b>：所有目标 ≥ 44dp，既可点击也可用手柄焦点移动。</li>
+            <li><b>视觉重量</b>：示意图落在卡片内，周围留白 ≥ 16dp，不贴着面板边缘。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L7 -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L7</span><span class="screen-name">切换配置 · 弹窗</span><span class="screen-tag">AppDialogStyle · 366dp</span></div>
+        <div class="frame land">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="scrim"></div>
+          <div class="u-dialog">
+            <div class="d-head"><div class="d-title">切换配置</div><div class="d-sub">选择后立即应用，触控与震动设置一并切换。</div></div>
+            <div class="d-body">
+              <div class="u-opt on">
+                <div class="u-thumb"><span class="mini a"></span><span class="mini b"></span><span class="mini c"></span></div>
+                <div class="o-txt"><div class="o-t">Apex 布局</div><div class="o-s">12 个控件 · 当前配置</div></div>
+                <span class="check"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg></span>
+              </div>
+              <div class="u-opt">
+                <div class="u-thumb" style="background:linear-gradient(160deg,#2c2438,#14101c)"><span class="mini a" style="left:8px;bottom:8px;width:13px;height:13px"></span><span class="mini c" style="right:9px;top:9px;width:12px;height:5px;border-radius:3px"></span></div>
+                <div class="o-txt"><div class="o-t">FPS 紧凑布局</div><div class="o-s">8 个控件 · 2 天前使用</div></div>
+                <span class="check"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg></span>
+              </div>
+              <div class="u-opt">
+                <div class="u-thumb" style="background:linear-gradient(160deg,#1e2b28,#0d1614)"><span class="mini a" style="left:6px;top:6px;width:14px;height:14px"></span><span class="mini b" style="right:7px;bottom:7px"></span></div>
+                <div class="o-txt"><div class="o-t">RPG 双摇杆</div><div class="o-s">16 个控件 · 上周使用</div></div>
+                <span class="check"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg></span>
+              </div>
+            </div>
+            <div class="d-foot"><button class="u-btn ghost" style="flex:1">取消</button><button class="u-btn primary" style="flex:1">切换</button></div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>丢掉系统列表</b>：<code>simple_list_item_1</code> 换成带缩略图、控件数、最近使用的行。</li>
+            <li><b>当前项可辨</b>：accent 9% 底 + 描边 + 勾选，不用再靠文字猜。</li>
+            <li><b>操作可预期</b>：取消 / 切换双按钮；点行不直接关闭。</li>
+            <li><b>对话框归位</b>：366dp、22dp 圆角、<code>app_dialog_*</code> 色，和全应用对话框一致。</li>
+            <li><b>信息前置</b>：先说明「一并切换触控与震动」再让用户选。</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- L8 dark -->
+      <article class="screen">
+        <div class="screen-head"><span class="screen-id">L8</span><span class="screen-name">同一面板 · 夜间</span><span class="screen-tag">跟随系统 · 不另设色板</span></div>
+        <div class="frame land" data-theme="dark">
+          <div class="scene"><span class="moon"></span><span class="glow"></span><span class="ridge a"></span><span class="ridge b"></span><span class="tag">1920 × 1080 <i>·</i> 60 FPS</span></div>
+          <div class="u-panel">
+            <div class="u-head">
+              <span class="u-mark"><svg class="i" viewBox="0 0 24 24"><path d="M3.6 17.4h16.8M4.9 17.4 3.7 8.1l5 3.2L12 5.3l3.3 6 5-3.2-1.2 9.3"/></svg></span>
+              <div class="txt"><div class="u-title">王冠</div><div class="u-sub">Apex 布局 · 12 个控件</div></div>
+              <span class="u-iconbtn"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+            </div>
+            <div class="u-body">
+              <div class="u-profile">
+                <div class="u-thumb"><span class="mini a"></span><span class="mini b"></span><span class="mini c"></span><span class="mini d"></span></div>
+                <div class="u-txt"><div class="u-lbl">当前配置</div><div class="u-desc">横屏 16:9 · 已适配当前串流</div></div>
+                <button class="u-btn sm">切换</button>
+              </div>
+              <div class="u-label">快速控制</div>
+              <div class="u-card">
+                <div class="u-row"><span class="u-ic accent"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V19.5"/></svg></span><div class="u-txt"><div class="u-lbl">显示屏幕按键</div><div class="u-desc">退出编辑时恢复显示</div></div><span class="u-sw on"></span></div>
+                <div class="u-row"><span class="u-ic accent"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2"/><circle cx="12" cy="12" r="2.4"/><path d="M12 4.8v2M12 17.2v2M4.8 12h2M17.2 12h2"/></svg></span><div class="u-txt"><div class="u-lbl">触控输入</div><div class="u-desc">触控板 + 鼠标指针</div></div><span class="u-sw on"></span></div>
+                <div class="u-row"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 9v6M7.5 6.5v11M16.5 6.5v11M20 9v6M12 8.5v7"/></svg></span><div class="u-txt"><div class="u-lbl">震动反馈</div><div class="u-desc">设备震动与按键震动均已关闭</div></div><span class="u-sw"></span></div>
+              </div>
+              <div class="u-label">当前方案</div>
+              <div class="u-card">
+                <div class="u-row"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="12" r="1.6"/><circle cx="15" cy="17" r="1.6"/></svg></span><div class="u-txt"><div class="u-lbl">方案设置</div><div class="u-desc">触控灵敏度、滚轮速度、震动</div></div><svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+                <div class="u-row"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg></span><div class="u-txt"><div class="u-lbl">导入 / 导出配置</div><div class="u-desc">.crown 分享包或旧版 .mdat</div></div><svg class="i u-chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+              </div>
+            </div>
+            <div class="u-foot"><button class="u-btn ghost">退出</button><button class="u-btn primary">编辑布局</button></div>
+          </div>
+        </div>
+        <aside class="aside">
+          <h4>关键改动</h4>
+          <ul>
+            <li><b>一套派生</b>：夜间值全部来自 <code>values-night/advance_setting_colors.xml</code>，不再维护第二套。</li>
+            <li><b>层级正确</b>：面板 #1C1D22 高于游戏画面，卡片 +5% 白，读作抬升而非凹洞。</li>
+            <li><b>强调变亮</b>：夜间 accent 用 #FF8FA3，主按钮文字固定 #20161B，对比约 7.6:1。</li>
+            <li><b>描边减重</b>：夜间统一 18% 白，替代不透明预混色。</li>
+            <li><b>卡片不再叠加阴影</b>：夜间只用描边 + 表面色区分层级。</li>
+          </ul>
+        </aside>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ 04 SETTINGS + STORE ============ -->
+  <section class="section" id="store">
+    <div class="section-head">
+      <div class="section-num">04</div>
+      <div>
+        <h2 class="section-title">设置与超市：把王冠当成一个产品，而不是三张表单</h2>
+        <p class="section-desc">设置页给出「状态 + 当前配置 + 入口」，超市只负责发现与详情，「我的」只负责管理。卡片用布局预览建立识别，高频动作留一个，其余收进 ⋯ 菜单。</p>
+      </div>
+    </div>
+
+    <div class="port-row">
+      <!-- P1 -->
+      <div class="port-item">
+        <div class="frame port" data-theme="light">
+          <div class="p-wall"></div>
+          <div class="p-status"><span>9:41</span><span class="r"><span>5G</span><svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-4 6-6 9-6s6 2 9 6"/><path d="M6.5 19.5c2-2.6 3.6-3.8 5.5-3.8s3.5 1.2 5.5 3.8"/></svg><span style="display:inline-block;width:17px;height:8px;border:1px solid currentColor;border-radius:2px;position:relative"><i style="position:absolute;inset:1px 5px 1px 1px;background:currentColor;border-radius:1px"></i></span></span></div>
+          <div class="p-appbar"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span><span class="t">设置</span><span class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span></div>
+          <div class="p-scroll">
+            <div class="p-group-label">王冠</div>
+            <div class="p-card">
+              <div class="p-rows">
+                <div class="p-row" style="min-height:64px">
+                  <span class="u-mark"><svg class="i" viewBox="0 0 24 24"><path d="M3.6 17.4h16.8M4.9 17.4 3.7 8.1l5 3.2L12 5.3l3.3 6 5-3.2-1.2 9.3"/></svg></span>
+                  <div class="txt"><div class="t">已启用王冠</div><div class="s">Apex 布局 · 12 个控件 · 已适配当前串流</div></div>
+                  <span class="u-sw on"></span>
+                </div>
+                <div class="p-row">
+                  <span class="u-ic accent"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l4.2-1 10.3-10.3a2 2 0 0 0 0-2.8l-1.4-1.4a2 2 0 0 0-2.8 0L4 14.8 3 19l1 1Z"/></svg></span>
+                  <div class="txt"><div class="t">编辑当前布局</div><div class="s">拖动、缩放、对齐屏幕按键</div></div>
+                  <svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+                <div class="p-row">
+                  <span class="u-ic"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M9.5 9.5v10"/></svg></span>
+                  <div class="txt"><div class="t">配置方案</div><div class="s">切换、重命名、复制或删除</div></div>
+                  <span style="font-size:11px;color:var(--ink-3)">4 套</span>
+                  <svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+                <div class="p-row">
+                  <span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z"/><path d="M4 8.5 12 13l8-4.5M12 13v7"/></svg></span>
+                  <div class="txt"><div class="t">王冠超市</div><div class="s">32 套来自社区的布局</div></div>
+                  <span class="u-badge">NEW</span>
+                  <svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+                <div class="p-row">
+                  <span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg></span>
+                  <div class="txt"><div class="t">导入与分享</div><div class="s">.crown 分享包、链接或旧版 .mdat</div></div>
+                  <svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+              </div>
+            </div>
+            <div class="p-group-label" style="font-size:16px;margin-top:22px">主机设置</div>
+            <div class="p-card">
+              <div class="p-rows">
+                <div class="p-row"><div class="txt"><div class="t">视频分辨率</div><div class="s">1920 × 1080 · 60 FPS</div></div><svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+                <div class="p-row"><div class="txt"><div class="t">视频码率</div><div class="s">20 Mbps</div></div><svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="port-cap">
+          <div class="h"><span class="id">P1</span><span class="n">设置 · 王冠分类</span></div>
+          <p>分类头承担状态与入口：启用开关、当前配置、超市与导入各一行。设置页不再只是两个开关，也不再点一下就直接跳进商店。</p>
+        </div>
+      </div>
+
+      <!-- P2 -->
+      <div class="port-item">
+        <div class="frame port" data-theme="light">
+          <div class="p-wall"></div>
+          <div class="p-status"><span>9:41</span><span class="r"><span>5G</span><svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-4 6-6 9-6s6 2 9 6"/><path d="M6.5 19.5c2-2.6 3.6-3.8 5.5-3.8s3.5 1.2 5.5 3.8"/></svg><span style="display:inline-block;width:17px;height:8px;border:1px solid currentColor;border-radius:2px;position:relative"><i style="position:absolute;inset:1px 5px 1px 1px;background:currentColor;border-radius:1px"></i></span></span></div>
+          <div class="p-appbar"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span><span class="t">王冠超市</span><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></svg></span></div>
+          <div class="p-scroll" style="padding-bottom:104px">
+            <div class="store-search"><span class="f"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>搜索游戏、作者或标签</span><span class="b"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16l-6 7v5l-4 2v-7L4 6Z"/></svg></span></div>
+            <div class="chip-row"><span class="u-chip on">全部</span><span class="u-chip">最新</span><span class="u-chip">热门</span><span class="u-chip">横屏</span><span class="u-chip">4 指</span></div>
+            <div class="p-hero" style="margin-top:12px;padding:0;overflow:hidden">
+              <div class="u-mp" style="height:150px;border:0;border-radius:0">
+                <span class="dot" style="left:26px;bottom:30px;width:46px;height:46px"></span>
+                <span class="dot accentdot" style="right:34px;bottom:34px;width:34px;height:34px"></span>
+                <span class="dot" style="right:76px;bottom:36px;width:22px;height:22px"></span>
+                <span class="bar" style="left:26px;top:24px;width:64px;height:10px"></span>
+                <span class="arc" style="left:18px;bottom:22px;width:64px;height:64px"></span>
+                <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(10,12,18,.92))"></div>
+                <div style="position:absolute;left:14px;right:14px;bottom:12px;display:flex;align-items:flex-end;gap:10px">
+                  <div style="flex:1;min-width:0">
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;background:rgba(255,143,163,.22);border:1px solid rgba(255,143,163,.4);color:#ffd0dc;font-size:8.5px;font-weight:700">本周精选</span>
+                    <div style="margin-top:6px;font-size:14px;font-weight:700;color:#fff">Apex 通用布局</div>
+                    <div style="margin-top:2px;font-size:9.5px;color:rgba(255,255,255,.66)">by @mohaha · 通用 · 12 控件</div>
+                  </div>
+                  <span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;color:#fff"><svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M9.5 6 15.5 12 9.5 18"/></svg></span>
+                </div>
+              </div>
+            </div>
+            <div class="store-grid">
+              <div class="store-card"><div class="cp u-mp" style="border:0;border-radius:0"><span class="dot" style="left:12px;bottom:14px;width:25px;height:25px"></span><span class="dot accentdot" style="right:14px;bottom:15px;width:17px;height:17px"></span><span class="bar" style="left:12px;top:12px;width:34px;height:6px"></span></div><div class="cb"><div class="ct">FPS 紧凑布局</div><div class="cm">Apex Legends · @kite</div><div class="cf"><span>8 控件 · 3 天前</span><span class="cf-chev"><svg class="i" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></span></div></div></div>
+              <div class="store-card"><div class="cp u-mp" style="border:0;border-radius:0"><span class="dot" style="left:14px;top:14px;width:22px;height:22px"></span><span class="dot" style="right:16px;bottom:12px;width:28px;height:28px"></span><span class="bar" style="right:14px;top:15px;width:24px;height:6px"></span></div><div class="cb"><div class="ct">RPG 双摇杆</div><div class="cm">通用 · @luci</div><div class="cf"><span>16 控件 · 上周</span><span class="cf-chev"><svg class="i" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></span></div></div></div>
+              <div class="store-card"><div class="cp u-mp" style="border:0;border-radius:0"><span class="dot" style="left:12px;bottom:12px;width:20px;height:20px"></span><span class="dot accentdot" style="left:38px;bottom:12px;width:20px;height:20px"></span><span class="dot" style="left:64px;bottom:12px;width:20px;height:20px"></span></div><div class="cb"><div class="ct">音游四键</div><div class="cm">Phigros · @nana</div><div class="cf"><span>6 控件 · 2 周前</span><span class="cf-chev"><svg class="i" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></span></div></div></div>
+              <div class="store-card"><div class="cp u-mp" style="border:0;border-radius:0"><span class="bar" style="left:50%;top:50%;width:56px;height:8px;margin:-4px 0 0 -28px;border-radius:4px"></span><span class="dot accentdot" style="left:14px;top:14px;width:18px;height:18px"></span></div><div class="cb"><div class="ct">极简触控板</div><div class="cm">通用 · @woz</div><div class="cf"><span>3 控件 · 1 个月前</span><span class="cf-chev"><svg class="i" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></span></div></div></div>
+            </div>
+          </div>
+          <div class="p-bottombar">
+            <span class="navi on"><svg class="i" viewBox="0 0 24 24"><path d="M3.6 17.4h16.8M4.9 17.4 3.7 8.1l5 3.2L12 5.3l3.3 6 5-3.2-1.2 9.3"/></svg>超市</span>
+            <span class="navi"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M9.5 9.5v10"/></svg>我的</span>
+          </div>
+        </div>
+        <div class="port-cap">
+          <div class="h"><span class="id">P2</span><span class="n">王冠超市 · 浏览</span></div>
+          <p>搜索与筛选合成一行；卡片带布局缩略图，一屏能判断「这套适不适合我」。下载动作留在详情，列表只保留可扫读的信息。</p>
+        </div>
+      </div>
+
+      <!-- P3 -->
+      <div class="port-item">
+        <div class="frame port" data-theme="light">
+          <div class="p-wall"></div>
+          <div class="p-status"><span>9:41</span><span class="r"><span>5G</span><svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-4 6-6 9-6s6 2 9 6"/><path d="M6.5 19.5c2-2.6 3.6-3.8 5.5-3.8s3.5 1.2 5.5 3.8"/></svg><span style="display:inline-block;width:17px;height:8px;border:1px solid currentColor;border-radius:2px;position:relative"><i style="position:absolute;inset:1px 5px 1px 1px;background:currentColor;border-radius:1px"></i></span></span></div>
+          <div class="p-appbar"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span><span class="t">Apex 通用布局</span><span class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></span></div>
+          <div class="p-scroll" style="padding-bottom:98px">
+            <div class="u-mp" style="height:164px;border-radius:18px">
+              <span class="dot" style="left:28px;bottom:32px;width:54px;height:54px"></span>
+              <span class="dot accentdot" style="right:36px;bottom:36px;width:38px;height:38px"></span>
+              <span class="dot" style="right:84px;bottom:38px;width:24px;height:24px"></span>
+              <span class="dot" style="right:36px;bottom:84px;width:24px;height:24px"></span>
+              <span class="bar" style="left:28px;top:26px;width:70px;height:10px"></span>
+              <span class="arc" style="left:20px;bottom:24px;width:72px;height:72px"></span>
+              <span style="position:absolute;left:12px;top:12px;padding:3px 8px;border-radius:999px;background:rgba(10,12,18,.55);border:1px solid rgba(255,255,255,.16);font-size:9px;color:rgba(255,255,255,.82)">横屏 · 16:9</span>
+              <span style="position:absolute;right:12px;top:12px;padding:3px 8px;border-radius:999px;background:rgba(10,12,18,.55);border:1px solid rgba(255,255,255,.16);font-size:9px;color:rgba(255,255,255,.82)">12 控件</span>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+              <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#ffb3c8,#c9a6f0);border:1px solid var(--line)"></span>
+              <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:650;color:var(--ink)">@mohaha</div><div style="font-size:10px;color:var(--ink-3);margin-top:1px">更新于 3 天前 · 通用布局</div></div>
+              <span class="u-badge">已适配</span>
+            </div>
+            <p style="margin-top:13px;font-size:12.5px;line-height:1.7;color:var(--ink-2)">为 Apex 设计的通用手机布局：左摇杆、右侧四键与开镜，触控板在右下角。默认开启对齐吸附与设备震动，适合 6 寸以上横屏设备。</p>
+            <div class="chip-row" style="margin-top:12px"><span class="u-chip">Apex Legends</span><span class="u-chip">6 寸+</span><span class="u-chip">4 指</span><span class="u-chip">震动</span></div>
+            <div class="p-card" style="margin-top:14px">
+              <div class="p-rows">
+                <div class="p-row" style="min-height:46px"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M9.5 9.5v10"/></svg></span><div class="txt"><div class="t" style="font-size:12.5px">控件构成</div><div class="s">摇杆 2 · 方向键 1 · 数字按钮 8 · 触控板 1</div></div></div>
+                <div class="p-row" style="min-height:46px"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 3.5 19 6.5v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9v-5l7-3Z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span><div class="txt"><div class="t" style="font-size:12.5px">兼容性检查</div><div class="s">1080p 横屏基准 · 与当前设备匹配</div></div></div>
+                <div class="p-row" style="min-height:42px"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg></span><div class="txt"><div class="t" style="font-size:12.5px">分享包</div></div><span style="font-size:10.5px;color:var(--ink-3)">42 KB · 不含个人信息</span></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin:12px 2px 8px"><span style="font-size:14px;font-weight:700">同游戏布局</span><span style="font-size:10px;color:var(--ink-3)">查看全部</span></div>
+            <div class="p-card">
+              <div class="p-rows">
+                <div class="p-row" style="min-height:44px"><span class="u-thumb" style="width:34px;height:34px;border-radius:9px;background:linear-gradient(160deg,#2c2438,#14101c)"><span class="mini a" style="left:5px;bottom:5px;width:10px;height:10px"></span><span class="mini c" style="right:5px;top:5px;width:9px;height:4px;border-radius:2px"></span></span><div class="txt"><div class="t" style="font-size:12.5px">FPS 紧凑布局</div><div class="s">8 控件 · @kite</div></div><svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+                <div class="p-row" style="min-height:44px"><span class="u-thumb" style="width:34px;height:34px;border-radius:9px;background:linear-gradient(160deg,#1e2b28,#0d1614)"><span class="mini a" style="left:5px;top:5px;width:10px;height:10px"></span><span class="mini b" style="right:5px;bottom:5px"></span></span><div class="txt"><div class="t" style="font-size:12.5px">RPG 双摇杆</div><div class="s">16 控件 · @luci</div></div><svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <div class="p-sticky">
+            <span class="icon"><svg class="i" viewBox="0 0 24 24"><path d="M12 3.8 21 20H3L12 3.8Z"/><path d="M12 9.5v4.4"/><circle cx="12" cy="17" r=".7" fill="currentColor" stroke="none"/></svg></span>
+            <span class="u-btn primary"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg>导入配置</span>
+          </div>
+        </div>
+        <div class="port-cap">
+          <div class="h"><span class="id">P3</span><span class="n">超市 · 详情</span></div>
+          <p>大图预览 + 作者 + 标签 + 一段可读的描述 + 兼容性结论；导入是唯一主操作，举报收进图标。替代纯文字字段堆叠。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="port-row" style="grid-template-columns:repeat(2,390px);margin-top:38px">
+      <!-- P4 -->
+      <div class="port-item">
+        <div class="frame port" data-theme="light">
+          <div class="p-wall"></div>
+          <div class="p-status"><span>9:41</span><span class="r"><span>5G</span><svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-4 6-6 9-6s6 2 9 6"/><path d="M6.5 19.5c2-2.6 3.6-3.8 5.5-3.8s3.5 1.2 5.5 3.8"/></svg><span style="display:inline-block;width:17px;height:8px;border:1px solid currentColor;border-radius:2px;position:relative"><i style="position:absolute;inset:1px 5px 1px 1px;background:currentColor;border-radius:1px"></i></span></span></div>
+          <div class="p-appbar"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span><span class="t">我的王冠</span><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg></span></div>
+          <div class="p-scroll" style="padding-bottom:104px">
+            <div class="p-card" style="overflow:visible">
+              <div class="u-mp" style="height:128px;border:0;border-radius:18px 18px 0 0">
+                <span class="dot" style="left:22px;bottom:24px;width:42px;height:42px"></span>
+                <span class="dot accentdot" style="right:28px;bottom:26px;width:28px;height:28px"></span>
+                <span class="dot" style="right:62px;bottom:28px;width:18px;height:18px"></span>
+                <span class="bar" style="left:22px;top:20px;width:52px;height:8px"></span>
+                <div style="position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(10,12,18,.86))"></div>
+                <span class="u-badge" style="position:absolute;left:12px;top:12px;background:rgba(255,143,163,.24);border:1px solid rgba(255,143,163,.4);color:#ffd0dc"><svg class="i" viewBox="0 0 24 24" style="width:9px;height:9px"><path d="M5 12.5 9.5 17 19 7.5"/></svg>当前启用</span>
+                <div style="position:absolute;left:12px;right:12px;bottom:10px;display:flex;align-items:center;gap:8px">
+                  <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:#fff">Apex 布局</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:1px">12 个控件 · 刚刚同步</div></div>
+                  <span class="u-btn sm" style="height:28px;background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.26);color:#fff">编辑</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 2px 9px"><span style="font-size:15px;font-weight:700">全部配置</span><span style="font-size:10px;color:var(--ink-3)">4 套</span></div>
+            <div class="p-card" style="overflow:visible">
+              <div class="p-rows">
+                <div class="p-row">
+                  <span class="u-thumb" style="width:42px;height:42px"><span class="mini a" style="left:6px;top:24px;width:12px;height:12px"></span><span class="mini b" style="right:7px;bottom:7px;width:8px;height:8px"></span></span>
+                  <div class="txt"><div class="t">Apex 布局</div><div class="s">12 控件 · 当前启用</div></div>
+                  <span class="u-badge">启用中</span>
+                  <svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+                <div class="p-row" style="position:relative;z-index:5">
+                  <span class="u-thumb" style="width:42px;height:42px;background:linear-gradient(160deg,#2c2438,#14101c)"><span class="mini a" style="left:6px;bottom:6px;width:12px;height:12px"></span><span class="mini c" style="right:7px;top:7px;width:11px;height:4px;border-radius:2px"></span></span>
+                  <div class="txt"><div class="t">FPS 紧凑布局</div><div class="s">8 控件 · 2 天前</div></div>
+                  <span style="width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink)"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></span>
+                  <div style="position:absolute;right:0;top:44px;width:172px;padding:5px;border-radius:14px;background:var(--surface-solid);border:1px solid var(--line);box-shadow:0 18px 40px rgba(40,25,45,.22);z-index:60">
+                    <div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 10px;border-radius:9px;font-size:12px;color:var(--ink)"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px;color:var(--ink-3)"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg>导出分享包</div>
+                    <div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 10px;border-radius:9px;font-size:12px;color:var(--ink)"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px;color:var(--ink-3)"><path d="M12 4v16M12 20l-4-4M12 20l4-4"/></svg>合并到其它配置</div>
+                    <div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 10px;border-radius:9px;font-size:12px;color:var(--ink)"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px;color:var(--ink-3)"><path d="M12 3.5 19 6.5v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9v-5l7-3Z"/></svg>投稿到超市</div>
+                    <div style="height:1px;margin:4px 8px;background:var(--line)"></div>
+                    <div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 10px;border-radius:9px;font-size:12px;color:var(--danger)"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M5 7h14M9.5 7V5h5v2M7 7l1 12.5h8L17 7"/></svg>删除配置</div>
+                  </div>
+                </div>
+                <div class="p-row">
+                  <span class="u-thumb" style="width:42px;height:42px;background:linear-gradient(160deg,#1e2b28,#0d1614)"><span class="mini a" style="left:5px;top:5px;width:11px;height:11px"></span><span class="mini b" style="right:6px;bottom:6px"></span></span>
+                  <div class="txt"><div class="t">RPG 双摇杆</div><div class="s">16 控件 · 上周</div></div>
+                  <svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 2px 9px"><span style="font-size:15px;font-weight:700">工具</span></div>
+            <div class="p-card">
+              <div class="p-rows">
+                <div class="p-row" style="min-height:48px"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5 12 14.5 16 10.5M5 19h14"/></svg></span><div class="txt"><div class="t" style="font-size:13px">导入旧版 .mdat</div></div><svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+                <div class="p-row" style="min-height:48px"><span class="u-ic"><svg class="i" viewBox="0 0 24 24"><path d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.5 1.5"/><path d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.5-1.5"/></svg></span><div class="txt"><div class="t" style="font-size:13px">从链接导入</div></div><svg class="i chev" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12 9.5 18"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <div class="p-bottombar">
+            <span class="navi"><svg class="i" viewBox="0 0 24 24"><path d="M3.6 17.4h16.8M4.9 17.4 3.7 8.1l5 3.2L12 5.3l3.3 6 5-3.2-1.2 9.3"/></svg>超市</span>
+            <span class="navi on"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M9.5 9.5v10"/></svg>我的</span>
+          </div>
+        </div>
+        <div class="port-cap">
+          <div class="h"><span class="id">P4</span><span class="n">我的王冠 · 管理</span></div>
+          <p>当前配置块 + 列表；每行一个 ⋯ 菜单承载导出 / 合并 / 投稿 / 删除，替代卡片上平铺的 4 个同权按钮和隐藏的长按删除。</p>
+        </div>
+      </div>
+
+      <!-- P5 -->
+      <div class="port-item">
+        <div class="frame port" data-theme="light">
+          <div class="p-wall"></div>
+          <div class="p-status" style="opacity:.4"><span>9:41</span><span class="r"><span>5G</span></span></div>
+          <div class="p-appbar" style="opacity:.4"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg></span><span class="t">我的王冠</span></div>
+          <div class="p-scroll" style="opacity:.35">
+            <div class="p-card"><div class="u-mp" style="height:128px;border:0;border-radius:0"></div></div>
+            <div class="p-card" style="margin-top:12px;height:160px"></div>
+            <div class="p-card" style="margin-top:12px;height:110px"></div>
+          </div>
+          <div class="scrim" style="background:rgba(14,12,18,.42);backdrop-filter:blur(1.5px)"></div>
+          <div class="u-dialog" style="width:342px;border-radius:22px">
+            <div class="d-head" style="padding:18px 18px 0"><div class="d-title">投稿到王冠超市</div><div class="d-sub">提交后由维护者审核；请确认不含个人信息。</div></div>
+            <div class="d-body" style="padding:13px 18px 2px;gap:10px">
+              <div>
+                <div style="font-size:9.5px;letter-spacing:.08em;font-weight:800;color:var(--ink-3);margin-bottom:5px">名称</div>
+                <div class="u-field" style="height:36px"><span class="val">Apex 通用布局</span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                <div><div style="font-size:9.5px;letter-spacing:.08em;font-weight:800;color:var(--ink-3);margin-bottom:5px">游戏</div><div class="u-field" style="height:36px"><span class="val">通用</span></div></div>
+                <div><div style="font-size:9.5px;letter-spacing:.08em;font-weight:800;color:var(--ink-3);margin-bottom:5px">作者</div><div class="u-field" style="height:36px"><span class="val mono">@mohaha</span></div></div>
+              </div>
+              <div>
+                <div style="font-size:9.5px;letter-spacing:.08em;font-weight:800;color:var(--ink-3);margin-bottom:5px">标签</div>
+                <div class="u-field" style="height:36px;gap:6px"><span class="u-chip on" style="height:22px;font-size:9.5px;padding:0 8px">横屏</span><span class="u-chip" style="height:22px;font-size:9.5px;padding:0 8px">4 指</span><span class="val" style="color:var(--ink-3)">继续添加…</span></div>
+              </div>
+              <div>
+                <div style="font-size:9.5px;letter-spacing:.08em;font-weight:800;color:var(--ink-3);margin-bottom:5px">简介</div>
+                <div class="u-field" style="height:58px;align-items:flex-start;padding-top:9px;line-height:1.5">为 Apex 设计的通用手机布局：左摇杆、右侧四键与开镜。</div>
+              </div>
+              <div style="display:flex;gap:9px;align-items:flex-start;margin-top:2px">
+                <span style="width:17px;height:17px;border-radius:5px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);flex:0 0 auto"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M5 12.5 9.5 17 19 7.5"/></svg></span>
+                <span style="font-size:10px;line-height:1.5;color:var(--ink-2)">我确认这套配置不含个人信息，并同意王冠超市的分享规范。</span>
+              </div>
+            </div>
+            <div class="d-foot" style="padding:14px 18px 16px"><button class="u-btn ghost" style="flex:1">取消</button><button class="u-btn primary" style="flex:1">提交审核</button></div>
+          </div>
+        </div>
+        <div class="port-cap">
+          <div class="h"><span class="id">P5</span><span class="n">投稿弹窗</span></div>
+          <p>统一对话框：分组标签 + 36dp 圆角输入 + chip 标签 + 勾选同意 + 双按钮。输入不再用下划线，也不再有 22/24dp 两种内边距。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MAPPING ============ -->
+  <section class="section" id="mapping">
+    <div class="section-head">
+      <div class="section-num">05</div>
+      <div>
+        <h2 class="section-title">落地方式：改 token，不改结构</h2>
+        <p class="section-desc">先在资源层收口，再逐页替换；超市的 Compose 侧只需一层主题包装即可复用同一批色值。</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th style="width:16%">层</th><th style="width:30%">现状</th><th style="width:30%">目标</th><th style="width:24%">落点</th></tr></thead>
+        <tbody>
+          <tr><td><b>颜色</b></td><td><code>crown_store_colors.xml</code> 八个角色色自成一套；夜间底色 #4D464A</td><td>删除该文件，全部指向 <code>ui_shell_*</code>；夜间 #18191F / #1C1D22</td><td><code>values/advance_setting_colors.xml</code> + <code>values-night</code></td></tr>
+          <tr><td><b>语义别名</b></td><td><code>crown_*</code> 已有别名，但键盘/Store 未复用</td><td>保留 <code>crown_*</code> 作为别名层，补 <code>crown_on_accent</code>、<code>crown_surface_raised</code></td><td>同上，新增 2 个色名</td></tr>
+          <tr><td><b>形状</b></td><td>面板 12dp、分组 8dp；键盘 8dp；Store 16dp</td><td>面板 20dp、卡片 16dp、行内控件 10–12dp、键帽 8dp</td><td><code>drawable/crown_*</code> 使用 <code>@dimen/corner_radius_*</code></td></tr>
+          <tr><td><b>排版</b></td><td>13 页共 18 种字号，含 8 个小数号；键盘 8–10sp</td><td>5 档：22 / 16 / 13 / 11 / 9.5(仅大写标签)</td><td><code>styles.xml</code> 新增 <code>CrownTitle</code>、<code>CrownBody</code>、<code>CrownLabel</code>、<code>CrownSectionLabel</code></td></tr>
+          <tr><td><b>控件</b></td><td>原生 Spinner、下划线 EditText、simple_list_item_1、50% 胶囊</td><td>统一下拉行、38dp 圆角输入、AppDialogStyle 列表、固定 12dp 圆角</td><td><code>page_config.xml</code>、<code>CrownConfigPickerDialog</code>、<code>page_window.xml</code></td></tr>
+          <tr><td><b>属性页</b></td><td>12 份复制粘贴的 XML；滑杆 58/60dp；复制/删除按钮被代码隐藏</td><td>抽 <code>crown_property_row</code> / <code>crown_slider_row</code> / <code>crown_color_row</code> 三个 include；两列栅格</td><td><code>res/layout/</code> 新增 3 个可复用片段 + 各页替换</td></tr>
+          <tr><td><b>Compose</b></td><td><code>MaterialTheme {}</code> 裸默认；字号 18 个值；卡片 1dp 阴影 + 1dp 描边</td><td><code>CrownTheme</code> 包装 + 读 <code>colorResource</code>；字号走 5 档；卡片只留描边</td><td><code>CrownStoreActivity.kt</code> 331 行，抽 <code>CrownTheme.kt</code></td></tr>
+          <tr><td><b>入口</b></td><td>设置分类只有「启用」「管理配置」，管理直接跳超市</td><td>分类内加状态头 + 当前配置行 + 超市/导入行；「我的」与「超市」职责分离</td><td><code>preferences.xml</code> 1001–1016</td></tr>
+          <tr><td><b>状态</b></td><td>删除靠长按、无未保存提示、只有 Toast</td><td>行内 ⋯ 菜单暴露删除；顶部「未保存」pill；关键结果用内联条</td><td><code>CrownLocalProfileCard</code>、<code>page_config</code> 保存态</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="roadmap">
+      <div class="step">
+        <span class="p">P0 · 1–2 天</span>
+        <b>先统一颜色与圆角</b>
+        <p>删除 Store 色板、补 <code>crown_on_accent</code>、修夜间对比度与描边重量；所有 <code>crown_*</code> 面板尺寸改为 token。这一步不动布局即可消掉 70% 的「不搭」。</p>
+      </div>
+      <div class="step">
+        <span class="p">P1 · 3–4 天</span>
+        <b>串流面板与属性页</b>
+        <p>抽出 header / 分组 / 行 / 滑杆 / 颜色行五个组件；面板 320→380dp；属性页改两列 + 实时预览；键盘与手柄共用键帽样式。</p>
+      </div>
+      <div class="step">
+        <span class="p">P2 · 3–4 天</span>
+        <b>超市与对话框</b>
+        <p>Compose 侧加 <code>CrownTheme</code>，卡片加布局预览、四个按钮收进 ⋯ 菜单；10 个 AlertDialog 统一输入与列表样式；设置页补状态头。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>王冠 UI 重设计 · 基于仓库现有 token 与 13 个界面盘点 · 与 <code>docs/CROWN_UI_INVENTORY.md</code> 配套</span>
+    <span>尺寸标注为 dp；示意截图中的游戏画面为占位</span>
+  </div>
+</main>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('themeToggle');
+  const label = document.getElementById('themeLabel');
+  const compGrid = document.querySelector('.comp-grid');
+  const sync = () => {
+    const dark = root.dataset.siteTheme === 'dark';
+    if (compGrid) {
+      if (dark) compGrid.dataset.theme = 'dark';
+      else delete compGrid.dataset.theme;
+    }
+    label.textContent = dark ? '切换浅色预览' : '切换夜间预览';
+  };
+  btn.addEventListener('click', () => {
+    if (root.dataset.siteTheme === 'dark') delete root.dataset.siteTheme;
+    else root.dataset.siteTheme = 'dark';
+    sync();
+  });
+  sync();
+</script>
+</body>
+</html>
