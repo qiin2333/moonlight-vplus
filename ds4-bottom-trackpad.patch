@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/limelight/Game.kt b/app/src/main/java/com/limelight/Game.kt
-index e1b9e0d7..aad9b583 100644
+index e1b9e0d7..a073acd1 100644
 --- a/app/src/main/java/com/limelight/Game.kt
 +++ b/app/src/main/java/com/limelight/Game.kt
 @@ -281,6 +281,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
@@ -42,25 +42,38 @@ index e1b9e0d7..aad9b583 100644
              startClipboardSyncIfEnabled()
          }
      }
+@@ -3629,6 +3634,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
+     @SuppressLint("MissingSuperCall")
+     @Deprecated("Deprecated in Java")
+     override fun onBackPressed() {
++        // An edge swipe on the bottom-screen touchpad arrives as Back; don't open the menu for it.
++        if (secondScreenTrackpad.shouldSwallowBack()) return
+         showGameMenu(null)
+     }
+ 
 diff --git a/app/src/main/java/com/limelight/SecondScreenTrackpad.kt b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
 new file mode 100644
-index 00000000..009397f3
+index 00000000..55fbf6cb
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
-@@ -0,0 +1,404 @@
+@@ -0,0 +1,589 @@
 +@file:Suppress("DEPRECATION")
 +package com.limelight
 +
-+// Bottom-screen DualShock 4 touchpad for dual-screen handhelds (AYN Thor, Retroid Pocket Duo).
++// Bottom-screen DualShock 4 touchpad and hotkeys for dual-screen handhelds (AYN Thor, Retroid Pocket Duo).
 +//
-+// Look, layout and pad/click behaviour are ported from DroidDeck's "Deck trackpads" panels
++// Pad look and pad/click behaviour are ported from DroidDeck's "Deck trackpads" panels
 +// (https://github.com/Droid-Deck/DroidDeck, ui/InputSurfaceView.kt TrackpadView/HoldButton,
-+// input/InputStockLayouts.kt, input/DualScreen.kt), licensed GPL-3.0 like Moonlight V+.
++// input/DualScreen.kt), licensed GPL-3.0 like Moonlight V+.
 +//
-+// The two pads are the left and right halves of controller 0's DS4 touchpad: each pad carries one
-+// contact (pointer 0 = left, pointer 1 = right), so the host's two DS4 touch slots map one-to-one.
-+// A second finger on a pad, or the CLICK strip under it, presses the touchpad button; the pad's
++// Layout: [ left pad | hotkey column | right pad ]. The pads are the left and right halves of
++// controller 0's DS4 touchpad; each carries one contact (pointer 0 = left, 1 = right), matching the
++// host's two DS4 touch slots. Touchpad click: a quick tap, or a second finger on the pad. The pad's
 +// contact is held while clicked so the host knows which half was clicked.
++//
++// OLED care: pure black background, no filled panels, dims after 10 s without a touch and goes fully
++// black after 60 s (the pads keep working; any touch wakes it), and the whole layout shifts by a few
++// pixels every minute so static outlines never sit on the same pixels.
 +
 +import android.annotation.SuppressLint
 +import android.app.Presentation
@@ -69,24 +82,38 @@ index 00000000..009397f3
 +import android.graphics.Color
 +import android.graphics.Paint
 +import android.graphics.RadialGradient
++import android.graphics.Rect
 +import android.graphics.RectF
 +import android.graphics.Shader
 +import android.graphics.Typeface
++import android.graphics.drawable.ColorDrawable
 +import android.hardware.display.DisplayManager
 +import android.os.Build
 +import android.os.Bundle
++import android.os.Handler
++import android.os.Looper
++import android.os.SystemClock
 +import android.view.Display
 +import android.view.HapticFeedbackConstants
 +import android.view.KeyEvent
 +import android.view.MotionEvent
 +import android.view.View
++import android.view.ViewConfiguration
 +import android.view.ViewGroup
 +import android.view.WindowManager
++import com.limelight.nvstream.input.ControllerPacket
 +import com.limelight.nvstream.jni.MoonBridge
++import kotlin.math.abs
 +import kotlin.math.min
 +
 +class SecondScreenTrackpad(private val game: Game) {
 +    private var presentation: PadPresentation? = null
++    private val mainHandler = Handler(Looper.getMainLooper())
++    private val actions by lazy { StreamActionExecutor(game, { game.conn }) }
++    private val prefs by lazy { game.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
++
++    @Volatile private var lastTouchUptime = 0L
++    @Volatile private var touchesDown = 0
 +
 +    fun show() {
 +        if (presentation != null) return
@@ -114,6 +141,15 @@ index 00000000..009397f3
 +        }
 +    }
 +
++    /**
++     * True when a Back event was caused by an edge swipe on the bottom screen (Android's back
++     * gesture) rather than a deliberate Back. Game.onBackPressed() ignores Back in that case, so
++     * swiping on the pads never opens the stream menu. Use the MENU hotkey to open it instead.
++     */
++    fun shouldSwallowBack(): Boolean =
++        presentation != null &&
++            (touchesDown > 0 || SystemClock.uptimeMillis() - lastTouchUptime < BACK_GUARD_MS)
++
 +    // ---------------------------------------------------------------- display (from DroidDeck DualScreen)
 +
 +    private fun builtInSecondDisplay(displayManager: DisplayManager, primaryDisplayId: Int): Display? =
@@ -130,9 +166,26 @@ index 00000000..009397f3
 +        return KNOWN_DUAL_SCREEN_MODELS.any { model.startsWith(it) }
 +    }
 +
-+    // ---------------------------------------------------------------- DS4 touchpad state
++    // ---------------------------------------------------------------- colours
 +
-+    private val clicks = BooleanArray(2)
++    private var themeIndex = 0
++    private val accent: Int get() = THEMES[themeIndex]
++
++    private fun loadTheme() {
++        themeIndex = prefs.getInt(PREF_THEME, 0).coerceIn(0, THEMES.size - 1)
++    }
++
++    private fun nextTheme() {
++        themeIndex = (themeIndex + 1) % THEMES.size
++        prefs.edit().putInt(PREF_THEME, themeIndex).apply()
++    }
++
++    private fun withAlpha(color: Int, alpha: Int) = (color and 0x00ffffff) or (alpha shl 24)
++
++    // ---------------------------------------------------------------- controller output
++
++    private val padClicks = BooleanArray(2)
++    private var guideDown = false
 +
 +    private fun sendContact(side: Int, type: Byte, fx: Float, fy: Float) {
 +        // Left pad covers x 0.0..0.5 of the DS4 touchpad, right pad 0.5..1.0
@@ -142,16 +195,30 @@ index 00000000..009397f3
 +        game.conn?.sendControllerTouchEvent(0, type, side, x, y, pressure)
 +    }
 +
-+    private fun setClick(side: Int, down: Boolean) {
-+        if (clicks[side] == down) return
-+        clicks[side] = down
-+        game.controllerHandler.setSecondScreenPadPressed(clicks[0] || clicks[1])
++    private fun pushButtons() {
++        var mask = 0
++        if (padClicks[0] || padClicks[1]) mask = mask or ControllerPacket.TOUCHPAD_FLAG
++        if (guideDown) mask = mask or ControllerPacket.SPECIAL_BUTTON_FLAG
++        game.controllerHandler.setSecondScreenButtons(mask)
++    }
++
++    private fun setPadClick(side: Int, down: Boolean) {
++        if (padClicks[side] == down) return
++        padClicks[side] = down
++        pushButtons()
++    }
++
++    private fun setGuide(down: Boolean) {
++        if (guideDown == down) return
++        guideDown = down
++        pushButtons()
 +    }
 +
 +    private fun releaseAll() {
-+        clicks[0] = false
-+        clicks[1] = false
-+        game.controllerHandler.setSecondScreenPadPressed(false)
++        padClicks[0] = false
++        padClicks[1] = false
++        guideDown = false
++        game.controllerHandler.setSecondScreenButtons(0)
 +        game.conn?.sendControllerTouchEvent(0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f)
 +    }
 +
@@ -162,20 +229,26 @@ index 00000000..009397f3
 +
 +        override fun onCreate(savedInstanceState: Bundle?) {
 +            super.onCreate(savedInstanceState)
-+            // Not focusable, as in DroidDeck: the stream window keeps controller and key focus,
-+            // while touches on this screen still reach the pads.
++            // Not focusable, as in DroidDeck: the stream window keeps controller and key focus.
 +            window?.addFlags(
 +                WindowManager.LayoutParams.FLAG_FULLSCREEN or
 +                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
 +                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 +            )
++            // Black window behind the layout, so the anti-burn-in pixel shift never exposes another colour
++            window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
++            loadTheme()
 +            val layout = PadLayout(context)
 +            root = layout
 +            setContentView(layout)
 +        }
 +
-+        // Fallback if the platform still routes input here: hand it back to the stream.
-+        override fun dispatchKeyEvent(event: KeyEvent): Boolean = game.dispatchKeyEvent(event)
++        // Fallback if the platform still routes input here: hand it back to the stream,
++        // except a gesture-generated Back.
++        override fun dispatchKeyEvent(event: KeyEvent): Boolean {
++            if (event.keyCode == KeyEvent.KEYCODE_BACK && shouldSwallowBack()) return true
++            return game.dispatchKeyEvent(event)
++        }
 +
 +        override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean =
 +            game.dispatchGenericMotionEvent(event)
@@ -190,30 +263,65 @@ index 00000000..009397f3
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- layout (from DroidDeck InputStockLayouts)
++    // ---------------------------------------------------------------- layout
 +
 +    private inner class PadLayout(context: Context) : ViewGroup(context) {
++        private val density = resources.displayMetrics.density
 +        private val leftPad = TrackpadView(context, LEFT)
 +        private val rightPad = TrackpadView(context, RIGHT)
-+        private val leftClick = ClickStrip(context, leftPad)
-+        private val rightClick = ClickStrip(context, rightPad)
++        private val hotkeys = listOf(
++            HotkeyView(context, "MENU") { if (it) actions.execute("open_menu") },
++            HotkeyView(context, "GUIDE", hold = true) { setGuide(it) },
++            HotkeyView(context, "ESC") { if (it) actions.execute("send_esc") },
++            HotkeyView(context, "ALT+TAB") { if (it) actions.execute("send_alt_tab") },
++            HotkeyView(context, "WIN") { if (it) actions.execute("send_win") },
++            HotkeyView(context, "KEYS") { if (it) actions.execute("open_keyboard") },
++            HotkeyView(context, "COLOR") { if (it) { nextTheme(); invalidateAll() } },
++        )
++        private val gestureRects = listOf(Rect())
++
++        private var dimmed = false
++        private var off = false
++        private var shiftStep = 0
++        private val dimRunnable = Runnable { setLevel(dim = true, black = false) }
++        private val offRunnable = Runnable { setLevel(dim = true, black = true) }
++        private val shiftRunnable = object : Runnable {
++            override fun run() {
++                shiftStep = (shiftStep + 1) % SHIFT_PATTERN.size
++                translationX = SHIFT_PATTERN[shiftStep].first * density
++                translationY = SHIFT_PATTERN[shiftStep].second * density
++                mainHandler.postDelayed(this, SHIFT_INTERVAL_MS)
++            }
++        }
 +
 +        init {
 +            setBackgroundColor(Color.BLACK)
 +            isMotionEventSplittingEnabled = true
 +            addView(leftPad)
 +            addView(rightPad)
-+            addView(leftClick)
-+            addView(rightClick)
++            hotkeys.forEach { addView(it) }
++            wake()
++            mainHandler.postDelayed(shiftRunnable, SHIFT_INTERVAL_MS)
 +        }
 +
 +        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
 +            val w = (r - l).toFloat()
 +            val h = (b - t).toFloat()
-+            place(leftPad, .02f, .02f, .47f, .74f, w, h)
-+            place(rightPad, .51f, .02f, .47f, .74f, w, h)
-+            place(leftClick, .02f, .78f, .47f, .20f, w, h)
-+            place(rightClick, .51f, .78f, .47f, .20f, w, h)
++            place(leftPad, .01f, .02f, .385f, .96f, w, h)
++            place(rightPad, .605f, .02f, .385f, .96f, w, h)
++            // Hotkey column in the middle, evenly stacked with small gaps
++            val colX = .405f
++            val colW = .19f
++            val top = .02f
++            val gap = .012f
++            val each = (.96f - gap * (hotkeys.size - 1)) / hotkeys.size
++            hotkeys.forEachIndexed { i, v -> place(v, colX, top + i * (each + gap), colW, each, w, h) }
++            // Ask Android not to treat edge swipes here as Back (the system honours a limited height;
++            // shouldSwallowBack() covers the rest).
++            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++                gestureRects[0].set(0, 0, r - l, b - t)
++                systemGestureExclusionRects = gestureRects
++            }
 +        }
 +
 +        private fun place(v: View, x: Float, y: Float, width: Float, height: Float, w: Float, h: Float) {
@@ -228,16 +336,62 @@ index 00000000..009397f3
 +            v.layout(left, top, right, bottom)
 +        }
 +
++        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
++            lastTouchUptime = SystemClock.uptimeMillis()
++            when (event.actionMasked) {
++                MotionEvent.ACTION_DOWN -> touchesDown = 1
++                MotionEvent.ACTION_POINTER_DOWN -> touchesDown = event.pointerCount
++                MotionEvent.ACTION_POINTER_UP -> touchesDown = event.pointerCount - 1
++                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> touchesDown = 0
++            }
++            if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) wake()
++            else if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) scheduleIdle()
++            return super.dispatchTouchEvent(event)
++        }
++
++        private fun wake() {
++            mainHandler.removeCallbacks(dimRunnable)
++            mainHandler.removeCallbacks(offRunnable)
++            setLevel(dim = false, black = false)
++            scheduleIdle()
++        }
++
++        private fun scheduleIdle() {
++            mainHandler.removeCallbacks(dimRunnable)
++            mainHandler.removeCallbacks(offRunnable)
++            mainHandler.postDelayed(dimRunnable, DIM_AFTER_MS)
++            mainHandler.postDelayed(offRunnable, OFF_AFTER_MS)
++        }
++
++        private fun setLevel(dim: Boolean, black: Boolean) {
++            if (dimmed == dim && off == black) return
++            dimmed = dim
++            off = black
++            val a = when {
++                black -> 0f
++                dim -> DIM_ALPHA
++                else -> 1f
++            }
++            for (i in 0 until childCount) getChildAt(i).alpha = a
++        }
++
++        fun invalidateAll() {
++            for (i in 0 until childCount) getChildAt(i).invalidate()
++        }
++
 +        fun release() {
++            mainHandler.removeCallbacks(dimRunnable)
++            mainHandler.removeCallbacks(offRunnable)
++            mainHandler.removeCallbacks(shiftRunnable)
 +            leftPad.reset()
 +            rightPad.reset()
-+            leftClick.reset()
-+            rightClick.reset()
++            hotkeys.forEach { it.reset() }
++            touchesDown = 0
 +            releaseAll()
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- drawing (from DroidDeck Surface)
++    // ---------------------------------------------------------------- drawing (after DroidDeck Surface)
 +
 +    private abstract inner class Surface(context: Context) : View(context) {
 +        protected val density = resources.displayMetrics.density
@@ -248,18 +402,18 @@ index 00000000..009397f3
 +            textAlign = Paint.Align.CENTER
 +            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
 +        }
-+        protected val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-+            textAlign = Paint.Align.CENTER
-+            color = TEXT_DIM
-+        }
++        protected val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
 +
-+        protected fun drawSurface(canvas: Canvas, lit: Boolean) {
++        /** Outline-only panel (no fill when idle, for OLED); a faint accent wash only while lit. */
++        protected fun drawSurface(canvas: Canvas, lit: Boolean, corner: Float = CORNER) {
 +            val inset = density
 +            rect.set(inset, inset, width - inset, height - inset)
-+            val radius = CORNER * density
-+            fill.color = if (lit) ACCENT_WASH else SURFACE
-+            canvas.drawRoundRect(rect, radius, radius, fill)
-+            stroke.color = if (lit) ACCENT else LINE
++            val radius = corner * density
++            if (lit) {
++                fill.color = withAlpha(accent, 0x2E)
++                canvas.drawRoundRect(rect, radius, radius, fill)
++            }
++            stroke.color = if (lit) accent else withAlpha(accent, IDLE_LINE_ALPHA)
 +            stroke.strokeWidth = (if (lit) 2f else 1f) * density
 +            canvas.drawRoundRect(rect, radius, radius, stroke)
 +        }
@@ -272,57 +426,104 @@ index 00000000..009397f3
 +    // ---------------------------------------------------------------- pad (from DroidDeck TrackpadView)
 +
 +    private inner class TrackpadView(context: Context, val side: Int) : Surface(context) {
-+        var touching = false
-+            private set
++        private var touching = false
 +        private var clicked = false
-+        private var stripClick = false
 +        private var fingerX = 0f
 +        private var fingerY = 0f
-+        private val guide = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = GUIDE }
-+        private val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ACCENT }
++        private var downTime = 0L
++        private var downX = 0f
++        private var downY = 0f
++        private var tapCandidate = false
++        private var pendingTapRelease: Runnable? = null
++        private val slop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
++        private val guide = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
++        private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
 +        private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
 +        private val caption = if (side == LEFT) "LEFT TRACKPAD" else "RIGHT TRACKPAD"
 +
 +        override fun onDraw(canvas: Canvas) {
-+            drawSurface(canvas, clicked || stripClick)
++            drawSurface(canvas, clicked)
 +            val cx = width / 2f
 +            val cy = height / 2f
++            guide.color = withAlpha(accent, GUIDE_ALPHA)
 +            guide.strokeWidth = density
 +            val reach = min(width, height) / 2f - 24 * density
-+            canvas.drawCircle(cx, cy, reach, guide)
-+            canvas.drawCircle(cx, cy, reach / 2f, guide)
-+            canvas.drawLine(cx - reach, cy, cx + reach, cy, guide)
-+            canvas.drawLine(cx, cy - reach, cx, cy + reach, guide)
++            if (reach > 0) {
++                canvas.drawCircle(cx, cy, reach, guide)
++                canvas.drawCircle(cx, cy, reach / 2f, guide)
++                canvas.drawLine(cx - reach, cy, cx + reach, cy, guide)
++                canvas.drawLine(cx, cy - reach, cx, cy + reach, guide)
++            }
 +            captionPaint.textSize = 12 * density
-+            captionPaint.color = if (touching) ACCENT else TEXT_DIM
++            captionPaint.color = if (touching) accent else withAlpha(TEXT_DIM, 0xFF)
 +            canvas.drawText(caption, cx, 28 * density, captionPaint)
 +            if (touching) {
 +                val radius = 56 * density
-+                glow.shader = RadialGradient(fingerX, fingerY, radius, ACCENT_GLOW, Color.TRANSPARENT, Shader.TileMode.CLAMP)
++                glow.shader = RadialGradient(fingerX, fingerY, radius, withAlpha(accent, 0x66), Color.TRANSPARENT, Shader.TileMode.CLAMP)
 +                canvas.drawCircle(fingerX, fingerY, radius, glow)
-+                canvas.drawCircle(fingerX, fingerY, (if (clicked || stripClick) 16 else 12) * density, dot)
++                dot.color = accent
++                canvas.drawCircle(fingerX, fingerY, (if (clicked) 16 else 12) * density, dot)
 +            }
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
 +        override fun onTouchEvent(event: MotionEvent): Boolean {
 +            when (event.actionMasked) {
-+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
++                MotionEvent.ACTION_DOWN -> {
++                    flushPendingTap()
++                    downTime = event.eventTime
++                    downX = event.x
++                    downY = event.y
++                    tapCandidate = true
++                    touch(event.x, event.y)
++                }
++                MotionEvent.ACTION_MOVE -> {
++                    if (tapCandidate && (abs(event.x - downX) > slop || abs(event.y - downY) > slop)) tapCandidate = false
 +                    touch(event.getX(0), event.getY(0))
 +                    click(event.pointerCount > 1)
 +                }
-+                MotionEvent.ACTION_POINTER_DOWN -> click(true)
++                MotionEvent.ACTION_POINTER_DOWN -> {
++                    tapCandidate = false
++                    click(true)
++                }
 +                MotionEvent.ACTION_POINTER_UP -> {
 +                    val stays = if (event.actionIndex == 0) 1 else 0
 +                    touch(event.getX(stays), event.getY(stays))
 +                    click(event.pointerCount - 1 > 1)
 +                }
-+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
++                MotionEvent.ACTION_UP -> {
++                    val tap = tapCandidate && event.eventTime - downTime <= TAP_MS
++                    tapCandidate = false
++                    if (tap) {
++                        // Quick tap = touchpad click, with the contact still down so the host knows the side.
++                        click(true)
++                        val release = Runnable {
++                            pendingTapRelease = null
++                            click(false)
++                            lift()
++                        }
++                        pendingTapRelease = release
++                        mainHandler.postDelayed(release, TAP_CLICK_HOLD_MS)
++                    } else {
++                        click(false)
++                        lift()
++                    }
++                }
++                MotionEvent.ACTION_CANCEL -> {
++                    tapCandidate = false
++                    flushPendingTap()
 +                    click(false)
 +                    lift()
 +                }
 +            }
 +            return true
++        }
++
++        private fun flushPendingTap() {
++            val pending = pendingTapRelease ?: return
++            pendingTapRelease = null
++            mainHandler.removeCallbacks(pending)
++            pending.run()
 +        }
 +
 +        private fun touch(x: Float, y: Float) {
@@ -336,10 +537,6 @@ index 00000000..009397f3
 +
 +        private fun lift() {
 +            if (!touching) return
-+            if (stripClick) {
-+                // The CLICK strip is still held: keep the contact so the host knows the side.
-+                return
-+            }
 +            touching = false
 +            sendContact(side, MoonBridge.LI_TOUCH_EVENT_UP, fingerX / width.coerceAtLeast(1), fingerY / height.coerceAtLeast(1))
 +            invalidate()
@@ -349,63 +546,34 @@ index 00000000..009397f3
 +            if (clicked == down) return
 +            clicked = down
 +            if (down) feedback()
-+            setClick(side, clicked || stripClick)
++            setPadClick(side, down)
 +            invalidate()
-+        }
-+
-+        /** Called by the CLICK strip under this pad. */
-+        fun stripPressed(down: Boolean) {
-+            if (stripClick == down) return
-+            stripClick = down
-+            if (down) {
-+                if (!touching) {
-+                    // No finger on the pad: click at its centre.
-+                    fingerX = width / 2f
-+                    fingerY = height / 2f
-+                    touching = true
-+                    sendContact(side, MoonBridge.LI_TOUCH_EVENT_DOWN, 0.5f, 0.5f)
-+                }
-+                setClick(side, true)
-+            } else {
-+                setClick(side, clicked)
-+                if (!fingerOnPad) {
-+                    touching = false
-+                    sendContact(side, MoonBridge.LI_TOUCH_EVENT_UP, fingerX / width.coerceAtLeast(1), fingerY / height.coerceAtLeast(1))
-+                }
-+            }
-+            invalidate()
-+        }
-+
-+        private val fingerOnPad: Boolean get() = isPressed
-+
-+        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-+            // Track whether a finger is physically on the pad, separately from strip-held contacts.
-+            when (event.actionMasked) {
-+                MotionEvent.ACTION_DOWN -> isPressed = true
-+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> isPressed = false
-+            }
-+            return super.dispatchTouchEvent(event)
 +        }
 +
 +        fun reset() {
++            pendingTapRelease?.let { mainHandler.removeCallbacks(it) }
++            pendingTapRelease = null
 +            clicked = false
-+            stripClick = false
 +            touching = false
-+            isPressed = false
++            tapCandidate = false
 +            invalidate()
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- click strip (from DroidDeck HoldButton)
++    // ---------------------------------------------------------------- hotkey (after DroidDeck HoldButton)
 +
-+    private inner class ClickStrip(context: Context, private val pad: TrackpadView) : Surface(context) {
++    private inner class HotkeyView(
++        context: Context,
++        private val label: String,
++        private val hold: Boolean = false,
++        private val onChange: (Boolean) -> Unit
++    ) : Surface(context) {
 +        private var pressedDown = false
 +
 +        override fun onDraw(canvas: Canvas) {
-+            drawSurface(canvas, pressedDown)
-+            labelPaint.color = if (pressedDown) Color.WHITE else TEXT
-+            labelPaint.textSize = min(height * .3f, 30 * density)
-+            val label = "CLICK"
++            drawSurface(canvas, pressedDown, corner = HOTKEY_CORNER)
++            labelPaint.color = if (pressedDown) Color.WHITE else withAlpha(TEXT, 0xFF)
++            labelPaint.textSize = min(height * .32f, 16 * density)
 +            val labelWidth = labelPaint.measureText(label)
 +            if (labelWidth > width * .84f) labelPaint.textSize *= width * .84f / labelWidth
 +            canvas.drawText(label, width / 2f, height / 2f + labelPaint.textSize * .35f, labelPaint)
@@ -415,20 +583,23 @@ index 00000000..009397f3
 +        override fun onTouchEvent(event: MotionEvent): Boolean {
 +            when (event.actionMasked) {
 +                MotionEvent.ACTION_DOWN -> setDown(true)
-+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> setDown(false)
++                MotionEvent.ACTION_UP -> setDown(false)
++                MotionEvent.ACTION_CANCEL -> setDown(false, cancelled = true)
 +            }
 +            return true
 +        }
 +
-+        private fun setDown(down: Boolean) {
++        private fun setDown(down: Boolean, cancelled: Boolean = false) {
 +            if (pressedDown == down) return
 +            pressedDown = down
 +            if (down) feedback()
-+            pad.stripPressed(down)
++            if (hold) onChange(down)
++            else if (down && !cancelled) onChange(true)
 +            invalidate()
 +        }
 +
 +        fun reset() {
++            if (pressedDown && hold) onChange(false)
 +            pressedDown = false
 +            invalidate()
 +        }
@@ -440,27 +611,50 @@ index 00000000..009397f3
 +        const val TYPE_INTERNAL = 1
 +        val KNOWN_DUAL_SCREEN_MODELS = setOf("retroid pocket duo", "ayn thor")
 +
-+        // DroidDeck palette
++        const val PREFS = "second_screen_trackpad"
++        const val PREF_THEME = "accent_theme"
++
++        const val BACK_GUARD_MS = 800L
++        const val TAP_MS = 180L
++        const val TAP_CLICK_HOLD_MS = 60L
++
++        // OLED care
++        const val DIM_AFTER_MS = 10_000L
++        const val OFF_AFTER_MS = 60_000L
++        const val DIM_ALPHA = 0.25f
++        const val SHIFT_INTERVAL_MS = 60_000L
++        val SHIFT_PATTERN = listOf(0f to 0f, 2f to 1f, -1f to 2f, -2f to -1f, 1f to -2f)
++        const val IDLE_LINE_ALPHA = 0x55
++        const val GUIDE_ALPHA = 0x22
++
++        // Shapes and text (DroidDeck)
 +        const val CORNER = 20f
-+        val ACCENT = Color.rgb(0x1A, 0x9F, 0xFF)
-+        val ACCENT_WASH = Color.argb(0x2E, 0x1A, 0x9F, 0xFF)
-+        val ACCENT_GLOW = Color.argb(0x66, 0x1A, 0x9F, 0xFF)
-+        val SURFACE = Color.rgb(0x0A, 0x0B, 0x0D)
-+        val LINE = Color.rgb(0x26, 0x29, 0x2E)
-+        val GUIDE = Color.rgb(0x16, 0x18, 0x1B)
-+        val TEXT = Color.rgb(0xF2, 0xF4, 0xF7)
-+        val TEXT_DIM = Color.rgb(0x7A, 0x80, 0x8A)
++        const val HOTKEY_CORNER = 12f
++        val TEXT = Color.rgb(0xC8, 0xCC, 0xD2)
++        val TEXT_DIM = Color.rgb(0x5A, 0x60, 0x6A)
++
++        // Accent colours, cycled with the COLOR hotkey (first is DroidDeck's blue)
++        val THEMES = intArrayOf(
++            Color.rgb(0x1A, 0x9F, 0xFF), // blue
++            Color.rgb(0xFF, 0x3B, 0x3B), // red
++            Color.rgb(0x2B, 0xD9, 0x6B), // green
++            Color.rgb(0xA0, 0x6B, 0xFF), // purple
++            Color.rgb(0xFF, 0x8A, 0x1F), // orange
++            Color.rgb(0xFF, 0x4F, 0xA3), // pink
++            Color.rgb(0x2E, 0xE6, 0xE6), // cyan
++            Color.rgb(0xB0, 0xB0, 0xB0), // grey
++        )
 +    }
 +}
 diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
-index 39ed1c38..1ba40335 100644
+index 39ed1c38..4d26dc0e 100644
 --- a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
 +++ b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
 @@ -421,6 +421,7 @@ class ControllerHandler(
  
      @Volatile
      private var screenDs5TouchpadPressed = false
-+    @Volatile private var secondScreenPadPressed = false
++    @Volatile private var secondScreenButtons = 0
  
      private val REMAP_IGNORE = -1
      private val REMAP_CONSUME = -2
@@ -468,10 +662,10 @@ index 39ed1c38..1ba40335 100644
          sendControllerInputPacket(defaultContext)
      }
  
-+    /** Touchpad click from the second-screen pad, merged into controller 0's own state. */
-+    fun setSecondScreenPadPressed(pressed: Boolean) {
-+        if (secondScreenPadPressed == pressed || stopped) return
-+        secondScreenPadPressed = pressed
++    /** Buttons from the bottom-screen touchpad (touchpad click, Guide), merged into controller 0. */
++    fun setSecondScreenButtons(mask: Int) {
++        if (secondScreenButtons == mask || stopped) return
++        secondScreenButtons = mask
 +        val owner = inputDeviceContextSnapshot.firstOrNull {
 +            it.assignedControllerNumber && it.controllerNumber.toInt() == 0
 +        } ?: return
@@ -485,8 +679,8 @@ index 39ed1c38..1ba40335 100644
              if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
                  inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
              }
-+            if (controllerNumber.toInt() == 0 && secondScreenPadPressed) {
-+                inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
++            if (controllerNumber.toInt() == 0 && secondScreenButtons != 0) {
++                inputMap = inputMap or secondScreenButtons
 +            }
          }
  
