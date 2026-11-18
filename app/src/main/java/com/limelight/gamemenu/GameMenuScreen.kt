@@ -360,7 +360,8 @@ internal fun GameMenuScreen(
                 handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                 guideActive = guideActive,
                 hasFocusTarget = state.options.isNotEmpty() ||
-                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE,
+                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE ||
+                    state.pageLayout == GameMenuPageLayout.PERF_POSITION,
                 menuContentLaidOut = menuContentLaidOut,
                 menuHasFocus = menuHasFocus
             )
@@ -589,14 +590,19 @@ private fun GameMenuContent(
     val menuScrollState = rememberScrollState()
     val wideTouchMode = wideLayout && state.pageLayout == GameMenuPageLayout.TOUCH_MODE
     val microphonePage = state.pageLayout == GameMenuPageLayout.MICROPHONE
-    val performancePage = state.pageLayout.isPerformancePage()
+    val performancePositionPage = state.pageLayout == GameMenuPageLayout.PERF_POSITION
+    val performancePage = state.pageLayout.isPerformancePage() && !performancePositionPage
     val touchModeBackFocusRequester = remember { FocusRequester() }
 
-    DisposableEffect(microphonePage, performancePage, menuScrollState) {
-        if (microphonePage || performancePage) {
+        DisposableEffect(microphonePage, performancePage, performancePositionPage, menuScrollState) {
+            if (microphonePage || performancePage || performancePositionPage) {
             callbacks.onMicrophoneScrollReady { menuScrollState.dispatchRawDelta(it) }
         }
-        onDispose { if (microphonePage || performancePage) callbacks.onMicrophoneScrollReady(null) }
+            onDispose {
+                if (microphonePage || performancePage || performancePositionPage) {
+                    callbacks.onMicrophoneScrollReady(null)
+                }
+            }
     }
 
     LaunchedEffect(state.title, state.isSubmenu) {
@@ -621,8 +627,12 @@ private fun GameMenuContent(
             state = state,
             callbacks = callbacks,
             crownGuideModifier = crownGuideModifier,
-            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode || microphonePage || performancePage },
-            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode || microphonePage || performancePage }
+            backFocusRequester = touchModeBackFocusRequester.takeIf {
+                wideTouchMode || microphonePage || performancePage || performancePositionPage
+            },
+            backDownFocusRequester = initialFocusRequester.takeIf {
+                wideTouchMode || microphonePage || performancePage || performancePositionPage
+            }
         )
 
         if (!state.isSubmenu) {
@@ -641,7 +651,14 @@ private fun GameMenuContent(
             )
         }
 
-        if (microphonePage) {
+        if (performancePositionPage) {
+            PerformancePositionGrid(
+                options = state.options,
+                onOptionClick = callbacks.onOptionClick,
+                initialFocusRequester = initialFocusRequester,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else if (microphonePage) {
             MicrophoneDeviceList(state.microphone, callbacks.onMicrophoneInput,
                 initialFocusRequester, touchModeBackFocusRequester)
         } else if (wideTouchMode) {

@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limelight.R
+import com.limelight.PerfOverlayAnchor
 import com.limelight.ui.gamepadFocusOutline
 import com.limelight.utils.AppSwitch
 import com.limelight.ui.theme.AppShapes
@@ -354,7 +355,7 @@ private fun MenuOptionRow(
  * focus target. Higher-level click/toggle modifiers create delegated targets
  * that can diverge from the node checked by tests and focus restoration.
  */
-private fun Modifier.gameMenuActivatable(
+internal fun Modifier.gameMenuActivatable(
     hapticFeedback: (Int) -> Unit,
     action: () -> Unit,
     inputKey: Any?
@@ -413,6 +414,130 @@ private fun PerformanceSegmentedOption(
             verticalNavigationModifier = modifier,
             compactLabels = false
         )
+    }
+}
+
+@Composable
+internal fun PerformancePositionGrid(
+    options: List<GameMenu.MenuOption>,
+    onOptionClick: (GameMenu.MenuOption) -> Unit,
+    modifier: Modifier = Modifier,
+    initialFocusRequester: FocusRequester? = null
+) {
+    val hapticFeedback = LocalGameMenuHapticFeedback.current
+    val accent = appAccentColor()
+    val anchorOptions = options.filter { option ->
+        PerfOverlayAnchor.entries.any { it.name == option.focusKey }
+    }
+    val resetOption = options.firstOrNull { it.focusKey == PERF_POSITION_RESET_FOCUS_KEY }
+    val selectedIndex = anchorOptions.indexOfFirst { it.selected }
+    val initialIndex = if (selectedIndex >= 0) selectedIndex else 4
+    val focusRequesters = remember(anchorOptions.size) {
+        List(anchorOptions.size) { FocusRequester() }
+    }
+    val resetFocusRequester = remember { FocusRequester() }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        anchorOptions.chunked(3).forEachIndexed { rowIndex, rowOptions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowOptions.forEachIndexed { columnIndex, option ->
+                    val index = rowIndex * 3 + columnIndex
+                    val selected = option.selected
+                    val borderColor = if (selected) accent.copy(alpha = 0.70f) else {
+                        colorResource(R.color.game_menu_list_item_border)
+                    }
+                    val targets = segmentedFocusTargets(
+                        itemCount = anchorOptions.size,
+                        index = index,
+                        columnCount = 3
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .focusRequester(focusRequesters[index])
+                            .then(
+                                initialFocusRequester.takeIf { index == initialIndex }
+                                    ?.let { Modifier.focusRequester(it) }
+                                    ?: Modifier
+                            )
+                            .focusProperties {
+                                left = targets.left?.let(focusRequesters::get) ?: FocusRequester.Default
+                                right = targets.right?.let(focusRequesters::get) ?: FocusRequester.Default
+                                targets.up?.let { up = focusRequesters[it] }
+                                targets.down?.let { down = focusRequesters[it] }
+                            }
+                            .clip(GameMenuControlShape)
+                            .background(
+                                if (selected) accent.copy(alpha = 0.12f) else {
+                                    colorResource(R.color.game_menu_list_item_normal)
+                                }
+                            )
+                            .border(
+                                GameMenuDimens.surfaceStroke,
+                                borderColor,
+                                GameMenuControlShape
+                            )
+                            .gamepadFocusOutline(GameMenuControlShape)
+                            .gameMenuActivatable(
+                                hapticFeedback = hapticFeedback,
+                                action = { onOptionClick(option) },
+                                inputKey = option
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = option.label,
+                            color = if (selected) accent else {
+                                colorResource(R.color.game_menu_text_primary)
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        resetOption?.let { option ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .focusRequester(resetFocusRequester)
+                    .focusProperties { up = focusRequesters[4] }
+                    .clip(GameMenuControlShape)
+                    .background(colorResource(R.color.game_menu_list_item_normal))
+                    .border(
+                        GameMenuDimens.surfaceStroke,
+                        colorResource(R.color.game_menu_list_item_border),
+                        GameMenuControlShape
+                    )
+                    .gamepadFocusOutline(GameMenuControlShape)
+                    .gameMenuActivatable(
+                        hapticFeedback = hapticFeedback,
+                        action = { onOptionClick(option) },
+                        inputKey = option
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = option.label,
+                    color = colorResource(R.color.game_menu_text_primary),
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
 

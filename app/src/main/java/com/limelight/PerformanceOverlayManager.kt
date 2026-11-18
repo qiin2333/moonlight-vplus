@@ -75,13 +75,17 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** One-shot position actions for the in-stream return menu. */
-enum class PerfOverlayMoveDirection {
-    LEFT,
-    RIGHT,
-    UP,
-    DOWN,
-    CENTER
+/** Anchor positions shown as a 3x3 quick-placement grid. */
+enum class PerfOverlayAnchor {
+    TOP_LEFT,
+    TOP_CENTER,
+    TOP_RIGHT,
+    CENTER_LEFT,
+    CENTER,
+    CENTER_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_CENTER,
+    BOTTOM_RIGHT
 }
 
 class PerformanceOverlayManager(
@@ -245,7 +249,26 @@ class PerformanceOverlayManager(
     val isPerfOverlayMovable: Boolean
         get() = performanceOverlayView != null && currentHudLayout != PerfHudLayout.DOCK
 
-    fun movePerfOverlay(direction: PerfOverlayMoveDirection) {
+    val perfOverlayAnchor: PerfOverlayAnchor?
+        get() {
+            if (hasRelativePosition()) {
+                val guideX = savedGuide(KEY_GUIDE_X)
+                val guideY = savedGuide(KEY_GUIDE_Y)
+                return PerfOverlayAnchor.entries.firstOrNull {
+                    it.horizontalGuide() == guideX && it.verticalGuide() == guideY
+                }
+            }
+            return when (prefConfig.perfOverlayPosition) {
+                PreferenceConfiguration.PerfOverlayPosition.TOP -> PerfOverlayAnchor.TOP_CENTER
+                PreferenceConfiguration.PerfOverlayPosition.BOTTOM -> PerfOverlayAnchor.BOTTOM_CENTER
+                PreferenceConfiguration.PerfOverlayPosition.TOP_LEFT -> PerfOverlayAnchor.TOP_LEFT
+                PreferenceConfiguration.PerfOverlayPosition.TOP_RIGHT -> PerfOverlayAnchor.TOP_RIGHT
+                PreferenceConfiguration.PerfOverlayPosition.BOTTOM_LEFT -> PerfOverlayAnchor.BOTTOM_LEFT
+                PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT -> PerfOverlayAnchor.BOTTOM_RIGHT
+            }
+        }
+
+    fun setPerfOverlayAnchor(anchor: PerfOverlayAnchor) {
         val overlay = performanceOverlayView ?: return
         if (!isPerfOverlayMovable || isDraggingPerfOverlay) return
 
@@ -257,28 +280,32 @@ class PerformanceOverlayManager(
         val (availableWidth, availableHeight) = measureOverlayInParent(overlay, parent, lp)
         val maxLeft = maxOf(0, availableWidth - overlay.width)
         val maxTop = maxOf(0, availableHeight - overlay.height)
-        val currentLeft = lp.leftMargin.coerceIn(0, maxLeft)
-        val currentTop = lp.topMargin.coerceIn(0, maxTop)
-        val stepX = maxOf(dp(32f), maxLeft / 8)
-        val stepY = maxOf(dp(32f), maxTop / 8)
+        val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+        val topInset = if (isStickyBar()) 0 else sideInset
+        val guideX = anchor.horizontalGuide()
+        val guideY = anchor.verticalGuide()
 
-        val left = when (direction) {
-            PerfOverlayMoveDirection.LEFT -> currentLeft - stepX
-            PerfOverlayMoveDirection.RIGHT -> currentLeft + stepX
-            else -> currentLeft
-        }.coerceIn(0, maxLeft)
-        val top = when (direction) {
-            PerfOverlayMoveDirection.UP -> currentTop - stepY
-            PerfOverlayMoveDirection.DOWN -> currentTop + stepY
-            else -> currentTop
-        }.coerceIn(0, maxTop)
+        val left = restoredMargin(
+            anchor.horizontalRelative(),
+            guideX,
+            maxLeft,
+            sideInset,
+            sideInset
+        )
+        val top = restoredMargin(
+            anchor.verticalRelative(),
+            guideY,
+            maxTop,
+            topInset,
+            sideInset
+        )
 
         lp.leftMargin = left
         lp.topMargin = top
-        dragGuideX = if (direction == PerfOverlayMoveDirection.CENTER) SnapGuide.CENTER else null
-        dragGuideY = if (direction == PerfOverlayMoveDirection.CENTER) SnapGuide.CENTER else null
-        dragRelativeX = if (maxLeft > 0) left.toFloat() / maxLeft else 0.5f
-        dragRelativeY = if (maxTop > 0) top.toFloat() / maxTop else 0.5f
+        dragGuideX = guideX
+        dragGuideY = guideY
+        dragRelativeX = anchor.horizontalRelative()
+        dragRelativeY = anchor.verticalRelative()
         dragMaxLeft = maxLeft
         dragMaxTop = maxTop
         saveDragPosition(overlay)
@@ -304,6 +331,42 @@ class PerformanceOverlayManager(
             remove(KEY_GUIDE_Y)
         }
         refreshOverlayNow()
+    }
+
+    private fun PerfOverlayAnchor.horizontalGuide(): SnapGuide = when (this) {
+        PerfOverlayAnchor.TOP_LEFT,
+        PerfOverlayAnchor.CENTER_LEFT,
+        PerfOverlayAnchor.BOTTOM_LEFT -> SnapGuide.START
+        PerfOverlayAnchor.TOP_CENTER,
+        PerfOverlayAnchor.CENTER,
+        PerfOverlayAnchor.BOTTOM_CENTER -> SnapGuide.CENTER
+        PerfOverlayAnchor.TOP_RIGHT,
+        PerfOverlayAnchor.CENTER_RIGHT,
+        PerfOverlayAnchor.BOTTOM_RIGHT -> SnapGuide.END
+    }
+
+    private fun PerfOverlayAnchor.verticalGuide(): SnapGuide = when (this) {
+        PerfOverlayAnchor.TOP_LEFT,
+        PerfOverlayAnchor.TOP_CENTER,
+        PerfOverlayAnchor.TOP_RIGHT -> SnapGuide.START
+        PerfOverlayAnchor.CENTER_LEFT,
+        PerfOverlayAnchor.CENTER,
+        PerfOverlayAnchor.CENTER_RIGHT -> SnapGuide.CENTER
+        PerfOverlayAnchor.BOTTOM_LEFT,
+        PerfOverlayAnchor.BOTTOM_CENTER,
+        PerfOverlayAnchor.BOTTOM_RIGHT -> SnapGuide.END
+    }
+
+    private fun PerfOverlayAnchor.horizontalRelative(): Float = when (horizontalGuide()) {
+        SnapGuide.START -> 0f
+        SnapGuide.CENTER -> 0.5f
+        SnapGuide.END -> 1f
+    }
+
+    private fun PerfOverlayAnchor.verticalRelative(): Float = when (verticalGuide()) {
+        SnapGuide.START -> 0f
+        SnapGuide.CENTER -> 0.5f
+        SnapGuide.END -> 1f
     }
     private val hudAnchorListener = View.OnLayoutChangeListener     { v, l, t, r, b, oL, oT, oR, oB ->
             onHudOverlayResized(v, l, t, r, b, oL, oT, oR, oB)

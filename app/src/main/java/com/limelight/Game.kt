@@ -3700,6 +3700,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         get() = performanceOverlayMode != PerformanceOverlayMode.HIDDEN &&
             performanceOverlayManager?.isPerfOverlayMovable == true
 
+    val perfOverlayAnchor: PerfOverlayAnchor?
+        get() = performanceOverlayManager?.perfOverlayAnchor
+
     fun setPerfOverlayStyle(style: PerfHudDensity) {
         performanceOverlayManager?.setPerfOverlayStyle(style)
     }
@@ -3740,8 +3743,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         performanceOverlayManager?.setPerfOverlayDisplayItems(items)
     }
 
-    fun movePerfOverlay(direction: PerfOverlayMoveDirection) {
-        performanceOverlayManager?.movePerfOverlay(direction)
+    fun setPerfOverlayAnchor(anchor: PerfOverlayAnchor) {
+        performanceOverlayManager?.setPerfOverlayAnchor(anchor)
     }
 
     fun resetPerfOverlayPosition() {

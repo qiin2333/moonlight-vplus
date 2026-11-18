@@ -50,7 +50,8 @@ internal enum class GameMenuPageLayout {
     TOUCH_MODE,
     MICROPHONE,
     PERF_OVERLAY,
-    PERF_METRICS
+    PERF_METRICS,
+    PERF_POSITION
 }
 
 enum class GameMenuOptionPresentation {
