@@ -134,6 +134,9 @@ jobs:
       - name: Apply gyro throttle patch
         run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
 
+      - name: Apply DS4 bottom-screen touchpad patch
+        run: git apply "$GITHUB_WORKSPACE/ds4-bottom-trackpad.patch"
+
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
         with:
