@@ -80,19 +80,20 @@ class PerfHudSheet(private val activity: Activity) {
             cardWidth(hasNavigation),
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        val root = FrameLayout(activity).apply {
+        val root = LinearLayout(activity).apply {
             clipToPadding = false
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setPadding(shadowPad, shadowPad, shadowPad, shadowPad)
-            addView(card)
         }
         if (hasNavigation) {
-            val navigationPad = shadowPad + dp(NAVIGATION_GAP_DP)
             spec.previousAction?.let {
                 root.addView(
                     navigationButton(it, activity.getString(R.string.perf_sheet_previous_page)),
-                    navigationLayoutParams(Gravity.START, navigationPad)
+                    navigationLayoutParams()
                 )
             }
+            root.addView(card)
             spec.nextAction?.let {
                 root.addView(
                     navigationButton(
@@ -100,9 +101,11 @@ class PerfHudSheet(private val activity: Activity) {
                         activity.getString(R.string.perf_sheet_next_page),
                         rotateForLeft = false
                     ),
-                    navigationLayoutParams(Gravity.END, navigationPad)
+                    navigationLayoutParams(leadingGap = false)
                 )
             }
+        } else {
+            root.addView(card)
         }
         dialog.setContentView(root)
         dialog.setCancelable(true)
@@ -123,84 +126,46 @@ class PerfHudSheet(private val activity: Activity) {
 
         // Info cards are a transient stream overlay; centered placement avoids
         // portrait/dock layouts clipping or crowding nearby controls.
-        val fromAbove = place(window, card, shadowPad, null, hasNavigation)
+        val fromAbove = place(window, root, card, shadowPad, hasNavigation)
 
         dialog.setOnDismissListener { if (current === dialog) current = null }
         current = dialog
         dialog.show()
-        animateIn(card, fromAbove)
+        animateIn(root, fromAbove)
     }
 
-    /** 尽量贴着 HUD 放：上下哪边空间大放哪边，都不够就放侧边，没有锚点则居中。返回卡片是否从上方滑入。 */
+    /** 说明卡片是临时覆盖层，统一居中；左右箭头和卡片在同一个横向容器内保持相对位置。 */
     private fun place(
         window: Window,
+        content: View,
         card: CardLayout,
         pad: Int,
-        anchor: View?,
-        hasNavigation: Boolean = false
+        hasNavigation: Boolean
     ): Boolean {
-        val decor = activity.window.decorView
-        val screenW = decor.width.takeIf { it > 0 } ?: activity.resources.displayMetrics.widthPixels
-        val screenH = decor.height.takeIf { it > 0 } ?: activity.resources.displayMetrics.heightPixels
+        val screenH = activity.window.decorView.height
+            .takeIf { it > 0 }
+            ?: activity.resources.displayMetrics.heightPixels
         val margin = dp(12f)
-        val gap = dp(8f)
         val cardW = cardWidth(hasNavigation)
 
         val lp = window.attributes
-        lp.width = cardW + 2 * pad + if (hasNavigation) {
+        val navigationWidth = if (hasNavigation) {
             2 * (dp(NAVIGATION_GAP_DP) + dp(NAVIGATION_BUTTON_DP))
         } else {
             0
         }
+        val windowWidth = cardW + 2 * pad + navigationWidth
+        lp.width = windowWidth
         lp.height = WindowManager.LayoutParams.WRAP_CONTENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
-        val visible = anchor != null && anchor.isShown && anchor.width > 0
-        if (!visible) {
-            card.maxHeight = screenH - 2 * margin
-            lp.gravity = Gravity.CENTER
-            window.attributes = lp
-            return true
-        }
-
-        val loc = IntArray(2)
-        anchor!!.getLocationOnScreen(loc)
-        val aLeft = loc[0]
-        val aTop = loc[1]
-        val aRight = aLeft + anchor.width
-        val aBottom = aTop + anchor.height
-
-        val below = screenH - aBottom - gap - margin
-        val above = aTop - gap - margin
-        val minUseful = dp(MIN_USEFUL_HEIGHT_DP)
-        var x: Int
-        var y: Int
-        val fromAbove: Boolean
-        if (maxOf(below, above) >= minUseful) {
-            val placeBelow = below >= above
-            card.maxHeight = if (placeBelow) below else above
-            val h = measure(card, cardW)
-            x = (aLeft + aRight) / 2 - cardW / 2
-            y = if (placeBelow) aBottom + gap else aTop - gap - h
-            fromAbove = placeBelow
-        } else {
-            card.maxHeight = screenH - 2 * margin
-            val h = measure(card, cardW)
-            val right = screenW - aRight - gap - margin
-            x = if (right >= cardW) aRight + gap else aLeft - gap - cardW
-            y = (aTop + aBottom) / 2 - h / 2
-            fromAbove = true
-        }
-        x = x.coerceIn(margin, maxOf(margin, screenW - margin - cardW))
-        y = y.coerceIn(margin, maxOf(margin, screenH - margin - card.measuredHeight))
-
-        lp.gravity = Gravity.TOP or Gravity.START
-        lp.x = x - pad
-        lp.y = y - pad
+        card.maxHeight = screenH - 2 * margin
+        measure(content, windowWidth)
+        lp.gravity = Gravity.CENTER
         window.attributes = lp
-        return fromAbove
+        return true
     }
 
     private fun cardWidth(hasNavigation: Boolean): Int {
@@ -282,15 +247,14 @@ class PerfHudSheet(private val activity: Activity) {
         return card
     }
 
-    private fun navigationLayoutParams(gravity: Int, margin: Int) = FrameLayout.LayoutParams(
+    private fun navigationLayoutParams(leadingGap: Boolean = true) = LinearLayout.LayoutParams(
         dp(NAVIGATION_BUTTON_DP),
-        dp(NAVIGATION_BUTTON_DP),
-        gravity or Gravity.CENTER_VERTICAL
+        dp(NAVIGATION_BUTTON_DP)
     ).apply {
-        if (gravity == Gravity.START) {
-            marginStart = margin
+        if (leadingGap) {
+            marginEnd = dp(NAVIGATION_GAP_DP)
         } else {
-            marginEnd = margin
+            marginStart = dp(NAVIGATION_GAP_DP)
         }
     }
 
@@ -391,8 +355,8 @@ class PerfHudSheet(private val activity: Activity) {
         rotation = if (rotateForLeft) 180f else 0f
         background = ripple(GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(P.TILE)
-            setStroke(dp(1f), P.HAIRLINE)
+            setColor(P.withAlpha(P.SHEET_RGB, 0xF2))
+            setStroke(dp(1.5f), P.withAlpha(Color.WHITE, 0x66))
         })
         isClickable = true
         isFocusable = true
