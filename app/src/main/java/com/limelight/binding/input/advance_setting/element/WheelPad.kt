@@ -741,6 +741,10 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_wheel_pad_text_57047)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (wheelPadPage == null) {
             wheelPadPage = LayoutInflater.from(context).inflate(R.layout.page_wheel_pad_clean, null) as SuperPageLayout

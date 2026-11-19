@@ -285,6 +285,10 @@ class DigitalPad(attributesMap: Map<String, Any>,
         fun onDirectionChange(direction: Int)
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_digital_pad_text_3c1b5)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (digitalPadPage == null) {
             digitalPadPage = LayoutInflater.from(context).inflate(R.layout.page_digital_pad_clean, null) as SuperPageLayout

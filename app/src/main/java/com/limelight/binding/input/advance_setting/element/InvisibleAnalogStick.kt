@@ -306,6 +306,10 @@ class InvisibleAnalogStick(attributesMap: Map<String, Any>,
         listener!!.onRevoke()
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_invisible_analog_stick_text_5e3cb)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (invisibleAnalogStickPage == null) {
             invisibleAnalogStickPage = LayoutInflater.from(context).inflate(R.layout.page_invisible_analog_stick_clean, null) as SuperPageLayout

@@ -47,7 +47,7 @@ class CrownConfigPickerDialogTest {
                     name = "Config $it",
                     elementCount = it,
                     preview = null,
-                    configId = it.toLong(),
+                    configId = 9000L + it * 10L,
                     isCurrent = false,
                     isSelectable = true
                 )
@@ -91,7 +91,7 @@ class CrownConfigPickerDialogTest {
             key(KeyEvent.KEYCODE_BUTTON_A, true)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
-            assertEquals(listOf(1L), selections)
+            assertEquals(listOf(9010L), selections)
             assertFalse(dialog.isShowing)
         }
     }
@@ -156,7 +156,7 @@ class CrownConfigPickerDialogTest {
             assertTrue(dialog.isShowing)
             key(KeyEvent.KEYCODE_BUTTON_A, true)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
-            assertEquals(listOf(1L), selections)
+            assertEquals(listOf(9010L), selections)
         }
     }
 

@@ -465,6 +465,10 @@ class AnalogStick(attributesMap: Map<String, Any>,
         return true
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_analog_stick_text_dedb8)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (analogStickPage == null) {
             analogStickPage = LayoutInflater.from(context).inflate(R.layout.page_analog_stick_clean, null) as SuperPageLayout

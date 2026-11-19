@@ -508,6 +508,10 @@ class DigitalMovableButton(attributesMap: Map<String, Any>,
         }
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_digital_movable_button_text_e279e)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (digitalMovableButtonPage == null) {
             digitalMovableButtonPage = LayoutInflater.from(context).inflate(R.layout.page_digital_movable_button_clean, null) as SuperPageLayout

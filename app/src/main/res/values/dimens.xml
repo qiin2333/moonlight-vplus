@@ -50,4 +50,5 @@
     <dimen name="appview_small_card_width">120dp</dimen>
     <dimen name="appview_small_card_height">160dp</dimen>
 
+    <dimen name="crown_inspector_preview_height">84dp</dimen>
 </resources>

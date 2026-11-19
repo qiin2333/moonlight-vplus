@@ -292,6 +292,10 @@ class DigitalSwitchButton(attributesMap: Map<String, Any>,
         }
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_digital_switch_button_text_a96b6)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (digitalSwitchButtonPage == null) {
             digitalSwitchButtonPage = LayoutInflater.from(context).inflate(R.layout.page_digital_switch_button_clean, null) as SuperPageLayout

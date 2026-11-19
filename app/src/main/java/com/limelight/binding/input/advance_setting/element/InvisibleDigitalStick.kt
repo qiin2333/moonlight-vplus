@@ -352,6 +352,10 @@ class InvisibleDigitalStick(attributesMap: Map<String, Any>,
         listener!!.onRevoke()
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_invisible_digital_stick_text_e60ec)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (invisibleDigitalStickPage == null) {
             invisibleDigitalStickPage = LayoutInflater.from(context).inflate(R.layout.page_invisible_digital_stick_clean, null) as SuperPageLayout

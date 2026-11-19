@@ -22,31 +22,46 @@ class CrownThumbnailView @JvmOverloads constructor(
     private val frame = RectF()
     private var preview: CrownProfileShareManager.ProfilePreview? = null
 
+    // Same deliberately dark preview canvas as the inspector and the store:
+    // the thumbnail must read as "this layout over the game picture".
+    private val canvasTop = ContextCompat.getColor(context, R.color.crown_preview_bg_top)
+    private val canvasBottom = ContextCompat.getColor(context, R.color.crown_preview_bg_bottom)
+    private val previewInk = ContextCompat.getColor(context, R.color.crown_preview_ink)
+    private val fallbackMuted = ContextCompat.getColor(context, R.color.crown_text_secondary)
+    private val fallbackAccent = ContextCompat.getColor(context, R.color.ui_shell_accent)
+    private var gradient: LinearGradient? = null
+    private var sortedElements: List<CrownProfileShareManager.PreviewElement> = emptyList()
+
     fun bind(value: CrownProfileShareManager.ProfilePreview?) {
+        // Sort once per bind: this view sits in list rows that redraw on every
+        // scroll and selection step.
+        sortedElements = value?.takeUnless { it.isEmpty }?.elements
+            ?.sortedBy { if (it.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 0 else 1 }
+            ?: emptyList()
         preview = value
         invalidate()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        gradient = LinearGradient(
+            0f,
+            0f,
+            w.toFloat(),
+            h.toFloat(),
+            intArrayOf(canvasTop, canvasBottom),
+            null,
+            Shader.TileMode.CLAMP
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val density = resources.displayMetrics.density
         val radius = 9f * density
-        // Same deliberately dark preview canvas as the inspector and the store:
-        // the thumbnail must read as "this layout over the game picture".
-        val canvasTop = ContextCompat.getColor(context, R.color.crown_preview_bg_top)
-        val canvasBottom = ContextCompat.getColor(context, R.color.crown_preview_bg_bottom)
-        val previewInk = ContextCompat.getColor(context, R.color.crown_preview_ink)
         paint.style = Paint.Style.FILL
         paint.alpha = 255
-        paint.shader = LinearGradient(
-            0f,
-            0f,
-            width.toFloat(),
-            height.toFloat(),
-            intArrayOf(canvasTop, canvasBottom),
-            null,
-            Shader.TileMode.CLAMP
-        )
+        paint.shader = gradient
         frame.set(0f, 0f, width.toFloat(), height.toFloat())
         canvas.drawRoundRect(frame, radius, radius, paint)
         paint.shader = null
@@ -62,11 +77,11 @@ class CrownThumbnailView @JvmOverloads constructor(
         canvas.drawLine(width * 0.66f, 0f, width * 0.66f, height.toFloat(), paint)
         canvas.drawLine(0f, height * 0.5f, width.toFloat(), height * 0.5f, paint)
 
-        val value = preview?.takeUnless { it.isEmpty }
-        if (value == null) {
+        if (sortedElements.isEmpty() || preview == null) {
             drawFallback(canvas, density)
             return
         }
+        val value = preview!!
 
         val scale = minOf(
             width / value.widthPx.toFloat().coerceAtLeast(1f),
@@ -78,9 +93,7 @@ class CrownThumbnailView @JvmOverloads constructor(
         val offsetY = (height - canvasHeight) / 2f
         val outline = previewInk
 
-        value.elements
-            .sortedBy { if (it.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 0 else 1 }
-            .forEach { element ->
+        sortedElements.forEach { element ->
                 val elementWidth = (element.width * scale).coerceAtLeast(2f)
                 val elementHeight = (element.height * scale).coerceAtLeast(2f)
                 val centerX = offsetX + element.centerX * scale
@@ -150,8 +163,8 @@ class CrownThumbnailView @JvmOverloads constructor(
     }
 
     private fun drawFallback(canvas: Canvas, density: Float) {
-        val muted = ContextCompat.getColor(context, R.color.crown_text_secondary)
-        val accent = ContextCompat.getColor(context, R.color.ui_shell_accent)
+        val muted = fallbackMuted
+        val accent = fallbackAccent
         paint.style = Paint.Style.FILL
         paint.color = muted
         paint.alpha = 120

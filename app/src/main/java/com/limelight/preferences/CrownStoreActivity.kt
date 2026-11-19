@@ -277,33 +277,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     private fun ensureStoreProfilePreview(profile: CrownProfileShareManager.StoreProfile) {
-        val key = profilePreviewKey(profile)
-        if (profilePreviewStates.value.containsKey(key)) return
-
-        profilePreviewStates.value = profilePreviewStates.value +
-            (key to ProfilePreviewUiState(loading = true))
-        thread(name = "CrownProfilePreview") {
-            val result = runCatching {
-                val profileUrl = CrownProfileShareManager.resolveStoreProfileUrl(
-                    CROWN_STORE_INDEX_URL,
-                    profile.url
-                )
-                val bundle = downloadRemoteText(profileUrl, CROWN_SHARE_MAX_DOWNLOAD_BYTES)
-                val imported = CrownProfileShareManager.parseImportText(bundle)
-                CrownProfileShareManager.parsePreview(imported.payload, imported.layoutBasis)
-            }
-            mainHandler.post {
-                result
-                    .onSuccess { preview ->
-                        profilePreviewStates.value = profilePreviewStates.value +
-                            (key to ProfilePreviewUiState(preview = preview))
-                    }
-                    .onFailure { error ->
-                        Log.w("CrownStore", "Failed to load profile thumbnail: $key", error)
-                        profilePreviewStates.value = profilePreviewStates.value +
-                            (key to ProfilePreviewUiState(failed = true))
-                    }
-            }
+        ensureProfilePreview(profilePreviewKey(profile), "CrownProfilePreview") {
+            val profileUrl = CrownProfileShareManager.resolveStoreProfileUrl(
+                CROWN_STORE_INDEX_URL,
+                profile.url
+            )
+            val bundle = downloadRemoteText(profileUrl, CROWN_SHARE_MAX_DOWNLOAD_BYTES)
+            val imported = CrownProfileShareManager.parseImportText(bundle)
+            CrownProfileShareManager.parsePreview(imported.payload, imported.layoutBasis)
         }
     }
 
@@ -312,16 +293,23 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     private fun ensureLocalProfilePreview(profile: LocalCrownProfile) {
-        val key = localProfilePreviewKey(profile)
+        ensureProfilePreview(localProfilePreviewKey(profile), "LocalCrownProfilePreview") {
+            val payload = helper.exportConfig(profile.id.toLong())
+            CrownProfileShareManager.parsePreview(payload, currentLayoutBasis())
+        }
+    }
+
+    private fun ensureProfilePreview(
+        key: String,
+        logTag: String,
+        fetch: () -> CrownProfileShareManager.ProfilePreview
+    ) {
         if (profilePreviewStates.value.containsKey(key)) return
 
         profilePreviewStates.value = profilePreviewStates.value +
             (key to ProfilePreviewUiState(loading = true))
-        thread(name = "LocalCrownProfilePreview") {
-            val result = runCatching {
-                val payload = helper.exportConfig(profile.id.toLong())
-                CrownProfileShareManager.parsePreview(payload, currentLayoutBasis())
-            }
+        thread(name = logTag) {
+            val result = runCatching(fetch)
             mainHandler.post {
                 result
                     .onSuccess { preview ->
@@ -329,7 +317,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             (key to ProfilePreviewUiState(preview = preview))
                     }
                     .onFailure { error ->
-                        Log.w("CrownStore", "Failed to load local profile thumbnail: $key", error)
+                        Log.w("CrownStore", "Failed to load profile thumbnail: $key", error)
                         profilePreviewStates.value = profilePreviewStates.value +
                             (key to ProfilePreviewUiState(failed = true))
                     }
@@ -1523,6 +1511,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 .padding(8.dp)
         ) {
             if (preview != null) {
+                val drawnElements = remember(preview) {
+                    selectThumbnailElements(
+                        elements = preview.elements,
+                        widthPx = preview.widthPx,
+                        heightPx = preview.heightPx
+                    )
+                        .sortedBy { if (it.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 0 else 1 }
+                }
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val guideColor = Color.White.copy(alpha = 0.055f)
                     drawLine(guideColor, androidx.compose.ui.geometry.Offset(size.width * 0.33f, 0f), androidx.compose.ui.geometry.Offset(size.width * 0.33f, size.height), strokeWidth = 1f)
@@ -1536,13 +1532,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     val canvasHeight = preview.heightPx * fitScale
                     val canvasOffsetX = (size.width - canvasWidth) / 2f
                     val canvasOffsetY = (size.height - canvasHeight) / 2f
-                    selectThumbnailElements(
-                        elements = preview.elements,
-                        widthPx = preview.widthPx,
-                        heightPx = preview.heightPx
-                    )
-                        .sortedBy { if (it.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 0 else 1 }
-                        .forEach { element ->
+                    drawnElements.forEach { element ->
                         val centerX = (canvasOffsetX + element.centerX * fitScale)
                             .coerceIn(canvasOffsetX, canvasOffsetX + canvasWidth)
                         val centerY = (canvasOffsetY + element.centerY * fitScale)
@@ -2862,7 +2852,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             })
             .create()
 
-        fun actionButton(label: Int, backgroundRes: Int, onClick: () -> Unit): Button =
+        fun actionButton(label: Int, primary: Boolean, onClick: () -> Unit): Button =
             Button(this).apply {
                 text = getString(label)
                 isAllCaps = false
@@ -2872,14 +2862,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 setTextColor(
                     ContextCompat.getColor(
                         context,
-                        if (backgroundRes == R.drawable.crown_primary_button_bg) {
-                            R.color.crown_on_accent
-                        } else {
-                            R.color.crown_text_primary
-                        }
+                        if (primary) R.color.crown_on_accent else R.color.crown_text_primary
                     )
                 )
-                background = ContextCompat.getDrawable(context, backgroundRes)
+                background = ContextCompat.getDrawable(
+                    context,
+                    if (primary) R.drawable.crown_primary_button_bg
+                    else R.drawable.crown_config_action_button_bg
+                )
                 minHeight = dp(44)
                 setPadding(dp(6), 0, dp(6), 0)
                 setOnClickListener { onClick() }
@@ -2890,14 +2880,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
         mainActions.addView(actionButton(
             R.string.crown_share_install_as_new,
-            R.drawable.crown_primary_button_bg
+            primary = true
         ) {
             dialog.dismiss()
             importPendingCrownShareAsNew()
         })
         mainActions.addView(actionButton(
             R.string.crown_share_merge_into_existing,
-            R.drawable.crown_config_action_button_bg
+            primary = false
         ) {
             dialog.dismiss()
             showCrownShareMergeTargetDialog()

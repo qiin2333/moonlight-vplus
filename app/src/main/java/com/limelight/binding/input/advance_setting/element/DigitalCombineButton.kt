@@ -344,6 +344,10 @@ class DigitalCombineButton(attributesMap: Map<String, Any>,
         }
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_digital_combine_button_text_3bb27)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (digitalCombineButtonPage == null) {
             digitalCombineButtonPage = LayoutInflater.from(context).inflate(R.layout.page_digital_combine_button_clean, null) as SuperPageLayout

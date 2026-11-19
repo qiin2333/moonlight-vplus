@@ -567,6 +567,10 @@ class GroupButton(attributesMap: Map<String, Any>,
         }
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_group_button_text_6db87)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (groupButtonPage == null) {
             groupButtonPage = LayoutInflater.from(context).inflate(R.layout.page_group_button_clean, null) as SuperPageLayout

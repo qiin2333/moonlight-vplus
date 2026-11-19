@@ -331,6 +331,10 @@ class DigitalCommonButton(attributesMap: Map<String, Any>,
         }
     }
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_digital_common_button_text_02c2a)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (digitalButtonPage == null) {
             digitalButtonPage = LayoutInflater.from(context).inflate(R.layout.page_digital_common_button_clean, null) as SuperPageLayout

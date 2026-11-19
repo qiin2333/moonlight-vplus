@@ -9,25 +9,32 @@ object CrownConfigChoiceFactory {
     @JvmStatic
     fun create(
         database: SuperConfigDatabaseHelper,
-        orderedConfigIds: List<Long>,
+        configIds: List<Long>,
         currentConfigId: Long
-    ): List<CrownConfigChoice> = orderedConfigIds.map { configId ->
-        val name = database.queryConfigAttribute(
-            configId,
-            CrownProfileSchema.CONFIG_NAME_KEY,
-            "default"
-        ) as? String ?: "default"
-        val preview = runCatching {
-            CrownProfileShareManager.parsePreview(database.exportConfig(configId))
-        }.getOrNull()
+    ): List<CrownConfigChoice> {
+        // Current profile first, then the rest in their stored order.
+        val orderedConfigIds = buildList {
+            if (currentConfigId in configIds) add(currentConfigId)
+            configIds.forEach { if (it != currentConfigId) add(it) }
+        }
+        return orderedConfigIds.map { configId ->
+            val name = database.queryConfigAttribute(
+                configId,
+                CrownProfileSchema.CONFIG_NAME_KEY,
+                "default"
+            ) as? String ?: "default"
+            val preview = runCatching {
+                CrownProfileShareManager.parsePreview(database.exportConfig(configId))
+            }.getOrNull()
 
-        CrownConfigChoice(
-            name = name,
-            elementCount = database.queryAllElementIds(configId).size,
-            preview = preview,
-            configId = configId,
-            isCurrent = configId == currentConfigId,
-            isSelectable = configId != currentConfigId
-        )
+            CrownConfigChoice(
+                name = name,
+                elementCount = database.queryAllElementIds(configId).size,
+                preview = preview,
+                configId = configId,
+                isCurrent = configId == currentConfigId,
+                isSelectable = configId != currentConfigId
+            )
+        }
     }
 }

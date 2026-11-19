@@ -223,13 +223,8 @@ class PageConfigController(private val controllerManager: ControllerManager, pri
         // Keep the currently active profile at the top, show its real layout
         // thumbnail, and let the shared Crown picker handle touch and controller
         // focus consistently with the in-stream direct-switch action.
-        val orderedIds = ArrayList<Long>()
-        if (configIds.contains(currentConfigId)) orderedIds.add(currentConfigId)
-        for (id in configIds) {
-            if (!orderedIds.contains(id)) orderedIds.add(id)
-        }
         val choices = CrownConfigChoiceFactory.create(
-            controllerManager.superConfigDatabaseHelper!!, orderedIds, currentConfigId)
+            controllerManager.superConfigDatabaseHelper!!, configIds, currentConfigId)
         (context as Game).showCrownConfigPicker(choices, { choice ->
             if (!choice.isSelectable || choice.configId == currentConfigId) {
                 return@showCrownConfigPicker
@@ -314,12 +309,13 @@ class PageConfigController(private val controllerManager: ControllerManager, pri
         loadEnhancedTouch()
         controllerManager.elementController!!.loadAllElement(currentConfigId)
         val headerSubtitle = pageConfig.findViewById<TextView>(R.id.crown_page_subtitle)
-        headerSubtitle.text = getCurrentConfigName()
+        val currentName = getCurrentConfigName()
+        headerSubtitle.text = currentName
         headerSubtitle.visibility = View.VISIBLE
-        selectedProfileName.text = getCurrentConfigName()
+        selectedProfileName.text = currentName
         selectedProfileSummary.text = context.getString(
             R.string.crown_menu_profile_summary,
-            getCurrentConfigName(),
+            currentName,
             getCurrentElementCount())
         if (selectedProfileThumbnail != null) {
             var preview: CrownProfileShareManager.ProfilePreview? = null

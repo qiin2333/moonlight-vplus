@@ -319,6 +319,10 @@ class SimplifyPerformance(attributesMap: Map<String, Any>,
 
     // --- UI 和页面逻辑 ---
 
+    override fun getCrownInspectorTitle(): String {
+        return context.getString(R.string.layout_page_simplify_performance_text_58923)
+    }
+
     override fun getInfoPage(): SuperPageLayout {
         if (simplifyPerformancePage == null) {
             simplifyPerformancePage = LayoutInflater.from(context).inflate(R.layout.page_simplify_performance_clean, null) as SuperPageLayout

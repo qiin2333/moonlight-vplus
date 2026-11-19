@@ -2861,11 +2861,13 @@ class StreamSettings : ThemedAppCompatActivity() {
                         null
                     ) as? String
                     val count = helper.queryAllElementIds(currentId).size
-                    name.orEmpty() to count
+                    val profileCount = helper.queryAllConfigIds().size
+                    Triple(name.orEmpty(), count, profileCount)
                 }
             }.getOrNull()
             val name = profile?.first.orEmpty()
             val count = profile?.second ?: 0
+            val profileCount = profile?.third ?: 0
             enabledPreference.summary = if (name.isBlank()) {
                 getString(R.string.summary_crown_current_profile_empty)
             } else {
@@ -2883,11 +2885,6 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             // Design P1: the profiles row shows how many setups exist.
             findPreference<Preference>("crown_config_management")?.apply {
-                val profileCount = runCatching {
-                    SuperConfigDatabaseHelper(requireContext()).use { helper ->
-                        helper.queryAllConfigIds().size
-                    }
-                }.getOrElse { 0 }
                 summary = if (profileCount > 0) {
                     getString(R.string.summary_crown_config_management_with_count, profileCount)
                 } else {

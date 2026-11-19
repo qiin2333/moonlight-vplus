@@ -110,6 +110,10 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
 
     private val paint = Paint()
     private val rect = RectF()
+    private val editSelectionPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var lastLabelWidth = -1
+    private var lastLabelHeight = -1
+    private var sizeLabel = ""
 
     @JvmField
     var centralXMax = 0
@@ -262,7 +266,9 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
         val handleRadius = 4f * density
         val accent = resources.getColor(R.color.ui_shell_accent)
 
-        val selection = Paint(Paint.ANTI_ALIAS_FLAG)
+        val selection = editSelectionPaint
+        selection.reset()
+        selection.setAntiAlias(true)
         selection.style = Paint.Style.STROKE
         selection.strokeWidth = 1.5f * density
         selection.color = accent
@@ -279,10 +285,16 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
         if (width >= 56f * density && height >= 32f * density) {
             selection.textSize = 9f * density
             selection.textAlign = Paint.Align.CENTER
-            val size = "$width × $height"
+            // Rebuild the label only when the size actually changes; drags
+            // invalidate per frame and measureText is not free.
+            if (lastLabelWidth != width || lastLabelHeight != height) {
+                lastLabelWidth = width
+                lastLabelHeight = height
+                sizeLabel = "$width × $height"
+            }
             val textY = Math.max(12f * density, height - 5f * density)
             selection.color = 0xCC000000.toInt()
-            val textWidth = selection.measureText(size)
+            val textWidth = selection.measureText(sizeLabel)
             canvas.drawRoundRect(
                 width / 2f - textWidth / 2f - 4f * density,
                 textY - 10f * density,
@@ -292,8 +304,8 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
                 4f * density,
                 selection
             )
-            selection.color = 0xFFF7F3F7.toInt()
-            canvas.drawText(size, width / 2f, textY, selection)
+            selection.color = resources.getColor(R.color.crown_text_primary)
+            canvas.drawText(sizeLabel, width / 2f, textY, selection)
         }
     }
 
@@ -413,6 +425,11 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
     }
 
     abstract fun getInfoPage(): SuperPageLayout
+
+    /** Title shown on the inspector header when this element is selected. */
+    open fun getCrownInspectorTitle(): String {
+        return ""
+    }
 
     abstract fun updatePage()
 

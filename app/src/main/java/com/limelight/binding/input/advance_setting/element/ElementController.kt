@@ -665,7 +665,8 @@ class ElementController(private val controllerManager: ControllerManager, layout
             controllerManager.superPagesController!!.openNewPage(
                 controllerManager.superPagesController!!.pageNull)
         } else {
-            addCrownInspectorPreview(elementSettingPage, selectedElement)
+            bindCrownInspectorHeader(elementSettingPage, selectedElement)
+            bindCrownInspectorPreview(elementSettingPage, selectedElement)
             applyCrownDetailStyle(elementSettingPage)
             compactCrownInspector(elementSettingPage)
             promoteCrownDetailActions(elementSettingPage)
@@ -679,31 +680,24 @@ class ElementController(private val controllerManager: ControllerManager, layout
         }
     }
 
-    private fun addCrownInspectorPreview(page: SuperPageLayout, element: Element?) {
-        if (element == null || page.findViewWithTag<View>("crown_inspector_preview") != null) {
+    private fun bindCrownInspectorHeader(page: SuperPageLayout, element: Element?) {
+        val title = page.findViewById<TextView>(R.id.crown_page_title_text)
+        if (title != null && element != null) {
+            val titleText = element.getCrownInspectorTitle()
+            if (!titleText.isEmpty()) {
+                title.text = titleText
+            }
+        }
+    }
+
+    private fun bindCrownInspectorPreview(page: SuperPageLayout, element: Element?) {
+        if (element == null) {
             return
         }
-
-        val scrollView = findCrownDetailScrollView(page) ?: return
-        if (scrollView.getChildAt(0) !is ViewGroup) {
-            return
+        val preview = page.findViewById<CrownInspectorPreviewView>(R.id.crown_inspector_preview_view)
+        if (preview != null) {
+            preview.bind(element)
         }
-        val content = scrollView.getChildAt(0) as ViewGroup
-        // Design L4: a full-width 84dp dark canvas with the live element centered.
-        val card = FrameLayout(context)
-        card.tag = "crown_inspector_preview"
-        card.setBackgroundResource(R.drawable.crown_inspector_preview_bg)
-        card.setPadding(dp(6), dp(6), dp(6), dp(6))
-
-        val preview = CrownInspectorPreviewView(context)
-        preview.bind(element)
-        card.addView(preview, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-
-        val cardParams = ViewGroup.MarginLayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(84))
-        cardParams.bottomMargin = dp(10)
-        content.addView(card, Math.min(1, content.childCount), cardParams)
     }
 
     /**
@@ -728,7 +722,6 @@ class ElementController(private val controllerManager: ControllerManager, layout
             Math.max(scrollView.paddingBottom, dp(82))
         )
         compactNumberSeekbars(scrollView.getChildAt(0) as ViewGroup)
-        normalizeCrownInspectorTypography(scrollView.getChildAt(0) as ViewGroup)
         scrollView.tag = CROWN_INSPECTOR_COMPACT_TAG
     }
 
@@ -787,28 +780,6 @@ class ElementController(private val controllerManager: ControllerManager, layout
         }
     }
 
-    private fun normalizeCrownInspectorTypography(parent: ViewGroup) {
-        val scaledDensity = context.resources.displayMetrics.scaledDensity
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            if (child is TextView && child !is NumberSeekbar) {
-                val text = child as TextView
-                val sizeSp = text.textSize / Math.max(0.1f, scaledDensity)
-                if (sizeSp >= 17f) {
-                    text.textSize = 16f
-                } else if (text.typeface != null && text.typeface!!.isBold && sizeSp >= 13f) {
-                    text.textSize = 12.5f
-                } else if (sizeSp >= 12f) {
-                    text.textSize = 11.5f
-                }
-                text.setIncludeFontPadding(false)
-            }
-            if (child is ViewGroup && "crown_inspector_preview" != child.tag) {
-                normalizeCrownInspectorTypography(child as ViewGroup)
-            }
-        }
-    }
-
     private fun positionCrownDetailPageAwayFromOwner(page: SuperPageLayout) {
         val owner = getCrownAutoColorOwner(page) ?: return
         if (owner.width <= 0) {
@@ -855,7 +826,7 @@ class ElementController(private val controllerManager: ControllerManager, layout
                 detailScroll.paddingLeft,
                 detailScroll.paddingTop,
                 detailScroll.paddingRight,
-                detailScroll.paddingBottom + dp(78)
+                Math.max(detailScroll.paddingBottom, dp(160))
             )
         }
 
@@ -949,14 +920,9 @@ class ElementController(private val controllerManager: ControllerManager, layout
         // Inspector pages carry their own tagged header row; fall back to the
         // shared crown_page_title structure for pages that use it.
         var header: ViewGroup? = null
-        val tagged = page.findViewWithTag<View>("crown_inspector_header")
-        if (tagged is ViewGroup) {
-            header = tagged as ViewGroup
-        } else {
-            val titleText = page.findViewById<View>(R.id.crown_page_title_text)
-            if (titleText != null && titleText.parent is ViewGroup) {
-                header = titleText.parent as ViewGroup
-            }
+        val titleText = page.findViewById<View>(R.id.crown_page_title_text)
+        if (titleText != null && titleText.parent is ViewGroup) {
+            header = titleText.parent as ViewGroup
         }
         if (header == null || page.findViewWithTag<View>("crown_header_delete") != null) {
             return
@@ -1621,13 +1587,8 @@ class ElementController(private val controllerManager: ControllerManager, layout
                         val configController = controllerManager.pageConfigController!!
                         val currentConfigId = configController.currentConfigId
                         val allConfigIds = controllerManager.superConfigDatabaseHelper!!.queryAllConfigIds()
-                        val orderedIds = ArrayList<Long>()
-                        if (allConfigIds.contains(currentConfigId)) orderedIds.add(currentConfigId)
-                        for (id in allConfigIds) {
-                            if (!orderedIds.contains(id)) orderedIds.add(id)
-                        }
                         val choices = CrownConfigChoiceFactory.create(
-                            controllerManager.superConfigDatabaseHelper!!, orderedIds, currentConfigId)
+                            controllerManager.superConfigDatabaseHelper!!, allConfigIds, currentConfigId)
                         game.showCrownConfigPicker(choices, { choice ->
                             if (!choice.isSelectable || choice.configId == currentConfigId) {
                                 return@showCrownConfigPicker
