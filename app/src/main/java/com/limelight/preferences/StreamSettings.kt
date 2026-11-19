@@ -2877,7 +2877,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 summary = if (name.isBlank()) {
                     getString(R.string.summary_crown_current_profile_empty)
                 } else {
-                    getString(R.string.summary_crown_edit_current, name)
+                    getString(R.string.summary_crown_edit_current)
                 }
             }
         }
