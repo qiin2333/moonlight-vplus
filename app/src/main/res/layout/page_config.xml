@@ -9,7 +9,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginEnd="5dp"
+        android:background="@drawable/crown_config_panel_bg"
         android:orientation="vertical">
 
         <ScrollView
@@ -17,12 +17,11 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="@drawable/crown_config_panel_bg"
-            android:clipToPadding="true"
+            android:clipToPadding="false"
             android:fillViewport="false"
-            android:paddingHorizontal="10dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="8dp">
+            android:paddingHorizontal="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -170,6 +169,48 @@
                             android:text="›"
                             android:textColor="@color/crown_text_secondary"
                             android:textSize="26sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:gravity="end|center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageButton
+                            android:id="@+id/add_config_button"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/crown_action_icon_button_bg"
+                            android:contentDescription="@string/layout_page_config_text_66ab5"
+                            android:padding="11dp"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/phc_action_plus"
+                            android:tint="@color/crown_text_primary" />
+
+                        <ImageButton
+                            android:id="@+id/rename_config_button"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginStart="6dp"
+                            android:background="@drawable/crown_action_icon_button_bg"
+                            android:contentDescription="@string/layout_config_item_text_c8ce4"
+                            android:padding="11dp"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/phc_action_edit"
+                            android:tint="@color/crown_text_primary" />
+
+                        <ImageButton
+                            android:id="@+id/delete_config_button"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginStart="6dp"
+                            android:background="@drawable/crown_action_icon_button_bg"
+                            android:contentDescription="@string/layout_config_item_text_2f4aa"
+                            android:padding="11dp"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/phc_action_trash"
+                            android:tint="@color/app_action_sheet_danger" />
                     </LinearLayout>
 
                 </LinearLayout>
@@ -370,63 +411,38 @@
         </LinearLayout>
         </ScrollView>
 
-        <LinearLayout
-            android:id="@+id/crown_config_action_bar"
+        <View
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:background="@color/crown_panel_background"
-            android:gravity="end"
+            android:layout_height="1dp"
+            android:background="@color/crown_section_border" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="8dp">
+            android:paddingHorizontal="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="14dp">
 
-        <ImageButton
-            android:id="@+id/add_config_button"
-            android:layout_width="48dp"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/crown_action_icon_button_bg"
-            android:contentDescription="@string/layout_page_config_text_66ab5"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/phc_action_plus"
-            android:tint="@color/crown_text_primary" />
+            <LinearLayout
+                android:id="@+id/exit_crown_config_button"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:background="@drawable/crown_primary_button_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal">
 
-        <ImageButton
-            android:id="@+id/rename_config_button"
-            android:layout_width="48dp"
-            android:layout_height="match_parent"
-            android:layout_marginHorizontal="2dp"
-            android:background="@drawable/crown_action_icon_button_bg"
-            android:contentDescription="@string/layout_config_item_text_c8ce4"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/phc_action_edit"
-            android:tint="@color/crown_text_primary" />
-
-        <ImageButton
-            android:id="@+id/delete_config_button"
-            android:layout_width="48dp"
-            android:layout_height="match_parent"
-            android:layout_marginHorizontal="2dp"
-            android:background="@drawable/crown_action_icon_button_bg"
-            android:contentDescription="@string/layout_config_item_text_2f4aa"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/phc_action_trash"
-            android:tint="@color/crown_text_primary" />
-
-        <ImageButton
-            android:id="@+id/exit_crown_config_button"
-            android:layout_width="48dp"
-            android:layout_height="match_parent"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/crown_action_icon_button_bg"
-            android:contentDescription="@string/layout_page_config_text_df603"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/phc_action_check"
-            android:tint="@color/crown_text_primary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/crown_edit_done"
+                    android:textColor="@color/crown_on_accent"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>

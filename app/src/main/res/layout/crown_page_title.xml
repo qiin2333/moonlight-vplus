@@ -7,12 +7,21 @@
     android:orientation="horizontal"
     android:paddingHorizontal="4dp">
 
-    <ImageView
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+    <FrameLayout
+        android:layout_width="34dp"
+        android:layout_height="34dp"
         android:layout_marginEnd="10dp"
-        android:importantForAccessibility="no"
-        android:src="@drawable/ic_super_crown" />
+        android:background="@drawable/crown_header_mark_bg"
+        android:importantForAccessibility="no">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/phc_crown"
+            android:tint="@color/crown_section_label" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -28,7 +37,7 @@
             android:maxLines="1"
             android:text="@string/game_menu_crown_function"
             android:textColor="@color/crown_text_primary"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <TextView

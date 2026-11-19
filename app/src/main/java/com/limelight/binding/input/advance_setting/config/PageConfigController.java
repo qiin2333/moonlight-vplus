@@ -226,12 +226,17 @@ public class PageConfigController {
         TextView layoutTab = pageConfig.findViewById(R.id.crown_config_segment_layout);
         TextView touchTab = pageConfig.findViewById(R.id.crown_config_segment_touch);
         TextView feedbackTab = pageConfig.findViewById(R.id.crown_config_segment_feedback);
+        int primaryText = androidx.core.content.ContextCompat.getColor(context, R.color.crown_text_primary);
+        int secondaryText = androidx.core.content.ContextCompat.getColor(context, R.color.crown_text_secondary);
         layoutTab.setBackgroundResource(section == CONFIG_SECTION_LAYOUT
                 ? R.drawable.crown_segment_selected_bg : R.drawable.crown_segment_unselected_bg);
+        layoutTab.setTextColor(section == CONFIG_SECTION_LAYOUT ? primaryText : secondaryText);
         touchTab.setBackgroundResource(section == CONFIG_SECTION_TOUCH
                 ? R.drawable.crown_segment_selected_bg : R.drawable.crown_segment_unselected_bg);
+        touchTab.setTextColor(section == CONFIG_SECTION_TOUCH ? primaryText : secondaryText);
         feedbackTab.setBackgroundResource(section == CONFIG_SECTION_FEEDBACK
                 ? R.drawable.crown_segment_selected_bg : R.drawable.crown_segment_unselected_bg);
+        feedbackTab.setTextColor(section == CONFIG_SECTION_FEEDBACK ? primaryText : secondaryText);
 
         boolean showTouch = section == CONFIG_SECTION_TOUCH;
         boolean showFeedback = section == CONFIG_SECTION_FEEDBACK;
