@@ -116,6 +116,24 @@ jobs:
       - name: Run lint and unit tests
         run: ./gradlew :app:lintNonRootDebug :app:testNonRootDebugUnitTest --stacktrace
 
+      # Thor fork: Gradle prints only lint's first failure; list every error so one
+      # run shows everything that needs fixing.
+      - name: List lint errors
+        if: failure()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for report in app/build/reports/lint-results-*.xml; do
+            python3 - "$report" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          for issue in ET.parse(sys.argv[1]).getroot().iter("issue"):
+              if issue.get("severity") in ("Error", "Fatal"):
+                  loc = issue.find("location")
+                  where = f'{loc.get("file")}:{loc.get("line")}' if loc is not None else "?"
+                  print(f'::error::{where} [{issue.get("id")}] {issue.get("message")}')
+          PY
+          done
+
       - name: Test release versioning
         shell: bash
         run: bash .github/release/test.sh

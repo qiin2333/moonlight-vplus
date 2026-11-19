@@ -442,7 +442,9 @@ class SecondScreenTrackpad(private val game: Game) {
                 }
                 if (shouldSwallowBack()) return true
             }
-            return game.dispatchKeyEvent(event)
+            // Through android.app.Activity's public API: ComponentActivity's override is
+            // @RestrictTo for outside callers (lint RestrictedApi). Same method at runtime.
+            return (game as android.app.Activity).dispatchKeyEvent(event)
         }
 
         override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean =
