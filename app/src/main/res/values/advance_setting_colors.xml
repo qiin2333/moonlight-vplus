@@ -98,7 +98,7 @@
 
     <!-- Crown side panel: aliases into the shared shell roles. -->
     <color name="crown_panel_background">@color/ui_shell_surface_elevated</color>
-    <color name="crown_panel_border">@color/ui_shell_outline_strong</color>
+    <color name="crown_panel_border">@color/ui_shell_outline</color>
     <color name="crown_section_background">@color/crown_surface_raised</color>
     <color name="crown_section_border">@color/ui_shell_outline</color>
     <color name="crown_input_background">@color/ui_shell_surface</color>
