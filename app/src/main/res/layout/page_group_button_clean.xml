@@ -139,7 +139,8 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="10dp"
+                android:gravity="center_vertical">
                 
                 <TextView
                     android:layout_width="wrap_content"
@@ -164,7 +165,8 @@
                     android:orientation="vertical"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp">
+                    android:layout_marginBottom="10dp"
+                android:gravity="center_vertical">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -201,7 +203,8 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/crown_config_section_bg"
                 android:padding="12dp"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="10dp"
+                android:gravity="center_vertical">
                 
                 <TextView
                     android:layout_width="wrap_content"

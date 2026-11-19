@@ -31,6 +31,16 @@ class CrownConfigPickerDialogTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
     private fun show() {
+        // ListView selection navigation requires the display to be out of touch
+        // mode; a real (UiAutomation-injected) key event flips it regardless of
+        // whatever taps happened on the device before the run.
+        val uiAutomation = instrumentation.uiAutomation
+        val now = SystemClock.uptimeMillis()
+        uiAutomation.injectInputEvent(KeyEvent(now, now,
+            KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, 0), true)
+        uiAutomation.injectInputEvent(KeyEvent(now, now,
+            KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN, 0), true)
+        SystemClock.sleep(100)
         activityRule.scenario.onActivity { activity ->
             dialog = CrownConfigPickerDialog(activity, (0..39).map {
                 CrownConfigChoice(
