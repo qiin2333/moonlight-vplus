@@ -18,7 +18,7 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 
 import com.limelight.R
-import com.limelight.preferences.BackgroundSource
+import com.limelight.utils.UiHelper
 import com.limelight.utils.AppDialogStyler
 
 import java.security.MessageDigest
@@ -43,7 +43,7 @@ object CrashReportPrompt {
         val report = CrashReporter.pendingReportFile(activity) ?: return
         val preview = report.readText().lineSequence().take(20).joinToString("\n")
             .let { if (it.length > 600) it.substring(0, 600) + "…" else it }
-        val isTv = BackgroundSource.isTvDevice(activity)
+        val isTv = UiHelper.isTvDevice(activity)
 
         val builder = AlertDialog.Builder(activity, R.style.AppDialogStyle)
             .setTitle(R.string.crash_report_dialog_title)
@@ -87,7 +87,7 @@ object CrashReportPrompt {
             setLineSpacing(0f, 1.12f)
             setTextSize(
                 TypedValue.COMPLEX_UNIT_SP,
-                if (BackgroundSource.isTvDevice(activity)) 16f else 14f
+                if (UiHelper.isTvDevice(activity)) 16f else 14f
             )
             setPadding(padding, padding, padding, padding)
             layoutParams = ViewGroup.LayoutParams(

@@ -263,11 +263,9 @@ dependencies {
     implementation libs.constraintlayout
     implementation libs.gson
     implementation libs.glide
-    implementation libs.glide.transformations
     implementation libs.cardview
     implementation libs.recyclerview
     annotationProcessor libs.glide.compiler
-    implementation libs.seismic
     implementation libs.flexbox
     implementation libs.tvprovider
     implementation libs.zxing.embedded

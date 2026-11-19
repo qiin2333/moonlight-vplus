@@ -468,18 +468,10 @@
     <string name="summary_use_external_display">Se um display externo estiver conectado, exibir o stream no display externo</string>
     
     <!-- Background image API -->
-    <string name="title_background_image_api">API de imagem de fundo</string>
-    <string name="summary_background_image_api">Insira uma API de imagem de fundo personalizada ou URL de imagem única. Deixe vazio para ver imagens aleatórias</string>
-    <string name="dialog_title_background_image_api">API de imagem de fundo</string>
-    <string name="dialog_message_background_image_api">Por favor, insira a API de imagem completa</string>
     
     <!-- Local image picker -->
-    <string name="title_local_image_picker">Selecionar imagem local</string>
-    <string name="summary_local_image_picker">Escolher uma imagem da sua galeria como fundo</string>
     
     <!-- Reset background image -->
-    <string name="title_reset_background_image">Redefinir imagem de fundo</string>
-    <string name="summary_reset_background_image">Restaurar imagem de fundo padrão (imagem aleatória da API)</string>
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Inverter resolução</string>
@@ -630,14 +622,9 @@
     <string name="time_unknown">Hora desconhecida</string>
     
     <!-- PcView strings -->
-    <string name="storage_permission_required">Permissão de armazenamento necessária para salvar imagens, conceda permissão nas configurações</string>
-    <string name="downloading_image_please_wait">Re-baixando imagem, por favor aguarde...</string>
     <string name="image_download_failed_retry">Falha no download da imagem, tente novamente</string>
     <string name="image_download_failed_with_error">Falha no download da imagem: %1$s</string>
-    <string name="image_not_loaded_please_retry">Imagem não carregada, tente novamente mais tarde</string>
     <string name="image_invalid">Imagem inválida</string>
-    <string name="image_saved_successfully">Imagem guardada com sucesso em: Pictures/vplus</string>
-    <string name="image_save_failed_with_error">Falha ao guardar a imagem: %1$s</string>
     <string name="config_save_failed">Falha ao salvar configuração</string>
     <string name="scene_config_applied">Configuração da cena %1$d aplicada: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">Cena %1$d não configurada</string>
@@ -650,12 +637,7 @@
     <string name="network_bandwidth_test">Teste de largura de banda de rede (iPerf3)</string>
     <string name="no_online_computer_with_running_game">Nenhum computador online com jogo em execução encontrado</string>
     <string name="restoring_session">Restaurando sessão: %1$s</string>
-    <string name="please_wait_seconds">Por favor aguarde %1$ds</string>
-    <string name="daily_limit_reached">Limite diário atingido (5/5). Tente novamente amanhã!</string>
-    <string name="refreshing_with_remaining">Atualizando... (%1$d restantes hoje)</string>
-    <string name="background_refreshed_with_remaining">Fundo atualizado! (%1$d restantes hoje)</string>
     <string name="refresh_failed_please_retry">Falha na atualização, tente novamente</string>
-    <string name="refresh_failed_with_error">Falha na atualização: %1$s</string>
     <string name="game_menu_toggle_remote_mouse">Mostrar/Ocultar rato remoto</string>
     <string name="toast_remote_mouse_toast">Rato remoto exibido/oculto</string>
     

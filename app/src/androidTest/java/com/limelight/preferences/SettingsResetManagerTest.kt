@@ -111,13 +111,13 @@ class SettingsResetManagerTest {
             .putString(DeveloperUnlockSettings.PREF_ACCESS_TOKEN, "saved-authorization")
             .putBoolean(DeveloperUnlockSettings.PREF_UNLOCKED, true)
             .putString("pref_framegen_star_access_token", "legacy-authorization")
-            .putString(BackgroundSource.KEY_LOCAL_PATH, "/saved/background.png")
+            .putString("background_image_local_path", "/saved/background.png")
             .commit()
         val preservedDefaultKeys = setOf(
             ConfigurationSyncManager.PREF_EXTERNAL_SYNC_TREE_URI, "config_sync_device_id",
             "config_sync_last_external_content_hash", DeveloperUnlockSettings.PREF_ACCESS_TOKEN,
             DeveloperUnlockSettings.PREF_UNLOCKED, "pref_framegen_star_access_token",
-            BackgroundSource.KEY_LOCAL_PATH
+            "background_image_local_path"
         )
         val preservedDefaults = defaults.all.filterKeys { it in preservedDefaultKeys }
         val libraryStores = listOf("pair_name_map", "custom_resolutions", "SceneConfigs", "HiddenApps",
@@ -158,7 +158,7 @@ class SettingsResetManagerTest {
             assertFalse(defaults.contains("current_config_id"))
             assertFalse(defaults.contains("list_resolution_fps"))
             assertFalse(defaults.contains("checkbox_show_QuickKeyCard"))
-            assertEquals(BackgroundSource.Auto, BackgroundSource.current(context))
+            assertFalse(defaults.contains("background_source"))
             assertSyncDisabled(defaults)
             listOf(TouchPointerPresetPreferences.FILE_NAME, TouchpadInputPreferences.PRESETS_FILE_NAME).forEach {
                 assertEquals("saved-presets", context.prefs(it).getString(TouchPointerPresetPreferences.JSON_KEY, null))

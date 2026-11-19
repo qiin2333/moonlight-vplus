@@ -112,7 +112,7 @@ internal object SettingsResetManager {
     private fun isPreservedDefaultKey(key: String): Boolean =
         ConfigurationSyncManager.isConfigSyncMetadataPreferenceKey(key) ||
             key.startsWith("pref_developer_features_") || key.startsWith("pref_framegen_star_") ||
-            key == BackgroundSource.KEY_LOCAL_PATH || key == BackgroundSource.KEY_DIALOG_SHOWN
+            key == "background_image_local_path" || key == "background_source_dialog_shown"
 
     private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
     private const val APP_NS = "http://schemas.android.com/apk/res-auto"
@@ -126,8 +126,8 @@ internal object SettingsResetManager {
     // Preferences written outside preferences.xml, plus aliases consumed by legacy migrations.
     // Saved profile data and authorization state must never be added here.
     private val EXTRA_DEFAULT_KEYS = setOf(
-        BackgroundSource.KEY_SOURCE,
-        BackgroundSource.KEY_API_URL,
+        "background_source",
+        "background_image_url",
         "background_image_type",
         "current_config_id",
         "crown_alignment_snap_enabled"

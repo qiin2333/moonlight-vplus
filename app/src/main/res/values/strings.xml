@@ -1069,23 +1069,11 @@
     <string name="summary_use_external_display">When a second display is connected, show the stream there instead of on this device\'s built-in display.</string>
     
     <!-- Background image API -->
-    <string name="title_background_image_api">Custom background URL</string>
-    <string name="summary_background_image_api">Enter an HTTPS image API or a direct image URL. Clearing it returns the source to Smart default.</string>
-    <string name="dialog_title_background_image_api">Custom background URL</string>
-    <string name="dialog_message_background_image_api">Enter a complete HTTPS image API or direct image URL.</string>
 
     <!-- Background source (issue #263) -->
-    <string name="title_background_source">Background source</string>
-    <string name="summary_background_source">Choose the home-screen background provider, a local image, or no background.</string>
     <string name="background_source_auto">Smart default (recommended)</string>
-    <string name="background_source_picsum">Photography (Lorem Picsum)</string>
-    <string name="background_source_pipw">Animé (Pipw)</string>
     <string name="background_source_api">Custom API URL</string>
     <string name="background_source_local">Local image</string>
-    <string name="background_source_none">No background</string>
-    <string name="background_source_dialog_title">Pick a background style</string>
-    <string name="background_source_dialog_message">Choose the style of random wallpapers shown on the home screen. You can change this anytime in Settings.</string>
-    <string name="background_source_dialog_later">Decide later</string>
 
     <!-- Crash report prompt -->
     <string name="crash_report_dialog_title">Moonlight closed unexpectedly last time</string>
@@ -1109,12 +1097,8 @@
     <string name="crash_report_unknown">Unknown</string>
     
     <!-- Local image picker -->
-    <string name="title_local_image_picker">Choose local background image</string>
-    <string name="summary_local_image_picker">Select one image from this device for the home-screen background.</string>
     
     <!-- Reset background image -->
-    <string name="title_reset_background_image">Return to smart background</string>
-    <string name="summary_reset_background_image">Clear the custom source and use the recommended automatic background again.</string>
     
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">Swap stream width and height</string>
@@ -1431,14 +1415,9 @@
     <string name="time_unknown">Unknown time</string>
 
     <!-- PcView hardcoded strings -->
-    <string name="storage_permission_required">Storage permission required to save images, please grant permission in settings</string>
-    <string name="downloading_image_please_wait">Re-downloading image, please wait...</string>
     <string name="image_download_failed_retry">Image download failed, please retry</string>
     <string name="image_download_failed_with_error">Image download failed: %1$s</string>
-    <string name="image_not_loaded_please_retry">Image not loaded, please try again later</string>
     <string name="image_invalid">Invalid image</string>
-    <string name="image_saved_successfully">Image successfully saved to system directory (Pictures/vplus)</string>
-    <string name="image_save_failed_with_error">Image save failed: %1$s</string>
     <string name="config_save_failed">Configuration save failed</string>
     <string name="scene_config_applied">Applied scene %1$d configuration: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">Scene %1$d not configured</string>
@@ -1464,13 +1443,7 @@
     <string name="network_bandwidth_test">Network Bandwidth Test (iPerf3)</string>
     <string name="no_online_computer_with_running_game">No online computer with running game found</string>
     <string name="restoring_session">Restoring session: %1$s</string>
-    <string name="please_wait_seconds">Please wait %1$ds</string>
-    <string name="daily_limit_reached">Daily limit reached (5/5). Try again tomorrow!</string>
-    <string name="refreshing_with_remaining">Refreshing... (%1$d left today)</string>
-    <string name="background_refreshed_with_remaining">Background refreshed! (%1$d left today)</string>
     <string name="refresh_failed_please_retry">Refresh failed, please retry</string>
-    <string name="refresh_failed_with_error">Refresh failed: %1$s</string>
-    <string name="refresh_failed_network">Network unavailable, can’t fetch background right now</string>
 
     <string name="game_menu_toggle_remote_mouse">Show/Hide Remote Mouse</string>
     <string name="toast_remote_mouse_toast">Remote mouse displayed/hidden</string>
@@ -2014,11 +1987,6 @@ Tap again to replace it.</string>
     <string name="toast_install_launch_failed">Failed to launch installer, please install manually from downloads</string>
     <string name="toast_external_display_disconnected">External display disconnected, switching to main screen</string>
     <string name="toast_switched_to_external_display">Streaming switched to external display. If landscape is not shown correctly, try rotating on host.</string>
-    <string name="toast_image_picker_open_failed">Cannot open image picker</string>
-    <string name="toast_background_image_saved">Background image set</string>
-    <string name="toast_image_save_failed">Could not save image. Try again.</string>
-    <string name="toast_image_pick_cancelled">Image selection cancelled</string>
-    <string name="toast_background_image_reset">Default background restored</string>
     <string name="bitrate_haptic_mode_all">Haptics: every step</string>
     <string name="bitrate_haptic_mode_key_nodes">Haptics: milestones</string>
     <string name="bitrate_haptic_mode_none">Haptics: off</string>

@@ -5,9 +5,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
-import android.content.BroadcastReceiver
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -17,7 +15,6 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -73,15 +70,6 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DecodeFormat
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.FutureTarget
-import com.bumptech.glide.request.transition.Transition
-import com.bumptech.glide.signature.ObjectKey
 import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.ui.UiDismissKeyHandler
@@ -117,15 +105,11 @@ import com.limelight.utils.RemoteImeAutoShowPolicy
 import com.limelight.ui.screenCombinationModeIconRes
 import com.limelight.utils.UiHelper
 import com.limelight.utils.UpdateManager
-import com.limelight.utils.background.PipwImages
-import com.limelight.utils.background.PipwImageStore
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-import jp.wasabeef.glide.transformations.BlurTransformation
 
 import java.io.File
 import java.io.IOException
@@ -135,7 +119,6 @@ import java.util.*
 import kotlin.concurrent.thread
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 class StreamSettings : ThemedAppCompatActivity() {
 
@@ -156,23 +139,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         detailOwner = null
     }
 
-    private val backgroundFutureLock = Any()
-    @Volatile private var backgroundGeneration = 0
-    private var backgroundJob: Job? = null
-    private var backgroundTarget: CustomTarget<Drawable>? = null
-    private var backgroundFuture: FutureTarget<Drawable>? = null
-    private var pipwBackgroundLease: PipwImageStore.Lease? = null
-    private var backgroundReceiverRegistered = false
-    private val backgroundReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (!isDestroyed && !isFinishing) loadBackgroundImage()
-        }
-    }
-    private val backgroundPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == BackgroundSource.KEY_SOURCE || key == BackgroundSource.KEY_API_URL || key == BackgroundSource.KEY_LOCAL_PATH) {
-            if (!isDestroyed && !isFinishing) loadBackgroundImage()
-        }
-    }
     private var externalDisplayManager: ExternalDisplayManager? = null
 
     // 抽屉菜单相关
@@ -245,8 +211,6 @@ class StreamSettings : ThemedAppCompatActivity() {
     /** Reapplies presentation after reset and rebuilds the home screen for legacy locale changes. */
     internal fun onSettingsReset() {
         val languageChanged = UiHelper.resetLocale(this)
-        BackgroundSource.invalidateResolvedTarget()
-        sendBroadcast(Intent(BackgroundSource.ACTION_REFRESH).setPackage(packageName))
         AppTheme.applyStoredAppTheme(this)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && languageChanged) {
             // Rebuild the home screen too, matching the existing legacy language-change flow.
@@ -324,13 +288,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 searchBarExpanded = true
             }
         }
-
-        // 加载背景图片
-        loadBackgroundImage()
-        PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(backgroundPrefsListener)
-        ContextCompat.registerReceiver(this, backgroundReceiver,
-            IntentFilter(BackgroundSource.ACTION_REFRESH), ContextCompat.RECEIVER_NOT_EXPORTED)
-        backgroundReceiverRegistered = true
 
         // 设置版本号
         setupVersionInfo()
@@ -1029,7 +986,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         val nightModeChanged = lastNightMode != isNightMode()
         lastNightMode = isNightMode()
         applySettingsThemeSurfaces()
-        loadBackgroundImage()
         var shouldReloadSettings = nightModeChanged
         if (nightModeChanged) {
             AppTheme.applyStyle(this, R.style.PreferenceThemeWithShadow)
@@ -1169,14 +1125,6 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     override fun onDestroy() {
         crownInfoDialog?.dismiss()
-        PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(backgroundPrefsListener)
-        if (backgroundReceiverRegistered) {
-            unregisterReceiver(backgroundReceiver)
-            backgroundReceiverRegistered = false
-        }
-        cancelBackgroundLoad()
-        pipwBackgroundLease?.close()
-        pipwBackgroundLease = null
         AboutDialogLauncher.release(this)
         UpdateManager.cleanup()
         super.onDestroy()
@@ -3238,37 +3186,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
             setupAdaptiveBitratePresentation()
 
-            // 为 LocalImagePickerPreference 设置 Fragment 实例，确保 onActivityResult 回调正确
-            val localImagePicker = findPreference<LocalImagePickerPreference>("local_image_picker")
-            localImagePicker?.setFragment(this)
-
-            // Route API URL changes through BackgroundSource so source state,
-            // cache invalidation, and the live refresh stay atomic.
-            val backgroundImageUrlPref = findPreference<EditTextPreference>("background_image_url")
-            backgroundImageUrlPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-                val context = requireActivity()
-                val url = (newValue as? String).orEmpty().trim()
-
-                if (url.isNotEmpty()) {
-                    PreferenceManager.getDefaultSharedPreferences(context).edit {
-                        putString(BackgroundSource.KEY_API_URL, url)
-                    }
-                    BackgroundSource.setActivePreservingExtras(context, BackgroundSource.Api)
-                } else {
-                    BackgroundSource.setActive(context, BackgroundSource.Auto)
-                }
-
-                updateBackgroundPreferenceVisibility(
-                    if (url.isNotEmpty()) BackgroundSource.Api.prefValue else BackgroundSource.Auto.prefValue
-                )
-
-                true
-            }
-            findPreference<ListPreference>(BackgroundSource.KEY_SOURCE)?.onPreferenceChangeListener =
-                Preference.OnPreferenceChangeListener { _, newValue ->
-                    updateBackgroundPreferenceVisibility(newValue as? String)
-                    true
-                }
             // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
             // (Crashlytics 596baf51):先隐藏,探测放到 onViewCreated 里做,结果经
             // updateRuntimeVisibility 显示,避免与搜索过滤的可见性状态相互覆盖。
@@ -3796,11 +3713,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
             }
 
-            // 处理本地图片选择
-            if (requestCode == LocalImagePickerPreference.PICK_IMAGE_REQUEST && resultCode == RESULT_OK) {
-                val pickerPreference = LocalImagePickerPreference.instance
-                pickerPreference?.handleImagePickerResult(data)
-            }
         }
 
         private fun setupFramegenPreferences() {
@@ -3933,22 +3845,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             updateFramegenQualityVisibility(
                 PreferenceManager.getDefaultSharedPreferences(requireContext())
                     .getString(FramegenSettings.PREF_QUALITY_PRESET, null)
-            )
-        }
-
-        private fun updateBackgroundPreferenceVisibility(sourceValue: String?) {
-            val source = BackgroundSource.fromPrefValue(sourceValue)
-            updateRuntimeVisibility(
-                findPreference(BackgroundSource.KEY_API_URL),
-                source is BackgroundSource.Api,
-            )
-            updateRuntimeVisibility(
-                findPreference("local_image_picker"),
-                source is BackgroundSource.Local,
-            )
-            updateRuntimeVisibility(
-                findPreference("reset_background_image"),
-                source !is BackgroundSource.Auto,
             )
         }
 
@@ -4109,11 +4005,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 changedKey == PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING
             ) {
                 updateDeviceRumbleVisibility()
-            }
-            if (changedKey == null || changedKey == BackgroundSource.KEY_SOURCE) {
-                updateBackgroundPreferenceVisibility(
-                    BackgroundSource.current(requireContext()).prefValue
-                )
             }
             refreshFeaturePageVisibility(preferenceScreen)
             updateFeaturePageSummaries()
@@ -4898,232 +4789,5 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             return targetFile
         }
-    }
-
-    /**
-     * 计算设置页背景图允许的解码尺寸（RGB_565，每像素 2 字节）：
-     * - 预算取 min(maxMemory/12, freeMemory*0.4)，更贴近运行期实际可用堆
-     * - 仍超出预算则按平方根缩小到目标像素数
-     * - 返回 null 表示当前堆压力过大、放弃加载背景图（避免 OOM）
-     */
-    private fun computeBackgroundDecodeSize(): Pair<Int, Int>? {
-        val rt = Runtime.getRuntime()
-        val freeBytes = rt.maxMemory() - (rt.totalMemory() - rt.freeMemory())
-        // 极端低内存：直接放弃，避免 Glide native decode 第一步就 OOM
-        if (freeBytes < 8L * 1024 * 1024) return null
-        val dispW = resources.displayMetrics.widthPixels.coerceAtLeast(1)
-        val dispH = resources.displayMetrics.heightPixels.coerceAtLeast(1)
-        val needPixels = dispW.toLong() * dispH
-        val budgetBytes = minOf(rt.maxMemory() / 12L, (freeBytes * 4L) / 10L)
-        val maxPixels = budgetBytes / 2L  // RGB_565 每像素 2 字节
-        if (needPixels <= maxPixels) {
-            return dispW to dispH
-        }
-        val scale = sqrt(maxPixels.toDouble() / needPixels.toDouble())
-        val w = (dispW * scale).toInt().coerceAtLeast(1)
-        val h = (dispH * scale).toInt().coerceAtLeast(1)
-        return w to h
-    }
-
-    private fun cancelBackgroundLoad(): Int {
-        val previous = synchronized(backgroundFutureLock) {
-            backgroundGeneration++
-            backgroundFuture.also { backgroundFuture = null }
-        }
-        backgroundJob?.cancel()
-        // Cache hits use a CustomTarget, so clearing the ImageView's Glide request alone does not detach them.
-        findViewById<ImageView>(R.id.settingsBackgroundImage)?.setImageDrawable(null)
-        backgroundTarget?.let { Glide.with(applicationContext).clear(it) }
-        backgroundTarget = null
-        previous?.let {
-            it.cancel(true)
-            Glide.with(applicationContext).clear(it)
-        }
-        findViewById<ImageView>(R.id.settingsBackgroundImage)?.let { Glide.with(applicationContext).clear(it) }
-        return backgroundGeneration
-    }
-
-    private fun backgroundIsCurrent(generation: Int): Boolean =
-        generation == backgroundGeneration && !isDestroyed && !isFinishing
-
-    private fun loadBackgroundImage() {
-        val generation = cancelBackgroundLoad()
-        val imageView = findViewById<ImageView>(R.id.settingsBackgroundImage)
-        val orientation = resources.configuration.orientation
-        val resolved = BackgroundSource.resolveCurrentTarget(
-                this,
-                orientation
-        )
-        if (!backgroundIsCurrent(generation)) return
-        val target = resolved.target
-        val guarded = PipwImages.handles(resolved)
-        if (!guarded || pipwBackgroundLease?.key != resolved.cacheKey) {
-            pipwBackgroundLease?.close()
-            pipwBackgroundLease = null
-        }
-        if (guarded) imageView.setImageDrawable(null)
-
-        if (target == null) {
-            Glide.with(this).clear(imageView)
-            imageView.setImageDrawable(null)
-            return
-        }
-
-        // 解码尺寸根据当前可用堆按比例约束（详见 computeBackgroundDecodeSize）：
-        // - 4K 电视 + 大堆设备保持原分辨率
-        // - 低堆设备（典型场景：xiaomi MiTV4 SDK 23 maxMemory ≈ 100 MB）
-        //   自动缩到安全尺寸
-        // - 极端低剩余堆直接放弃背景图（保守不渲染，避免 OOM）
-        val size = computeBackgroundDecodeSize() ?: run {
-            imageView.setImageDrawable(null)
-            pipwBackgroundLease?.close()
-            pipwBackgroundLease = null
-            return
-        }
-        val (width, height) = size
-
-        // Theme tint comes from the shared full-page overlay, including detail pages.
-        // 强制 RGB_565：每像素 2 字节，整张图内存减半，模糊背景视觉无损
-        val options = RequestOptions()
-                .override(width, height)
-                .format(DecodeFormat.PREFER_RGB_565)
-                .transform(BlurTransformation(2, 3))
-                .signature(ObjectKey(resolved.cacheKey))
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-
-        if (guarded) {
-            backgroundJob = lifecycleScope.launch {
-                try {
-                    val lease = pipwBackgroundLease ?: PipwImages.get(this@StreamSettings).acquire(resolved, orientation)
-                        .also { pipwBackgroundLease = it }
-                    val file = lease.await()
-                    if (!backgroundIsCurrent(generation)) return@launch
-                    Glide.with(this@StreamSettings).load(file)
-                        .apply(options.clone().diskCacheStrategy(DiskCacheStrategy.NONE).skipMemoryCache(true))
-                        .transition(DrawableTransitionOptions.withCrossFade(400))
-                        .into(imageView)
-                } catch (_: CancellationException) {
-                    // A new source or Activity now owns the background.
-                } catch (_: Exception) {
-                    if (backgroundIsCurrent(generation)) imageView.setImageDrawable(null)
-                    LimeLog.warning("Pipw settings background unavailable")
-                }
-            }
-            return
-        }
-
-        // 候选 URL（含原始与所有代理变体）。Glide 缓存键以 URL 为基础，
-        // 因此可能上次走代理 A 命中、原始 URL 在缓存中并不存在；这里逐个尝试，
-        // 任一变体在缓存中就立即贴图，体验等同本地资源。
-        if (!target.startsWith("http")) {
-            val localFile = File(target)
-            if (!localFile.exists()) {
-                imageView.setImageDrawable(null)
-                return
-            }
-            Glide.with(this)
-                    .load(localFile)
-                    .apply(options)
-                    .transition(DrawableTransitionOptions.withCrossFade(400))
-                    .into(imageView)
-            return
-        }
-
-        // Reuse the active home-screen source. Proxy variants remain fallbacks
-        // for remote sources so this page keeps its existing network resilience.
-        val candidates = mutableListOf<String>().apply {
-            add(target)
-            try { addAll(UpdateManager.buildProxiedUrls(target)) } catch (_: Exception) {}
-        }.distinct()
-
-        tryCachedThenNetwork(imageView, options, candidates, 0, generation)
-    }
-
-    /**
-     * 依次对候选 URL 做 onlyRetrieveFromCache 同步缓存查询：
-     *   - 命中：直接贴图，无线程切换、无渐入，体验秒开
-     *   - 全部未命中：转入网络下载路径，下载完成后带 crossFade 渐入
-     */
-    private fun tryCachedThenNetwork(
-            imageView: ImageView,
-            options: RequestOptions,
-            candidates: List<String>,
-            index: Int,
-            generation: Int
-    ) {
-        if (!backgroundIsCurrent(generation)) return
-        if (index >= candidates.size) {
-            loadBackgroundImageFromNetwork(imageView, options, candidates, generation)
-            return
-        }
-        val requestTarget = object : CustomTarget<Drawable>() {
-            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                if (backgroundIsCurrent(generation)) imageView.setImageDrawable(resource)
-            }
-            override fun onLoadCleared(placeholder: Drawable?) {}
-            override fun onLoadFailed(errorDrawable: Drawable?) {
-                tryCachedThenNetwork(imageView, options, candidates, index + 1, generation)
-            }
-        }
-        backgroundTarget = requestTarget
-        Glide.with(this).load(candidates[index])
-            .apply(options.clone().onlyRetrieveFromCache(true)).into(requestTarget)
-    }
-
-    private fun loadBackgroundImageFromNetwork(
-            imageView: ImageView,
-            options: RequestOptions,
-            preBuiltCandidates: List<String>?,
-            generation: Int
-    ) {
-        Thread {
-            if (!backgroundIsCurrent(generation)) return@Thread
-            // 代理列表可能在调用前还未就绪，需要刷新一次
-            UpdateManager.ensureProxyListUpdated(this)
-            val candidates = preBuiltCandidates.orEmpty()
-            for (url in candidates) {
-                try {
-                    if (!backgroundIsCurrent(generation)) return@Thread
-                    // 后台同步预热：把图解码到 Glide 缓存中（包含 blur+mask 变换）；
-                    // 失败则尝试下一条代理，不会污染 UI
-                    val future = Glide.with(applicationContext)
-                            .asDrawable()
-                            .load(url)
-                            .apply(options)
-                            .submit()
-                    val retained = synchronized(backgroundFutureLock) {
-                        if (generation == backgroundGeneration) {
-                            backgroundFuture = future
-                            true
-                        } else false
-                    }
-                    if (!retained) {
-                        future.cancel(true)
-                        Glide.with(applicationContext).clear(future)
-                        return@Thread
-                    }
-                    try {
-                        future.get()
-                        runOnUiThread {
-                            if (!backgroundIsCurrent(generation)) return@runOnUiThread
-                            // 用同一份缓存渲染，加 400ms 渐入避免突兀 pop-in
-                            Glide.with(this@StreamSettings)
-                                    .load(url)
-                                    .apply(options)
-                                    .transition(DrawableTransitionOptions.withCrossFade(400))
-                                    .into(imageView)
-                        }
-                        return@Thread
-                    } finally {
-                        synchronized(backgroundFutureLock) {
-                            if (backgroundFuture === future) backgroundFuture = null
-                        }
-                        Glide.with(applicationContext).clear(future)
-                    }
-                } catch (e: Exception) {
-                    // Try next proxy
-                }
-            }
-        }.start()
     }
 }

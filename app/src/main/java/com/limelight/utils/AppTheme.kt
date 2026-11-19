@@ -97,6 +97,8 @@ object AppTheme {
     }
     const val ACCENT_MODE_PINK = "pink"
     const val ACCENT_MODE_BG = "bg"
+    /** Wallpaper hue buckets are retired; the active bucket is always "none". */
+    const val NO_ACCENT_BUCKET = -1
 
     /** Refresh live views on a bucket change, including changes made while the page was stopped. */
     fun observeAccent(context: Context, owner: LifecycleOwner, onChanged: () -> Unit) {
@@ -126,7 +128,7 @@ object AppTheme {
     }
 
     fun activeBucket(context: Context): Int =
-        if (getAccentMode(context) == ACCENT_MODE_BG) BgAccent.bucket(context) else BgAccent.NO_BUCKET
+        NO_ACCENT_BUCKET
 
     /** All Activity and drawable contexts use the same preference-resolved night configuration. */
     fun configurationContext(context: Context): Context {

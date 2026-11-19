@@ -853,23 +853,11 @@
     <string name="summary_enable_analytics">通过分享匿名使用统计数据来帮助改进应用。</string>
 
     <!-- Background image API -->
-    <string name="title_background_image_api">自定义背景网址</string>
-    <string name="summary_background_image_api">输入 HTTPS 图片 API 或图片直链；清空后会恢复为“智能默认”来源。</string>
-    <string name="dialog_title_background_image_api">自定义背景网址</string>
-    <string name="dialog_message_background_image_api">请输入完整的 HTTPS 图片 API 或图片直链。</string>
 
     <!-- Background source (issue #263) -->
-    <string name="title_background_source">背景图来源</string>
-    <string name="summary_background_source">选择首页背景提供方、本地图片或不显示背景。</string>
     <string name="background_source_auto">智能默认（推荐）</string>
-    <string name="background_source_picsum">摄影风景（Lorem Picsum）</string>
-    <string name="background_source_pipw">二次元（Pipw）</string>
     <string name="background_source_api">自定义 API</string>
     <string name="background_source_local">本地图片</string>
-    <string name="background_source_none">不显示背景</string>
-    <string name="background_source_dialog_title">选择壁纸风格</string>
-    <string name="background_source_dialog_message">选一种首页随机壁纸的风格吧，随时可以在设置里重新调整～</string>
-    <string name="background_source_dialog_later">以后再说</string>
 
     <!-- 崩溃日志反馈弹窗 -->
     <string name="crash_report_dialog_title">应用上次异常退出</string>
@@ -893,12 +881,8 @@
     <string name="crash_report_unknown">未知</string>
 
     <!-- Local image picker -->
-    <string name="title_local_image_picker">选择本地背景图片</string>
-    <string name="summary_local_image_picker">从本机选择一张图片作为首页背景。</string>
 
     <!-- Reset background image -->
-    <string name="title_reset_background_image">恢复智能背景</string>
-    <string name="summary_reset_background_image">清除自定义来源，重新使用推荐的自动背景。</string>
 
     <!-- Reverse resolution -->
     <string name="title_checkbox_reverse_resolution">交换串流宽度和高度</string>
@@ -1168,14 +1152,9 @@
     <string name="time_unknown">未知时间</string>
 
     <!-- PcView hardcoded strings - Chinese translations -->
-    <string name="storage_permission_required">需要存储权限才能保存图片，请在设置中授予权限</string>
-    <string name="downloading_image_please_wait">正在重新下载图片，请稍候...</string>
     <string name="image_download_failed_retry">图片下载失败，请重试</string>
     <string name="image_download_failed_with_error">图片下载失败: %1$s</string>
-    <string name="image_not_loaded_please_retry">图片未加载，请稍后再试</string>
     <string name="image_invalid">图片无效</string>
-    <string name="image_saved_successfully">涩图成功保存到了系统目录(Pictures/vplus)</string>
-    <string name="image_save_failed_with_error">涩图保存失败: %1$s</string>
     <string name="config_save_failed">配置保存失败</string>
     <string name="scene_config_applied">已应用场景%1$d配置: %2$dx%3$d@%4$dFPS %5$.2fMbps %6$s HDR %7$s</string>
     <string name="scene_not_configured">场景%1$d未配置</string>
@@ -1194,13 +1173,7 @@
     <string name="network_bandwidth_test">网络带宽测试 (iPerf3)</string>
     <string name="no_online_computer_with_running_game">没有找到运行游戏的在线电脑</string>
     <string name="restoring_session">恢复会话: %1$s</string>
-    <string name="please_wait_seconds">请等待 %1$d 秒</string>
-    <string name="daily_limit_reached">每日限制已达到 (5/5)。请明天再试！</string>
-    <string name="refreshing_with_remaining">刷新中... (今日剩余 %1$d 次)</string>
-    <string name="background_refreshed_with_remaining">背景刷新成功！(今日剩余 %1$d 次)</string>
     <string name="refresh_failed_please_retry">刷新失败，请重试</string>
-    <string name="refresh_failed_with_error">刷新失败: %1$s</string>
-    <string name="refresh_failed_network">网络不可用，暂时无法获取背景</string>
 
     <string name="game_menu_toggle_remote_mouse">显示/隐藏远程鼠标</string>
     <string name="toast_remote_mouse_toast">远程鼠标已显示/隐藏。</string>
@@ -1941,11 +1914,6 @@
     <string name="dialog_button_close">关闭</string>
     <string name="dialog_button_start">开始</string>
     <string name="dialog_button_stop">停止</string>
-    <string name="toast_image_picker_open_failed">无法打开图片选择器</string>
-    <string name="toast_background_image_saved">背景图片设置成功</string>
-    <string name="toast_image_save_failed">图片保存失败，请重试</string>
-    <string name="toast_image_pick_cancelled">图片选择已取消</string>
-    <string name="toast_background_image_reset">已恢复默认背景图片</string>
     <string name="bitrate_haptic_mode_all">震动：每档</string>
     <string name="bitrate_haptic_mode_key_nodes">震动：关键节点</string>
     <string name="bitrate_haptic_mode_none">震动：关闭</string>

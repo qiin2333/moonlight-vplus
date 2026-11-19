@@ -7,11 +7,6 @@
     android:background="@color/advance_setting_background"
     tools:context=".PcView" >
 
-    <ImageView
-        android:id="@+id/pcBackgroundImage"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop" />
 
     <RelativeLayout
         android:id="@+id/pcFragmentContainer"
