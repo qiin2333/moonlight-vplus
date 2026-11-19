@@ -1028,7 +1028,7 @@ public class ElementController {
         deleteButton.setColorFilter(
                 context.getResources().getColor(R.color.app_action_sheet_danger));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(32), dp(32));
-        params.marginStart = dp(8);
+        params.setMarginStart(dp(8));
         header.addView(deleteButton, params);
     }
 
