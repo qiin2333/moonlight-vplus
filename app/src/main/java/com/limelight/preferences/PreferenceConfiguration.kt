@@ -198,8 +198,8 @@ class PreferenceConfiguration {
      */
     var screenDs5TouchpadZoneRect = TouchpadZoneGeometry.DEFAULT_ZONE_RECT
     /** Ask the host to auto-invoke its touch keyboard when a text field gains focus (Sunshine extension). */
-    var touchKeyboardAutoInvoke = true
-    /** Auto-open the local IME on API 33+ when the host reports a trusted editable activation. */
+    var touchKeyboardAutoInvoke = false
+    /** Auto-open the local IME on API 30+ when the host reports a trusted editable activation. */
     var remoteImeAutoShow = true
     var audioConfiguration: MoonBridge.AudioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO
     /** Negotiated audio codec preference — see [MoonBridge.AUDIO_CODEC_OPUS] etc. */
@@ -1714,7 +1714,7 @@ class PreferenceConfiguration {
                 SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING,
                 TouchpadZoneGeometry.DEFAULT_ZONE_RECT
             ) ?: TouchpadZoneGeometry.DEFAULT_ZONE_RECT
-            config.touchKeyboardAutoInvoke = prefs.getBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, true)
+            config.touchKeyboardAutoInvoke = prefs.getBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, false)
             config.remoteImeAutoShow = prefs.getBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, true)
             config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.enableStun = prefs.getBoolean(ENABLE_STUN_PREF_STRING, DEFAULT_ENABLE_STUN)
