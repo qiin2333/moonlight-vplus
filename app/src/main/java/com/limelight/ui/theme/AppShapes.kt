@@ -3,14 +3,14 @@ package com.limelight.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
-/** Shared corner-radius scale for Compose surfaces and controls. */
+/** Shared corner-radius scale (Thor: restrained radii; mirrors corner_radius_* dimens). */
 object AppCornerRadii {
     val extraSmall = 4.dp
-    val small = 8.dp
-    val medium = 12.dp
-    val large = 16.dp
-    val overlay = 20.dp
-    val extraLarge = 24.dp
+    val small = 6.dp
+    val medium = 10.dp
+    val large = 12.dp
+    val overlay = 14.dp
+    val extraLarge = 16.dp
 }
 
 object AppShapes {
