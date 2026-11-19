@@ -64,7 +64,7 @@ class CrownEditorPersistenceTest {
             onView(withId(id("advance_setting_view"))).check(matches(isDisplayed()))
             activity.scenario.onActivity {
                 manager.elementController!!.loadAllElement(profile)
-                page = (manager.elementController!!.elements.single() as GroupButton).infoPage
+                page = (manager.elementController!!.elements.single() as GroupButton).getInfoPage()
                 manager.elementController!!.toggleInfoPage(page)
                 // Espresso does not wait for the editor's native entrance animator.
                 page.endAnimator()
@@ -94,7 +94,7 @@ class CrownEditorPersistenceTest {
                 assertTrue("Controller input must change the visible width", changedWidth > before)
                 page.pageReturn()
                 manager.elementController!!.loadAllElement(profile)
-                val reopened = (manager.elementController!!.elements.single() as GroupButton).infoPage
+                val reopened = (manager.elementController!!.elements.single() as GroupButton).getInfoPage()
                 manager.elementController!!.toggleInfoPage(reopened)
                 assertFalse(reopened.findViewById<CompoundButton>(id("page_group_button_child_visible")).isChecked)
                 assertEquals(changedWidth, reopened.findViewById<NumberSeekbar>(id("page_group_button_width")).value)
