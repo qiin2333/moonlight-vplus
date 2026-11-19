@@ -166,6 +166,7 @@ class CrownConfigPickerDialogTest {
         }
     }
 
+
     private fun coverAndReturn() {
         lateinit var cover: android.app.AlertDialog
         activityRule.scenario.onActivity { activity ->

@@ -45,12 +45,17 @@ class CrownConfigPickerDialog(
     private data class ConfirmTarget(val view: View?, val position: Int)
     private val confirmKeys = mutableMapOf<Pair<Int, Int>, ConfirmTarget>()
     private val choices = ListView(context).apply {
+        tag = "crown_picker_list"
         divider = null
         dividerHeight = 0
         clipToPadding = false
         setPadding(dp(12), dp(4), dp(12), dp(4))
         // Rows draw their own selection state; the default focus highlight would double-draw.
         setSelector(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        // Rows stay focusable but not clickable: ListView keeps the focus, moves
+        // its selection on dpad/stick input (mirrored into the row highlight by
+        // the selection listener below), and still owns taps for the item click
+        // listener because the rows themselves don't consume them.
         adapter = ConfigChoiceAdapter(context, configChoices) { position -> select(position) }
         // Rows are not clickable, so ListView routes taps here.
         setOnItemClickListener { _, _, position, _ -> select(position) }
@@ -187,8 +192,11 @@ class CrownConfigPickerDialog(
             gravity = android.view.Gravity.CENTER_VERTICAL
             minimumHeight = dp(50)
             setPadding(dp(8), dp(8), dp(10), dp(8))
-            // Not clickable: ListView owns taps and forwards them to the item click listener.
-            isFocusable = false
+            // Focusable so gamepad/key navigation moves between rows (ListView
+            // reports the focused row as the selected position, also in touch
+            // mode); NOT clickable, so ListView still owns taps and forwards
+            // them to its item click listener.
+            isFocusable = true
             isClickable = false
             addView(CrownThumbnailView(context), LinearLayout.LayoutParams(dp(34), dp(34)))
             addView(LinearLayout(context).apply {
@@ -242,10 +250,15 @@ class CrownConfigPickerDialog(
 
     private fun confirmSelection() {
         val adapter = choices.adapter as? ConfigChoiceAdapter ?: return
-        val position = if (adapter.highlightedPosition in 0 until adapter.count) {
+        // The ListView's live selection is the source of truth: it tracks dpad
+        // and stick moves synchronously, while highlightedPosition only mirrors
+        // it for rendering and can lag behind within the same frame.
+        val position = if (choices.selectedItemPosition in 0 until adapter.count) {
+            choices.selectedItemPosition
+        } else if (adapter.highlightedPosition in 0 until adapter.count) {
             adapter.highlightedPosition
         } else {
-            choices.selectedItemPosition
+            return
         }
         if (position !in 0 until adapter.count) return
         val choice = adapter.getItem(position)

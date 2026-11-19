@@ -143,3 +143,8 @@
     public int getCrownProfilesFailed();
     public int getPairingItemsFailed();
 }
+
+# Device picker instrumentation resolves layout ids on the minified target APK.
+-keepclassmembers class com.limelight.R$id {
+    int device_keyboard_scroll;
+}
