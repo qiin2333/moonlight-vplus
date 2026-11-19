@@ -53,10 +53,10 @@ index e1b9e0d7..a073acd1 100644
  
 diff --git a/app/src/main/java/com/limelight/SecondScreenTrackpad.kt b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
 new file mode 100644
-index 00000000..60feed89
+index 00000000..e389e397
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
-@@ -0,0 +1,1042 @@
+@@ -0,0 +1,1230 @@
 +@file:Suppress("DEPRECATION")
 +package com.limelight
 +
@@ -73,8 +73,11 @@ index 00000000..60feed89
 +// click comes only from the CLICK button under each pad, which holds that pad's contact while
 +// pressed so the host knows which half was clicked.
 +//
-+// Keyboard page (TYPE): a mouse trackpad (one finger moves, two fingers scroll) with
-+// [ LEFT | KEYBOARD | DONE | RIGHT ] below it, and Android's keyboard on the bottom screen. Text,
++// Keyboard page (TYPE), laid out like a ThinkPad: [ KEYBOARD | DONE ] on top, a mouse trackpad
++// with a TrackPoint-style nub in the middle, [ LEFT | MIDDLE | RIGHT ] under it, and Android's
++// keyboard below. Trackpad: one finger moves, two fingers scroll. Nub: press and push; the
++// pointer keeps moving at a speed set by how far you push. Holding MIDDLE turns nub or trackpad
++// movement into scrolling; tapping MIDDLE alone is a middle click. Text,
 +// Backspace and Enter go through the same handlers as V+'s own keyboard. The window is made
 +// focusable only while this page is open (the keyboard needs a focused editor); controller input
 +// is still forwarded to the stream. DONE or Back returns to the gamepad page.
@@ -83,6 +86,10 @@ index 00000000..60feed89
 +// Android's back gesture so a swipe from the bezel lands on the pad. Android only lifts its
 +// 200dp-per-edge exclusion limit while the navigation bar is stickily hidden; otherwise a 200dp
 +// band mid-pad is excluded, and a gesture Back from the rest of the edge never opens the menu.
++//
++// Touch rate: the pads ask Android for every touch sample as it arrives (unbuffered dispatch, as
++// V+'s main touch view does) and also replay any batched samples, instead of one sample per frame
++// of the bottom display.
 +//
 +// OLED care: pure black, no filled panels at rest (pads show only corner marks), captions fade
 +// out a few seconds after the last touch, everything dims after 10 s and goes black after 60 s
@@ -221,6 +228,8 @@ index 00000000..60feed89
 +
 +    private val padClicks = BooleanArray(2)
 +    private val mouseButtons = BooleanArray(2)
++    private var middleHeld = false
++    private var middleScrolled = false
 +
 +    private fun sendContact(side: Int, type: Byte, fx: Float, fy: Float) {
 +        // Left pad covers x 0.0..0.5 of the DS4 touchpad, right pad 0.5..1.0
@@ -245,7 +254,21 @@ index 00000000..60feed89
 +        if (down) conn.sendMouseButtonDown(button) else conn.sendMouseButtonUp(button)
 +    }
 +
++    /** ThinkPad middle button: held = scroll with nub or trackpad; tapped alone = middle click. */
++    private fun setMiddle(down: Boolean) {
++        if (middleHeld == down) return
++        middleHeld = down
++        if (down) {
++            middleScrolled = false
++        } else if (!middleScrolled) {
++            val conn = game.conn ?: return
++            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
++            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
++        }
++    }
++
 +    private fun releaseAll() {
++        middleHeld = false
 +        padClicks[0] = false
 +        padClicks[1] = false
 +        setMouseButton(0, false)
@@ -364,11 +387,13 @@ index 00000000..60feed89
 +        // Keyboard page
 +        private val mousePad = MousePadView(context)
 +        private val mouseLeft = ButtonView(context, "LEFT", hold = true) { setMouseButton(0, it) }
++        private val mouseMiddle = ButtonView(context, "MIDDLE", hold = true) { setMiddle(it) }
 +        private val mouseRight = ButtonView(context, "RIGHT", hold = true) { setMouseButton(1, it) }
 +        private val keyboardToggle = ButtonView(context, "KEYBOARD") { toggleIme() }
 +        private val done = ButtonView(context, "DONE") { closeKeyboardPage() }
 +        private val textSink = TextSinkView(context)
-+        private val keyboardViews: List<View> = listOf(mousePad, mouseLeft, mouseRight, keyboardToggle, done)
++        private val keyboardViews: List<View> =
++            listOf(mousePad, mouseLeft, mouseMiddle, mouseRight, keyboardToggle, done)
 +
 +        var keyboardPage = false
 +            private set
@@ -385,6 +410,11 @@ index 00000000..60feed89
 +        private val captionRunnable = Runnable { setCaptions(false) }
 +        private val shiftRunnable = object : Runnable {
 +            override fun run() {
++                // Never shift the pads under a finger; try again shortly.
++                if (touchesDown > 0) {
++                    mainHandler.postDelayed(this, 1_000L)
++                    return
++                }
 +                shiftStep = (shiftStep + 1) % SHIFT_PATTERN.size
 +                translationX = SHIFT_PATTERN[shiftStep].first * density
 +                translationY = SHIFT_PATTERN[shiftStep].second * density
@@ -431,7 +461,9 @@ index 00000000..60feed89
 +            hideIme()
 +            mousePad.reset()
 +            mouseLeft.reset()
++            mouseMiddle.reset()
 +            mouseRight.reset()
++            setMiddle(false)
 +            setMouseButton(0, false)
 +            setMouseButton(1, false)
 +            textSink.clearFocus()
@@ -491,18 +523,21 @@ index 00000000..60feed89
 +                    place(v, x, rowTop, x + each, rowBottom)
 +                }
 +            } else {
-+                // Mouse pad above [ LEFT | KEYBOARD | DONE | RIGHT ], all above the keyboard.
++                // ThinkPad-style: [ KEYBOARD | DONE ], trackpad with the nub in the middle,
++                // [ LEFT | MIDDLE | RIGHT ], then Android's keyboard below.
 +                val usable = (h - imeBottom).coerceAtLeast(h * .35f)
-+                val rowH = min(h * ROW_FRACTION, usable * .28f)
++                val topH = min(h * ROW_FRACTION * .6f, usable * .14f)
++                place(keyboardToggle, 0f, gap, w / 2f - gap / 2f, gap + topH)
++                place(done, w / 2f + gap / 2f, gap, w, gap + topH)
++                val rowH = min(h * ROW_FRACTION, usable * .24f)
 +                val rowBottom = usable - gap
 +                val rowTop = rowBottom - rowH
-+                place(mousePad, 0f, gap, w, rowTop - gap)
-+                val sideW = w * .3f
++                place(mousePad, 0f, 2 * gap + topH, w, rowTop - gap)
++                val midW = w * .22f
++                val sideW = (w - midW - 2 * gap) / 2f
 +                place(mouseLeft, 0f, rowTop, sideW, rowBottom)
++                place(mouseMiddle, sideW + gap, rowTop, sideW + gap + midW, rowBottom)
 +                place(mouseRight, w - sideW, rowTop, w, rowBottom)
-+                val mid = (w - 2 * sideW - 3 * gap) / 2f
-+                place(keyboardToggle, sideW + gap, rowTop, sideW + gap + mid, rowBottom)
-+                place(done, sideW + 2 * gap + mid, rowTop, w - sideW - gap, rowBottom)
 +            }
 +            updateGestureExclusion()
 +        }
@@ -611,7 +646,7 @@ index 00000000..60feed89
 +            leftPad.reset()
 +            rightPad.reset()
 +            mousePad.reset()
-+            listOf(leftClick, rightClick, mouseLeft, mouseRight).forEach { it.reset() }
++            listOf(leftClick, rightClick, mouseLeft, mouseMiddle, mouseRight).forEach { it.reset() }
 +            hotkeys.forEach { it.reset() }
 +            touchesDown = 0
 +            releaseAll()
@@ -705,6 +740,11 @@ index 00000000..60feed89
 +        private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
 +        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 +
++        /** Deliver every touch sample as it arrives rather than once per display frame. */
++        protected fun unbuffered(event: MotionEvent) {
++            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) requestUnbufferedDispatch(event)
++        }
++
 +        protected fun recordTrail(x: Float, y: Float) {
 +            trailX[trailHead] = x
 +            trailY[trailHead] = y
@@ -766,10 +806,15 @@ index 00000000..60feed89
 +        override fun onTouchEvent(event: MotionEvent): Boolean {
 +            when (event.actionMasked) {
 +                MotionEvent.ACTION_DOWN -> {
++                    unbuffered(event)
 +                    fingerDown = true
 +                    touch(event.x, event.y)
 +                }
-+                MotionEvent.ACTION_MOVE -> touch(event.getX(0), event.getY(0))
++                MotionEvent.ACTION_MOVE -> {
++                    // Replay samples Android batched since the last event, then the newest
++                    for (h in 0 until event.historySize) touch(event.getHistoricalX(0, h), event.getHistoricalY(0, h))
++                    touch(event.getX(0), event.getY(0))
++                }
 +                MotionEvent.ACTION_POINTER_UP -> {
 +                    // If the first finger lifts, keep following the one that stays
 +                    if (event.actionIndex == 0 && event.pointerCount > 1) touch(event.getX(1), event.getY(1))
@@ -824,9 +869,13 @@ index 00000000..60feed89
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- mouse pad
++    // ---------------------------------------------------------------- mouse pad with pointing-stick nub
 +
-+    /** Relative mouse: one finger moves the pointer, two fingers scroll. Clicks are the buttons below. */
++    /**
++     * Relative mouse. Trackpad: one finger moves the pointer, two fingers scroll. Nub (centre):
++     * press and push; the pointer moves continuously at a speed set by how far the finger has been
++     * pushed from where it pressed, like a ThinkPad TrackPoint. Holding MIDDLE makes either one scroll.
++     */
 +    private inner class MousePadView(context: Context) : TouchSurface(context) {
 +        private var lastX = 0f
 +        private var lastY = 0f
@@ -835,43 +884,118 @@ index 00000000..60feed89
 +        private var restScroll = 0f
 +        private var scrolling = false
 +
++        // Nub
++        private var nubActive = false
++        private var nubDownX = 0f
++        private var nubDownY = 0f
++        private var nubX = 0f
++        private var nubY = 0f
++        private var nubLastTick = 0L
++        private val nubFill = Paint(Paint.ANTI_ALIAS_FLAG)
++        private val nubRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
++        private val nubTick = object : Runnable {
++            override fun run() {
++                if (!nubActive) return
++                val now = SystemClock.uptimeMillis()
++                val dt = (now - nubLastTick).coerceIn(1L, 50L) / 1000f
++                nubLastTick = now
++                nubStep(dt)
++                mainHandler.postDelayed(this, NUB_TICK_MS)
++            }
++        }
++
++        private val nubCx get() = width / 2f
++        private val nubCy get() = height / 2f
++
 +        override fun onDraw(canvas: Canvas) {
-+            drawFrame(canvas, touching, CORNER)
-+            drawTouch(canvas, mouseButtons[0] || mouseButtons[1], if (scrolling) "SCROLL" else "MOUSE")
++            drawFrame(canvas, touching || nubActive, CORNER)
++            val caption = when {
++                nubActive -> if (middleHeld) "SCROLL" else "POINTER"
++                scrolling || (touching && middleHeld) -> "SCROLL"
++                else -> "MOUSE"
++            }
++            drawTouch(canvas, mouseButtons[0] || mouseButtons[1], caption)
++            drawNub(canvas)
++        }
++
++        /** Red ThinkPad-style nub: outline only at rest (OLED), filled with a push indicator in use. */
++        private fun drawNub(canvas: Canvas) {
++            val r = NUB_DP * density
++            if (nubActive) {
++                val px = (nubX - nubDownX).coerceIn(-r * 1.5f, r * 1.5f)
++                val py = (nubY - nubDownY).coerceIn(-r * 1.5f, r * 1.5f)
++                nubFill.shader = RadialGradient(nubCx + px * .3f, nubCy + py * .3f, r * 1.4f,
++                    blend(NUB_RED, Color.WHITE, .25f), withAlpha(NUB_RED, 0x30), Shader.TileMode.CLAMP)
++                canvas.drawCircle(nubCx, nubCy, r * 1.4f, nubFill)
++                nubFill.shader = null
++                nubFill.color = NUB_RED
++                canvas.drawCircle(nubCx + px * .35f, nubCy + py * .35f, r * .55f, nubFill)
++            } else {
++                nubRing.color = withAlpha(NUB_RED, 0x80)
++                nubRing.strokeWidth = 2f * density
++                canvas.drawCircle(nubCx, nubCy, r, nubRing)
++                nubFill.shader = null
++                nubFill.color = withAlpha(NUB_RED, 0x50)
++                canvas.drawCircle(nubCx, nubCy, r * .35f, nubFill)
++            }
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
 +        override fun onTouchEvent(event: MotionEvent): Boolean {
 +            when (event.actionMasked) {
 +                MotionEvent.ACTION_DOWN -> {
-+                    touching = true
-+                    baseline(event, -1)
-+                    mark(event.x, event.y)
++                    unbuffered(event)
++                    val dx = event.x - nubCx
++                    val dy = event.y - nubCy
++                    val hit = NUB_HIT_DP * density
++                    if (dx * dx + dy * dy <= hit * hit) {
++                        startNub(event.x, event.y)
++                    } else {
++                        touching = true
++                        baseline(event, -1)
++                        mark(event.x, event.y)
++                    }
 +                }
-+                MotionEvent.ACTION_POINTER_DOWN -> {
++                MotionEvent.ACTION_POINTER_DOWN -> if (!nubActive) {
 +                    scrolling = event.pointerCount >= 2
 +                    baseline(event, -1)
 +                }
-+                MotionEvent.ACTION_POINTER_UP -> {
++                MotionEvent.ACTION_POINTER_UP -> if (!nubActive) {
 +                    scrolling = event.pointerCount - 1 >= 2
 +                    baseline(event, event.actionIndex)
 +                }
 +                MotionEvent.ACTION_MOVE -> {
-+                    val i = 0
-+                    val dx = event.getX(i) - lastX
-+                    val dy = event.getY(i) - lastY
-+                    lastX = event.getX(i)
-+                    lastY = event.getY(i)
-+                    if (scrolling) scroll(dy) else move(dx, dy)
-+                    mark(lastX, lastY)
++                    if (nubActive) {
++                        nubX = event.getX(0)
++                        nubY = event.getY(0)
++                        invalidate()
++                    } else {
++                        // Replay batched samples, then the newest, so no movement is skipped
++                        for (h in 0 until event.historySize) track(event.getHistoricalX(0, h), event.getHistoricalY(0, h))
++                        track(event.getX(0), event.getY(0))
++                        mark(lastX, lastY)
++                    }
 +                }
 +                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
++                    stopNub()
 +                    touching = false
 +                    scrolling = false
 +                    invalidate()
 +                }
 +            }
 +            return true
++        }
++
++        private fun track(x: Float, y: Float) {
++            val dx = x - lastX
++            val dy = y - lastY
++            lastX = x
++            lastY = y
++            when {
++                scrolling -> scroll(dy)
++                middleHeld -> { middleScrolled = true; scroll(dy) }
++                else -> move(dx, dy)
++            }
 +        }
 +
 +        /** Re-anchor on a remaining pointer when fingers are added or lifted, so the cursor doesn't jump. */
@@ -892,8 +1016,12 @@ index 00000000..60feed89
 +            val dist = abs(dxPx) + abs(dyPx)
 +            // Gentle acceleration: slow strokes stay precise, fast flicks cross the screen.
 +            val gain = MOUSE_GAIN * (1f + min(dist / (ACCEL_DP * density), MAX_ACCEL))
-+            restX += dxPx / density * gain
-+            restY += dyPx / density * gain
++            send(dxPx / density * gain, dyPx / density * gain)
++        }
++
++        private fun send(dx: Float, dy: Float) {
++            restX += dx
++            restY += dy
 +            val sx = restX.toInt()
 +            val sy = restY.toInt()
 +            if (sx == 0 && sy == 0) return
@@ -911,7 +1039,57 @@ index 00000000..60feed89
 +            game.conn?.sendMouseHighResScroll(amount.coerceIn(-1200, 1200).toShort())
 +        }
 +
++        // ------------------------------------------------------------ nub
++
++        private fun startNub(x: Float, y: Float) {
++            nubActive = true
++            nubDownX = x
++            nubDownY = y
++            nubX = x
++            nubY = y
++            nubLastTick = SystemClock.uptimeMillis()
++            feedback()
++            mainHandler.removeCallbacks(nubTick)
++            mainHandler.postDelayed(nubTick, NUB_TICK_MS)
++            invalidate()
++        }
++
++        private fun stopNub() {
++            if (!nubActive) return
++            nubActive = false
++            mainHandler.removeCallbacks(nubTick)
++            invalidate()
++        }
++
++        /**
++         * Pointing-stick transfer: the push distance (dp from where the finger pressed) sets the
++         * pointer speed. Small dead zone so resting a finger doesn't drift; speed rises with the
++         * square of the push past it, capped.
++         */
++        private fun nubStep(dt: Float) {
++            val dx = (nubX - nubDownX) / density
++            val dy = (nubY - nubDownY) / density
++            val push = kotlin.math.sqrt(dx * dx + dy * dy)
++            if (push <= NUB_DEADZONE_DP) return
++            val over = push - NUB_DEADZONE_DP
++            val speed = min(NUB_GAIN * over * over, NUB_MAX_SPEED) // PC pixels per second
++            val vx = speed * dx / push
++            val vy = speed * dy / push
++            if (middleHeld) {
++                middleScrolled = true
++                restScroll += -vy * dt * NUB_SCROLL_RATIO
++                val amount = restScroll.toInt()
++                if (amount != 0) {
++                    restScroll -= amount
++                    game.conn?.sendMouseHighResScroll(amount.coerceIn(-1200, 1200).toShort())
++                }
++            } else {
++                send(vx * dt, vy * dt)
++            }
++        }
++
 +        fun reset() {
++            stopNub()
 +            touching = false
 +            scrolling = false
 +            restX = 0f
@@ -1066,6 +1244,16 @@ index 00000000..60feed89
 +        const val ACCEL_DP = 12f
 +        const val MAX_ACCEL = 1.5f
 +        const val SCROLL_GAIN = 6f // high-res wheel units (120 = one notch) per dp
++
++        // Nub (pointing stick)
++        const val NUB_DP = 20f // drawn radius
++        const val NUB_HIT_DP = 34f // press within this radius of the centre to use the nub
++        const val NUB_DEADZONE_DP = 1.5f
++        const val NUB_GAIN = 90f // PC pixels/s per dp^2 of push past the dead zone
++        const val NUB_MAX_SPEED = 3000f // PC pixels/s
++        const val NUB_SCROLL_RATIO = 1.2f // wheel units per pointer pixel while MIDDLE is held
++        const val NUB_TICK_MS = 8L
++        val NUB_RED = Color.rgb(0xE2, 0x23, 0x1A)
 +
 +        // OLED care
 +        const val CAPTION_MS = 4_000L
