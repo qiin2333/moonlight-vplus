@@ -93,6 +93,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -706,7 +707,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             value = query,
                             onValueChange = onQueryChange,
                             singleLine = true,
-                            textStyle = TextStyle(color = searchTextColor, fontSize = 14.sp, lineHeight = 20.sp),
+                            textStyle = TextStyle(color = searchTextColor, fontSize = 13.sp, lineHeight = 20.sp),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             modifier = Modifier
                                 .weight(1f)
@@ -724,7 +725,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                         if (query.isEmpty()) {
-                                            Text(searchHint, color = searchHintColor, fontSize = 14.sp)
+                                            Text(searchHint, color = searchHintColor, fontSize = 13.sp)
                                         }
                                         innerTextField()
                                     }
@@ -949,7 +950,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         Text(
                             text = profile.name,
                             color = Color.White,
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -960,7 +961,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                                 ?.let { getString(R.string.crown_store_detail_element_count, it) }
                                 ?: getString(R.string.crown_store_local_profile_id, profile.id),
                             color = Color.White.copy(alpha = 0.72f),
-                            fontSize = 10.sp,
+                            fontSize = 9.5.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -998,7 +999,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     Text(
                         text = stringResource(R.string.crown_store_my_workspace_title),
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -1018,13 +1019,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         Text(
                             text = profileCount.toString(),
                             color = MaterialTheme.colorScheme.primary,
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = stringResource(R.string.crown_store_profile_unit),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
+                            fontSize = 9.5.sp
                         )
                     }
                 }
@@ -1071,7 +1072,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Text(
                 text = title,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
@@ -1109,7 +1110,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     Text(
                         text = stringResource(R.string.crown_config_action_import_legacy),
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(3.dp))
@@ -1138,6 +1139,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             ensureStoreProfilePreview(profile)
         }
         CrownProfileCard(modifier, contentPadding = PaddingValues(12.dp)) {
+            // Design P2: preview first so a screen of cards reads as layouts,
+            // then scan-level text only - no actions on the card itself.
+            CrownLayoutPreview(profile.layoutBasis, previewState, height = 84.dp)
+            Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -1151,9 +1156,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     modifier = Modifier.size(18.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            CrownLayoutPreview(profile.layoutBasis, previewState, height = 62.dp)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             val meta = listOfNotNull(
                 profile.game.takeIf { it.isNotBlank() },
                 profile.author.takeIf { it.isNotBlank() }
@@ -1161,9 +1164,17 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             if (meta.isNotBlank()) {
                 CrownMetaText(meta, strong = false, maxLines = 1)
             }
-            previewState?.preview?.elements?.size?.takeIf { it > 0 }?.let {
-                Spacer(modifier = Modifier.height(3.dp))
-                CrownFootnote(stringResource(R.string.crown_store_detail_element_count, it))
+            val elementCount = previewState?.preview?.elements?.size?.takeIf { it > 0 }
+            val updatedLabel = formatStoreUpdatedAtCompact(profile.updatedAt)
+            if (elementCount != null || updatedLabel.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                val footer = listOfNotNull(
+                    elementCount?.let {
+                        stringResource(R.string.crown_store_detail_element_count, it)
+                    },
+                    updatedLabel.takeIf { it.isNotBlank() }
+                ).joinToString(" · ")
+                CrownFootnote(footer)
             }
         }
     }
@@ -1262,12 +1273,30 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Text(
                     text = profile.name,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 20.sp,
-                    lineHeight = 25.sp,
+                    fontSize = 22.sp,
+                    lineHeight = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                CrownLayoutPreview(profile.layoutBasis, previewState, height = 164.dp)
+                // Design P3: orientation and control count ride on the preview itself.
+                Box {
+                    CrownLayoutPreview(profile.layoutBasis, previewState, height = 164.dp)
+                    Row(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        formatLayoutBasisCompact(profile.layoutBasis)?.let { basis ->
+                            CrownPreviewOverlayChip(basis)
+                        }
+                        previewState?.preview?.elements?.size?.takeIf { it > 0 }?.let { count ->
+                            CrownPreviewOverlayChip(
+                                stringResource(R.string.crown_store_detail_element_count, count)
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -1472,14 +1501,16 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         height: androidx.compose.ui.unit.Dp = 76.dp,
         width: androidx.compose.ui.unit.Dp? = null
     ) {
-        val previewBackground = Color(0xFF171C2A)
-        val previewBackgroundEnd = Color(0xFF0E121B)
-        val previewControl = Color(0xFFFF8FA3)
-        val previewMuted = Color(0xFFE5E9F4).copy(alpha = 0.46f)
-        val previewInk = Color(0xFFF4F6FF)
-        val previewPrimary = Color(0xFFFF8FA3)
-        val previewSecondary = Color(0xFFD0B1FF)
-        val previewTertiary = Color(0xFFB4C7FF)
+        // Layout previews stay dark in both themes (they mimic the game picture),
+        // so these come from fixed resources instead of the theme's roles.
+        val previewBackground = colorResource(R.color.crown_preview_bg_top)
+        val previewBackgroundEnd = colorResource(R.color.crown_preview_bg_bottom)
+        val previewControl = colorResource(R.color.crown_preview_accent)
+        val previewMuted = colorResource(R.color.crown_preview_ink).copy(alpha = 0.46f)
+        val previewInk = colorResource(R.color.crown_preview_ink)
+        val previewPrimary = colorResource(R.color.crown_preview_accent)
+        val previewSecondary = colorResource(R.color.crown_preview_secondary)
+        val previewTertiary = colorResource(R.color.crown_preview_tertiary)
         val preview = state?.preview?.takeUnless { it.isEmpty }
         Box(
             modifier = (if (width == null) Modifier.fillMaxWidth() else Modifier.width(width))
@@ -1722,7 +1753,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Text(
                     text = title,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1750,7 +1781,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             text = text,
             modifier = modifier,
             color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 16.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
@@ -1762,7 +1793,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Text(
             text = text,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             lineHeight = 18.sp,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
@@ -1776,7 +1807,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Text(
             text = label,
             color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.alpha(0.7f)
         )
@@ -1784,7 +1815,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Text(
             text = value,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             lineHeight = 19.sp
         )
     }
@@ -1796,7 +1827,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Text(
             text = text,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             lineHeight = 17.sp,
             modifier = Modifier.alpha(0.72f)
         )
@@ -1807,7 +1838,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         Text(
             text = text,
             color = if (strong) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
@@ -1916,6 +1947,20 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         }
     }
 
+    /** Design P3: translucent pill pinned over a layout preview. */
+    @Composable
+    private fun CrownPreviewOverlayChip(text: String) {
+        Text(
+            text = text,
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.45f), AppShapes.small)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+
     @Composable
     private fun CrownTagChip(text: String, modifier: Modifier = Modifier) {
         Box(
@@ -1958,7 +2003,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Text(
                 text = text,
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 10.sp,
+                fontSize = 9.5.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -2167,7 +2212,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         }
         val termsCheckBox = CheckBox(this).apply {
             text = getString(R.string.message_crown_store_publish_terms)
-            textSize = 12f
+            textSize = 11f
             includeFontPadding = true
             setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
             buttonTintList = ColorStateList.valueOf(
@@ -2341,13 +2386,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
             setHintTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
             setPadding(dp(12), 0, dp(12), 0)
-            minimumHeight = dp(40)
+            minimumHeight = dp(36)
             val normalStroke = ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_input_border)
             val focusedStroke = UiHelper.accentColor(this@CrownStoreActivity)
             fun applyFieldBackground(focused: Boolean) {
                 background = GradientDrawable().apply {
                     setColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_input_background))
-                    cornerRadius = dp(10).toFloat()
+                    cornerRadius = dp(12).toFloat()
                     setStroke(dp(if (focused) 2 else 1), if (focused) focusedStroke else normalStroke)
                 }
             }
@@ -2360,9 +2405,11 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val block = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(TextView(context).apply {
-                text = getString(labelRes)
-                setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
-                textSize = 13f
+                // Design P5: micro section labels above each 36dp rounded field.
+                text = getString(labelRes).uppercase(Locale.getDefault())
+                setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
+                textSize = 9.5f
+                letterSpacing = 0.08f
                 typeface = Typeface.DEFAULT_BOLD
                 includeFontPadding = false
             })
@@ -2797,13 +2844,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         content.addView(TextView(this).apply {
             text = getString(R.string.crown_share_action_import)
             setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_primary))
-            textSize = 20f
+            textSize = 16f
             setTypeface(typeface, Typeface.BOLD)
         })
         content.addView(TextView(this).apply {
             text = getString(R.string.crown_store_detail_ready)
             setTextColor(ContextCompat.getColor(context, R.color.ui_shell_accent))
-            textSize = 12f
+            textSize = 11f
             setPadding(0, dp(4), 0, dp(10))
         })
 
@@ -2858,6 +2905,11 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
+            // Weighted so the install/merge actions stay visible even when the
+            // content is taller than the dialog on short landscape screens.
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            )
             addView(content)
         }
         val actions = LinearLayout(this).apply {
@@ -2880,8 +2932,19 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Button(this).apply {
                 text = getString(label)
                 isAllCaps = false
-                textSize = 12f
-                setTextColor(ContextCompat.getColor(context, R.color.crown_text_primary))
+                textSize = 11f
+                // The primary button is solid accent and needs the on-accent ink;
+                // everything else keeps the regular text color.
+                setTextColor(
+                    ContextCompat.getColor(
+                        context,
+                        if (backgroundRes == R.drawable.crown_primary_button_bg) {
+                            R.color.crown_on_accent
+                        } else {
+                            R.color.crown_text_primary
+                        }
+                    )
+                )
                 background = ContextCompat.getDrawable(context, backgroundRes)
                 minHeight = dp(44)
                 setPadding(dp(6), 0, dp(6), 0)
@@ -2910,7 +2973,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             text = getString(android.R.string.cancel)
             gravity = Gravity.CENTER
             setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_secondary))
-            textSize = 12f
+            textSize = 11f
             minHeight = dp(38)
             setOnClickListener { dialog.dismiss() }
         })

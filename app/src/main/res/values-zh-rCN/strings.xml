@@ -1886,7 +1886,7 @@
     <string name="crown_store_card_author">作者：%1$s</string>
     <string name="crown_store_no_search_results">没有匹配的王冠</string>
     <string name="crown_store_try_another_search">换个配置名、游戏、作者或标签试试。</string>
-    <string name="crown_store_action_import_profile">收下这套</string>
+    <string name="crown_store_action_import_profile">导入配置</string>
     <string name="crown_store_action_report_profile">举报</string>
     <string name="crown_store_action_edit_publish">补充信息并投稿</string>
     <string name="crown_store_action_publish_profile">投稿</string>
@@ -1921,7 +1921,7 @@
     <string name="crown_store_detail_compatibility_unknown">暂时无法判断适配</string>
     <string name="crown_store_detail_share_package">分享包</string>
     <string name="crown_store_detail_share_package_value">Crown 配置包（.crown）</string>
-    <string name="crown_store_action_publish">投稿到王冠 Store</string>
+    <string name="crown_store_action_publish">提交审核</string>
     <string name="crown_store_source_label">王冠 Store：%1$s</string>
     <string name="label_crown_share_source">来源</string>
     <string name="title_crown_store_publish_metadata">让大家认识这套配置</string>

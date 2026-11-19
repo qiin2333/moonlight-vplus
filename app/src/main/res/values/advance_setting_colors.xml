@@ -114,6 +114,10 @@
     <color name="crown_preview_bg_top">#FF232B3A</color>
     <color name="crown_preview_bg_bottom">#FF0E121A</color>
     <color name="crown_preview_border">#1AFFFFFF</color>
+    <color name="crown_preview_accent">#FFFF8FA3</color>
+    <color name="crown_preview_ink">#FFF4F6FF</color>
+    <color name="crown_preview_secondary">#FFD0B1FF</color>
+    <color name="crown_preview_tertiary">#FFB4C7FF</color>
 
     <!-- EasyTier 控制面板：跟随系统深浅色（暗色值与 crown 系一致） -->
     <color name="easytier_panel_background">@color/ui_shell_surface_elevated</color>

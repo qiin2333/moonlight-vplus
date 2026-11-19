@@ -957,7 +957,7 @@
     <string name="crown_store_card_author">By %1$s</string>
     <string name="crown_store_no_search_results">No matching crowns</string>
     <string name="crown_store_try_another_search">Try another name, game, author, or tag.</string>
-    <string name="crown_store_action_import_profile">Bring Home</string>
+    <string name="crown_store_action_import_profile">Import profile</string>
     <string name="crown_store_action_report_profile">Report</string>
     <string name="crown_store_action_edit_publish">Add Details and Submit</string>
     <string name="crown_store_action_publish_profile">Submit</string>
@@ -992,7 +992,7 @@
     <string name="crown_store_detail_compatibility_unknown">Screen fit is unknown</string>
     <string name="crown_store_detail_share_package">Share package</string>
     <string name="crown_store_detail_share_package_value">Crown package (.crown)</string>
-    <string name="crown_store_action_publish">Submit to Crown Store</string>
+    <string name="crown_store_action_publish">Submit for review</string>
     <string name="crown_store_source_label">Crown Store: %1$s</string>
     <string name="label_crown_share_source">Source</string>
     <string name="title_crown_store_publish_metadata">Introduce this profile</string>

@@ -31,6 +31,11 @@ class CrownThumbnailView @JvmOverloads constructor(
         super.onDraw(canvas)
         val density = resources.displayMetrics.density
         val radius = 9f * density
+        // Same deliberately dark preview canvas as the inspector and the store:
+        // the thumbnail must read as "this layout over the game picture".
+        val canvasTop = ContextCompat.getColor(context, R.color.crown_preview_bg_top)
+        val canvasBottom = ContextCompat.getColor(context, R.color.crown_preview_bg_bottom)
+        val previewInk = ContextCompat.getColor(context, R.color.crown_preview_ink)
         paint.style = Paint.Style.FILL
         paint.alpha = 255
         paint.shader = LinearGradient(
@@ -38,7 +43,7 @@ class CrownThumbnailView @JvmOverloads constructor(
             0f,
             width.toFloat(),
             height.toFloat(),
-            intArrayOf(Color.rgb(58, 65, 86), Color.rgb(23, 28, 42)),
+            intArrayOf(canvasTop, canvasBottom),
             null,
             Shader.TileMode.CLAMP
         )
@@ -51,7 +56,7 @@ class CrownThumbnailView @JvmOverloads constructor(
         // while the controls stay the visual focus.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = (0.7f * density).coerceAtLeast(1f)
-        paint.color = Color.WHITE
+        paint.color = previewInk
         paint.alpha = 18
         canvas.drawLine(width * 0.33f, 0f, width * 0.33f, height.toFloat(), paint)
         canvas.drawLine(width * 0.66f, 0f, width * 0.66f, height.toFloat(), paint)
@@ -71,7 +76,7 @@ class CrownThumbnailView @JvmOverloads constructor(
         val canvasHeight = value.heightPx * scale
         val offsetX = (width - canvasWidth) / 2f
         val offsetY = (height - canvasHeight) / 2f
-        val outline = Color.WHITE
+        val outline = previewInk
 
         value.elements
             .sortedBy { if (it.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 0 else 1 }
