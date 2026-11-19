@@ -302,4 +302,15 @@
     <string name="perf_sheet_previous_page">Trang trước</string>
     <string name="perf_sheet_next_page">Trang sau</string>
     <string name="perf_sheet_settings">Cài đặt</string>
+    <string name="game_menu_perf_position">Định vị nhanh</string>
+    <string name="game_menu_perf_position_reset">Đặt lại vị trí</string>
+    <string name="perf_overlay_anchor_top_left">Trên trái</string>
+    <string name="perf_overlay_anchor_top_center">Trên giữa</string>
+    <string name="perf_overlay_anchor_top_right">Trên phải</string>
+    <string name="perf_overlay_anchor_center_left">Giữa trái</string>
+    <string name="perf_overlay_anchor_center">Chính giữa</string>
+    <string name="perf_overlay_anchor_center_right">Giữa phải</string>
+    <string name="perf_overlay_anchor_bottom_left">Dưới trái</string>
+    <string name="perf_overlay_anchor_bottom_center">Dưới giữa</string>
+    <string name="perf_overlay_anchor_bottom_right">Dưới phải</string>
 </resources>

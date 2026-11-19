@@ -295,4 +295,15 @@
     <string name="perf_sheet_previous_page">Vorige pagina</string>
     <string name="perf_sheet_next_page">Volgende pagina</string>
     <string name="perf_sheet_settings">Instellingen</string>
+    <string name="game_menu_perf_position">Snelle plaatsing</string>
+    <string name="game_menu_perf_position_reset">Positie herstellen</string>
+    <string name="perf_overlay_anchor_top_left">Linksboven</string>
+    <string name="perf_overlay_anchor_top_center">Middenboven</string>
+    <string name="perf_overlay_anchor_top_right">Rechtsboven</string>
+    <string name="perf_overlay_anchor_center_left">Midden links</string>
+    <string name="perf_overlay_anchor_center">Midden</string>
+    <string name="perf_overlay_anchor_center_right">Midden rechts</string>
+    <string name="perf_overlay_anchor_bottom_left">Linksonder</string>
+    <string name="perf_overlay_anchor_bottom_center">Middenonder</string>
+    <string name="perf_overlay_anchor_bottom_right">Rechtsonder</string>
 </resources>

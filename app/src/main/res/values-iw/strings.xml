@@ -232,4 +232,15 @@
     <string name="perf_sheet_previous_page">הדף הקודם</string>
     <string name="perf_sheet_next_page">הדף הבא</string>
     <string name="perf_sheet_settings">הגדרות</string>
+    <string name="game_menu_perf_position">מיקום מהיר</string>
+    <string name="game_menu_perf_position_reset">איפוס מיקום</string>
+    <string name="perf_overlay_anchor_top_left">למעלה משמאל</string>
+    <string name="perf_overlay_anchor_top_center">למעלה במרכז</string>
+    <string name="perf_overlay_anchor_top_right">למעלה מימין</string>
+    <string name="perf_overlay_anchor_center_left">באמצע משמאל</string>
+    <string name="perf_overlay_anchor_center">במרכז</string>
+    <string name="perf_overlay_anchor_center_right">באמצע מימין</string>
+    <string name="perf_overlay_anchor_bottom_left">למטה משמאל</string>
+    <string name="perf_overlay_anchor_bottom_center">למטה במרכז</string>
+    <string name="perf_overlay_anchor_bottom_right">למטה מימין</string>
 </resources>

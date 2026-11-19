@@ -251,4 +251,15 @@
     <string name="perf_sheet_previous_page">Pagina precedentă</string>
     <string name="perf_sheet_next_page">Pagina următoare</string>
     <string name="perf_sheet_settings">Setări</string>
+    <string name="game_menu_perf_position">Poziționare rapidă</string>
+    <string name="game_menu_perf_position_reset">Resetează poziția</string>
+    <string name="perf_overlay_anchor_top_left">Stânga sus</string>
+    <string name="perf_overlay_anchor_top_center">Sus centru</string>
+    <string name="perf_overlay_anchor_top_right">Dreapta sus</string>
+    <string name="perf_overlay_anchor_center_left">Stânga centru</string>
+    <string name="perf_overlay_anchor_center">Centru</string>
+    <string name="perf_overlay_anchor_center_right">Dreapta centru</string>
+    <string name="perf_overlay_anchor_bottom_left">Stânga jos</string>
+    <string name="perf_overlay_anchor_bottom_center">Jos centru</string>
+    <string name="perf_overlay_anchor_bottom_right">Dreapta jos</string>
 </resources>

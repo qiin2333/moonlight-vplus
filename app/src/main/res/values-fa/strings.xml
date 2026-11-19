@@ -80,4 +80,15 @@
     <string name="perf_sheet_previous_page">صفحه قبلی</string>
     <string name="perf_sheet_next_page">صفحه بعدی</string>
     <string name="perf_sheet_settings">تنظیمات</string>
+    <string name="game_menu_perf_position">موقعیت سریع</string>
+    <string name="game_menu_perf_position_reset">بازنشانی موقعیت</string>
+    <string name="perf_overlay_anchor_top_left">بالا چپ</string>
+    <string name="perf_overlay_anchor_top_center">بالا وسط</string>
+    <string name="perf_overlay_anchor_top_right">بالا راست</string>
+    <string name="perf_overlay_anchor_center_left">وسط چپ</string>
+    <string name="perf_overlay_anchor_center">مرکز</string>
+    <string name="perf_overlay_anchor_center_right">وسط راست</string>
+    <string name="perf_overlay_anchor_bottom_left">پایین چپ</string>
+    <string name="perf_overlay_anchor_bottom_center">پایین وسط</string>
+    <string name="perf_overlay_anchor_bottom_right">پایین راست</string>
 </resources>

@@ -24,6 +24,10 @@
 -keep class com.limelight.gamemenu.GameMenuCardsKt { *; }
 # Performance-overlay tests invoke menu composables and HUD models across APKs.
 -keep class com.limelight.gamemenu.GameMenuOptionsKt { *; }
+-keep class com.limelight.PerfOverlayAnchor { *; }
+-keep class com.limelight.gamemenu.GameMenuKt {
+    public static int performanceAnchorLabel(com.limelight.PerfOverlayAnchor);
+}
 -keep class com.limelight.gamemenu.SegmentedFocusTargets { *; }
 -keep class com.limelight.gamemenu.GameMenu$MenuOption { *; }
 -keep class com.limelight.gamemenu.GameMenu$SegmentOption { *; }

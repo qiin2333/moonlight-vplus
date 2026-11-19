@@ -329,4 +329,15 @@
     <string name="perf_sheet_previous_page">Předchozí stránka</string>
     <string name="perf_sheet_next_page">Další stránka</string>
     <string name="perf_sheet_settings">Nastavení</string>
+    <string name="game_menu_perf_position">Rychlé umístění</string>
+    <string name="game_menu_perf_position_reset">Obnovit polohu</string>
+    <string name="perf_overlay_anchor_top_left">Vlevo nahoře</string>
+    <string name="perf_overlay_anchor_top_center">Nahoře uprostřed</string>
+    <string name="perf_overlay_anchor_top_right">Vpravo nahoře</string>
+    <string name="perf_overlay_anchor_center_left">Vlevo uprostřed</string>
+    <string name="perf_overlay_anchor_center">Uprostřed</string>
+    <string name="perf_overlay_anchor_center_right">Vpravo uprostřed</string>
+    <string name="perf_overlay_anchor_bottom_left">Vlevo dole</string>
+    <string name="perf_overlay_anchor_bottom_center">Dole uprostřed</string>
+    <string name="perf_overlay_anchor_bottom_right">Vpravo dole</string>
 </resources>

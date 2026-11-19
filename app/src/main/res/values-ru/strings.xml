@@ -2238,4 +2238,15 @@
     <string name="perf_sheet_previous_page">Предыдущая страница</string>
     <string name="perf_sheet_next_page">Следующая страница</string>
     <string name="perf_sheet_settings">Настройки</string>
+    <string name="game_menu_perf_position">Быстрое размещение</string>
+    <string name="game_menu_perf_position_reset">Сбросить положение</string>
+    <string name="perf_overlay_anchor_top_left">Сверху слева</string>
+    <string name="perf_overlay_anchor_top_center">Сверху по центру</string>
+    <string name="perf_overlay_anchor_top_right">Сверху справа</string>
+    <string name="perf_overlay_anchor_center_left">Слева по центру</string>
+    <string name="perf_overlay_anchor_center">По центру</string>
+    <string name="perf_overlay_anchor_center_right">Справа по центру</string>
+    <string name="perf_overlay_anchor_bottom_left">Снизу слева</string>
+    <string name="perf_overlay_anchor_bottom_center">Снизу по центру</string>
+    <string name="perf_overlay_anchor_bottom_right">Снизу справа</string>
 </resources>

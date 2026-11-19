@@ -370,4 +370,15 @@
     <string name="perf_sheet_previous_page">이전 페이지</string>
     <string name="perf_sheet_next_page">다음 페이지</string>
     <string name="perf_sheet_settings">설정</string>
+    <string name="game_menu_perf_position">빠른 위치 지정</string>
+    <string name="game_menu_perf_position_reset">위치 초기화</string>
+    <string name="perf_overlay_anchor_top_left">왼쪽 위</string>
+    <string name="perf_overlay_anchor_top_center">상단 중앙</string>
+    <string name="perf_overlay_anchor_top_right">오른쪽 위</string>
+    <string name="perf_overlay_anchor_center_left">왼쪽 중앙</string>
+    <string name="perf_overlay_anchor_center">중앙</string>
+    <string name="perf_overlay_anchor_center_right">오른쪽 중앙</string>
+    <string name="perf_overlay_anchor_bottom_left">왼쪽 아래</string>
+    <string name="perf_overlay_anchor_bottom_center">하단 중앙</string>
+    <string name="perf_overlay_anchor_bottom_right">오른쪽 아래</string>
 </resources>

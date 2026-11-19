@@ -266,4 +266,15 @@
     <string name="perf_sheet_previous_page">Önceki sayfa</string>
     <string name="perf_sheet_next_page">Sonraki sayfa</string>
     <string name="perf_sheet_settings">Ayarlar</string>
+    <string name="game_menu_perf_position">Hızlı konumlandırma</string>
+    <string name="game_menu_perf_position_reset">Konumu sıfırla</string>
+    <string name="perf_overlay_anchor_top_left">Sol üst</string>
+    <string name="perf_overlay_anchor_top_center">Üst orta</string>
+    <string name="perf_overlay_anchor_top_right">Sağ üst</string>
+    <string name="perf_overlay_anchor_center_left">Sol orta</string>
+    <string name="perf_overlay_anchor_center">Orta</string>
+    <string name="perf_overlay_anchor_center_right">Sağ orta</string>
+    <string name="perf_overlay_anchor_bottom_left">Sol alt</string>
+    <string name="perf_overlay_anchor_bottom_center">Alt orta</string>
+    <string name="perf_overlay_anchor_bottom_right">Sağ alt</string>
 </resources>

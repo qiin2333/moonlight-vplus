@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +103,7 @@ import androidx.compose.ui.semantics.testTag as semanticsTestTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -652,12 +654,14 @@ private fun GameMenuContent(
         }
 
         if (performancePositionPage) {
-            PerformancePositionGrid(
-                options = state.options,
-                onOptionClick = callbacks.onOptionClick,
-                initialFocusRequester = initialFocusRequester,
-                modifier = Modifier.fillMaxWidth()
-            )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                PerformancePositionGrid(
+                    options = state.options,
+                    onOptionClick = callbacks.onOptionClick,
+                    initialFocusRequester = initialFocusRequester,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         } else if (microphonePage) {
             MicrophoneDeviceList(state.microphone, callbacks.onMicrophoneInput,
                 initialFocusRequester, touchModeBackFocusRequester)

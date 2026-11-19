@@ -36,6 +36,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.limelight.PerfOverlayAnchor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -49,6 +50,47 @@ import java.util.Locale
 class GameMenuControllerLayoutFocusTest {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun positionGridFitsTranslatedLabelsAtLargeFontScale() {
+        val locales = listOf(Locale.GERMAN, Locale.forLanguageTag("nb-NO"), Locale.forLanguageTag("he"))
+        var locale by mutableStateOf(locales.first())
+        composeTestRule.setContent {
+            val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+                .createConfigurationContext(android.content.res.Configuration().apply { setLocale(locale) })
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.3f)) {
+                PerformancePositionGrid(
+                    options = PerfOverlayAnchor.entries.map { anchor ->
+                        GameMenu.MenuOption(
+                            label = context.getString(performanceAnchorLabel(anchor)),
+                            isWithGameFocus = false,
+                            runnable = Runnable {},
+                            iconKey = null,
+                            isShowIcon = false,
+                            isKeepDialog = true,
+                            focusKey = anchor.name
+                        )
+                    },
+                    onOptionClick = {},
+                    modifier = Modifier.width(280.dp)
+                )
+            }
+        }
+        for (language in locales) {
+            composeTestRule.runOnIdle { locale = language }
+            val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+                .createConfigurationContext(android.content.res.Configuration().apply { setLocale(language) })
+            PerfOverlayAnchor.entries.forEach { anchor ->
+                val label = context.getString(performanceAnchorLabel(anchor))
+                val results = mutableListOf<TextLayoutResult>()
+                val action = composeTestRule.onNodeWithText(label, useUnmergedTree = true)
+                    .fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
+                assertTrue(action.action?.invoke(results) == true)
+                assertFalse("$language: $label overflows", results.single().hasVisualOverflow)
+            }
+        }
+    }
 
     @Test
     fun wideTouchModeSplitPanesUseExplicitDirectionsAndReturnToHeader() {

@@ -366,4 +366,15 @@
     <string name="perf_sheet_previous_page">Page précédente</string>
     <string name="perf_sheet_next_page">Page suivante</string>
     <string name="perf_sheet_settings">Paramètres</string>
+    <string name="game_menu_perf_position">Position rapide</string>
+    <string name="game_menu_perf_position_reset">Réinitialiser la position</string>
+    <string name="perf_overlay_anchor_top_left">Haut gauche</string>
+    <string name="perf_overlay_anchor_top_center">Haut centre</string>
+    <string name="perf_overlay_anchor_top_right">Haut droite</string>
+    <string name="perf_overlay_anchor_center_left">Milieu gauche</string>
+    <string name="perf_overlay_anchor_center">Centre</string>
+    <string name="perf_overlay_anchor_center_right">Milieu droite</string>
+    <string name="perf_overlay_anchor_bottom_left">Bas gauche</string>
+    <string name="perf_overlay_anchor_bottom_center">Bas centre</string>
+    <string name="perf_overlay_anchor_bottom_right">Bas droite</string>
 </resources>

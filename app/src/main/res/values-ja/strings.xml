@@ -245,4 +245,15 @@
     <string name="perf_sheet_previous_page">前のページ</string>
     <string name="perf_sheet_next_page">次のページ</string>
     <string name="perf_sheet_settings">設定</string>
+    <string name="game_menu_perf_position">位置の変更</string>
+    <string name="game_menu_perf_position_reset">位置をリセット</string>
+    <string name="perf_overlay_anchor_top_left">左上</string>
+    <string name="perf_overlay_anchor_top_center">上中央</string>
+    <string name="perf_overlay_anchor_top_right">右上</string>
+    <string name="perf_overlay_anchor_center_left">左中央</string>
+    <string name="perf_overlay_anchor_center">中央</string>
+    <string name="perf_overlay_anchor_center_right">右中央</string>
+    <string name="perf_overlay_anchor_bottom_left">左下</string>
+    <string name="perf_overlay_anchor_bottom_center">下中央</string>
+    <string name="perf_overlay_anchor_bottom_right">右下</string>
 </resources>

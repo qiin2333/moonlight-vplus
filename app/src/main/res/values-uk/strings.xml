@@ -364,4 +364,15 @@
     <string name="perf_sheet_previous_page">Попередня сторінка</string>
     <string name="perf_sheet_next_page">Наступна сторінка</string>
     <string name="perf_sheet_settings">Налаштування</string>
+    <string name="game_menu_perf_position">Швидке розміщення</string>
+    <string name="game_menu_perf_position_reset">Скинути положення</string>
+    <string name="perf_overlay_anchor_top_left">Згори ліворуч</string>
+    <string name="perf_overlay_anchor_top_center">Згори по центру</string>
+    <string name="perf_overlay_anchor_top_right">Згори праворуч</string>
+    <string name="perf_overlay_anchor_center_left">Зліва по центру</string>
+    <string name="perf_overlay_anchor_center">По центру</string>
+    <string name="perf_overlay_anchor_center_right">Справа по центру</string>
+    <string name="perf_overlay_anchor_bottom_left">Знизу ліворуч</string>
+    <string name="perf_overlay_anchor_bottom_center">Знизу по центру</string>
+    <string name="perf_overlay_anchor_bottom_right">Знизу праворуч</string>
 </resources>

@@ -284,4 +284,15 @@
     <string name="perf_sheet_previous_page">Halaman sebelumnya</string>
     <string name="perf_sheet_next_page">Halaman berikutnya</string>
     <string name="perf_sheet_settings">Setelan</string>
+    <string name="game_menu_perf_position">Posisi cepat</string>
+    <string name="game_menu_perf_position_reset">Atur ulang posisi</string>
+    <string name="perf_overlay_anchor_top_left">Kiri atas</string>
+    <string name="perf_overlay_anchor_top_center">Atas tengah</string>
+    <string name="perf_overlay_anchor_top_right">Kanan atas</string>
+    <string name="perf_overlay_anchor_center_left">Kiri tengah</string>
+    <string name="perf_overlay_anchor_center">Tengah</string>
+    <string name="perf_overlay_anchor_center_right">Kanan tengah</string>
+    <string name="perf_overlay_anchor_bottom_left">Kiri bawah</string>
+    <string name="perf_overlay_anchor_bottom_center">Bawah tengah</string>
+    <string name="perf_overlay_anchor_bottom_right">Kanan bawah</string>
 </resources>

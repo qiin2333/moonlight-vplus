@@ -284,4 +284,15 @@
     <string name="perf_sheet_previous_page">Προηγούμενη σελίδα</string>
     <string name="perf_sheet_next_page">Επόμενη σελίδα</string>
     <string name="perf_sheet_settings">Ρυθμίσεις</string>
+    <string name="game_menu_perf_position">Γρήγορη τοποθέτηση</string>
+    <string name="game_menu_perf_position_reset">Επαναφορά θέσης</string>
+    <string name="perf_overlay_anchor_top_left">Πάνω αριστερά</string>
+    <string name="perf_overlay_anchor_top_center">Πάνω κέντρο</string>
+    <string name="perf_overlay_anchor_top_right">Πάνω δεξιά</string>
+    <string name="perf_overlay_anchor_center_left">Μέση αριστερά</string>
+    <string name="perf_overlay_anchor_center">Κέντρο</string>
+    <string name="perf_overlay_anchor_center_right">Μέση δεξιά</string>
+    <string name="perf_overlay_anchor_bottom_left">Κάτω αριστερά</string>
+    <string name="perf_overlay_anchor_bottom_center">Κάτω κέντρο</string>
+    <string name="perf_overlay_anchor_bottom_right">Κάτω δεξιά</string>
 </resources>

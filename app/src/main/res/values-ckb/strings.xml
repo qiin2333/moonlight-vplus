@@ -80,4 +80,15 @@
     <string name="perf_sheet_previous_page">پەڕەی پێشوو</string>
     <string name="perf_sheet_next_page">پەڕەی داهاتوو</string>
     <string name="perf_sheet_settings">ڕێکخستن</string>
+    <string name="game_menu_perf_position">دیاریکردنی شوێن</string>
+    <string name="game_menu_perf_position_reset">گەڕاندنەوەی شوێن</string>
+    <string name="perf_overlay_anchor_top_left">سەرەوە چەپ</string>
+    <string name="perf_overlay_anchor_top_center">سەرەوە ناوەڕاست</string>
+    <string name="perf_overlay_anchor_top_right">سەرەوە ڕاست</string>
+    <string name="perf_overlay_anchor_center_left">ناوەڕاست چەپ</string>
+    <string name="perf_overlay_anchor_center">ناوەڕاست</string>
+    <string name="perf_overlay_anchor_center_right">ناوەڕاست ڕاست</string>
+    <string name="perf_overlay_anchor_bottom_left">خوارەوە چەپ</string>
+    <string name="perf_overlay_anchor_bottom_center">خوارەوە ناوەڕاست</string>
+    <string name="perf_overlay_anchor_bottom_right">خوارەوە ڕاست</string>
 </resources>

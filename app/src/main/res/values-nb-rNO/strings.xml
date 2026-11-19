@@ -279,4 +279,15 @@
     <string name="perf_sheet_previous_page">Forrige side</string>
     <string name="perf_sheet_next_page">Neste side</string>
     <string name="perf_sheet_settings">Innstillinger</string>
+    <string name="game_menu_perf_position">Hurtigplassering</string>
+    <string name="game_menu_perf_position_reset">Tilbakestill plassering</string>
+    <string name="perf_overlay_anchor_top_left">Øverst til venstre</string>
+    <string name="perf_overlay_anchor_top_center">Øverst i midten</string>
+    <string name="perf_overlay_anchor_top_right">Øverst til høyre</string>
+    <string name="perf_overlay_anchor_center_left">Midten til venstre</string>
+    <string name="perf_overlay_anchor_center">Midten</string>
+    <string name="perf_overlay_anchor_center_right">Midten til høyre</string>
+    <string name="perf_overlay_anchor_bottom_left">Nederst til venstre</string>
+    <string name="perf_overlay_anchor_bottom_center">Nederst i midten</string>
+    <string name="perf_overlay_anchor_bottom_right">Nederst til høyre</string>
 </resources>

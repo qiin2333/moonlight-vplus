@@ -360,4 +360,15 @@
     <string name="perf_sheet_previous_page">Pagina precedente</string>
     <string name="perf_sheet_next_page">Pagina successiva</string>
     <string name="perf_sheet_settings">Impostazioni</string>
+    <string name="game_menu_perf_position">Posizionamento rapido</string>
+    <string name="game_menu_perf_position_reset">Ripristina posizione</string>
+    <string name="perf_overlay_anchor_top_left">Alto sinistra</string>
+    <string name="perf_overlay_anchor_top_center">Alto centro</string>
+    <string name="perf_overlay_anchor_top_right">Alto destra</string>
+    <string name="perf_overlay_anchor_center_left">Centro sinistra</string>
+    <string name="perf_overlay_anchor_center">Centro</string>
+    <string name="perf_overlay_anchor_center_right">Centro destra</string>
+    <string name="perf_overlay_anchor_bottom_left">Basso sinistra</string>
+    <string name="perf_overlay_anchor_bottom_center">Basso centro</string>
+    <string name="perf_overlay_anchor_bottom_right">Basso destra</string>
 </resources>
