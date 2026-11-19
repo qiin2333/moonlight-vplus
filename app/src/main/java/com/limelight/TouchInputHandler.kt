@@ -40,6 +40,12 @@ internal inline fun containsStylusTool(pointerCount: Int, toolTypeAt: (Int) -> I
     return false
 }
 
+internal inline fun pointerZeroIsStylus(pointerCount: Int, toolTypeAt: (Int) -> Int): Boolean =
+    pointerCount > 0 && when (toolTypeAt(0)) {
+        MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER -> true
+        else -> false
+    }
+
 internal const val CURRENT_MOTION_SAMPLE = -1
 
 internal fun normalizeStreamPosition(
@@ -799,11 +805,10 @@ class TouchInputHandler(private val game: Game) {
             eventY = event.getY(0) - activeStreamView.y
         }
 
-        val isStylus = event.pointerCount == 1 && event.actionIndex == 0 &&
-            (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
+        val isStylus = pointerZeroIsStylus(event.pointerCount) { event.getToolType(it) }
         // Pan/zoom must not delay a fallback pen stroke after a local transform.
-        if (isStylus && !game.getisTouchOverrideEnabled()) {
+        if (isStylus && event.pointerCount == 1 && event.actionIndex == 0 &&
+            !game.getisTouchOverrideEnabled()) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_HOVER_ENTER,
                 MotionEvent.ACTION_HOVER_EXIT, MotionEvent.ACTION_HOVER_MOVE -> {
