@@ -116,7 +116,10 @@ class CrownConfigPickerDialog(
             if (isShowing) {
                 choices.requestFocus()
                 choices.setSelection(selectedPosition)
-                (choices.adapter as? ConfigChoiceAdapter)?.notifyDataSetChanged()
+                (choices.adapter as? ConfigChoiceAdapter)?.let { adapter ->
+                    adapter.highlightedPosition = selectedPosition
+                    adapter.notifyDataSetChanged()
+                }
             }
         }
     }
