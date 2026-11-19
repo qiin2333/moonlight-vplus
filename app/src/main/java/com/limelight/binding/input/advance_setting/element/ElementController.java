@@ -757,40 +757,19 @@ public class ElementController {
             return;
         }
         ViewGroup content = (ViewGroup) scrollView.getChildAt(0);
-        LinearLayout card = new LinearLayout(context);
+        // Design L4: a full-width 84dp dark canvas with the live element centered.
+        FrameLayout card = new FrameLayout(context);
         card.setTag("crown_inspector_preview");
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        card.setBackgroundResource(R.drawable.crown_config_section_bg);
+        card.setBackgroundResource(R.drawable.crown_inspector_preview_bg);
+        card.setPadding(dp(6), dp(6), dp(6), dp(6));
 
         CrownInspectorPreviewView preview = new CrownInspectorPreviewView(context);
         preview.bind(element);
-        card.addView(preview, new LinearLayout.LayoutParams(dp(88), dp(88)));
-
-        LinearLayout text = new LinearLayout(context);
-        text.setOrientation(LinearLayout.VERTICAL);
-        text.setGravity(Gravity.CENTER_VERTICAL);
-        text.setPadding(dp(12), 0, 0, 0);
-        TextView title = new TextView(context);
-        title.setText(R.string.crown_preview);
-        title.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
-        title.setTextSize(13f);
-        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
-        TextView dimensions = new TextView(context);
-        dimensions.setText(element.getElementWidth() + " × " + element.getElementHeight());
-        dimensions.setTextColor(context.getResources().getColor(R.color.crown_text_secondary));
-        dimensions.setTextSize(11f);
-        dimensions.setPadding(0, dp(3), 0, 0);
-        text.addView(title, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        text.addView(dimensions, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        card.addView(text, new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(preview, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         ViewGroup.MarginLayoutParams cardParams = new ViewGroup.MarginLayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(108));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(84));
         cardParams.bottomMargin = dp(10);
         content.addView(card, Math.min(1, content.getChildCount()), cardParams);
     }
@@ -922,16 +901,18 @@ public class ElementController {
         collectCrownActionButtons(page, actionButtons);
         Element autoColorOwner = getCrownAutoColorOwner(page);
         boolean supportsAutoColor = autoColorOwner != null && autoColorOwner.supportsCrownAutoColors();
-        if (actionButtons.isEmpty() && !supportsAutoColor) {
+        Button copyButton = findCrownActionButton(actionButtons, "_copy");
+        Button deleteButton = findCrownActionButton(actionButtons, "_delete");
+        if (copyButton == null && deleteButton == null && !supportsAutoColor) {
             return;
         }
 
         LinearLayout actionBar = new LinearLayout(context);
         actionBar.setTag(CROWN_DETAIL_ACTION_BAR_TAG);
-        actionBar.setGravity(Gravity.END);
+        actionBar.setGravity(Gravity.CENTER_VERTICAL);
         actionBar.setOrientation(LinearLayout.HORIZONTAL);
-        actionBar.setPadding(dp(8), dp(8), dp(8), dp(8));
-        actionBar.setBackgroundColor(context.getResources().getColor(R.color.crown_panel_background));
+        actionBar.setPadding(dp(12), dp(10), dp(12), dp(14));
+        actionBar.setBackgroundResource(R.drawable.crown_panel_footer_bg);
 
         ScrollView detailScroll = findCrownDetailScrollView(page);
         if (detailScroll != null) {
@@ -940,20 +921,15 @@ public class ElementController {
                     detailScroll.getPaddingLeft(),
                     detailScroll.getPaddingTop(),
                     detailScroll.getPaddingRight(),
-                    detailScroll.getPaddingBottom() + dp(72)
+                    detailScroll.getPaddingBottom() + dp(78)
             );
-            FrameLayout.LayoutParams scrollParams =
-                    (FrameLayout.LayoutParams) detailScroll.getLayoutParams();
-            scrollParams.bottomMargin = Math.max(scrollParams.bottomMargin, dp(64));
-            detailScroll.setLayoutParams(scrollParams);
         }
 
         FrameLayout.LayoutParams actionBarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(64),
-                Gravity.BOTTOM | Gravity.END
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM
         );
-        actionBarParams.setMargins(0, 0, dp(5), 0);
         actionBar.setElevation(dp(6));
 
         if (supportsAutoColor) {
@@ -965,19 +941,95 @@ public class ElementController {
             actionBar.addView(autoColorButton, createCrownIconActionParams());
         }
 
-        for (Button originalButton : actionButtons) {
-            String idName = context.getResources().getResourceEntryName(originalButton.getId());
-            ImageButton actionButton = createCrownIconActionButton(
-                    getCrownActionIconRes(idName),
-                    originalButton.getText(),
-                    v -> originalButton.performClick()
-            );
-            actionBar.addView(actionButton, createCrownIconActionParams());
-            originalButton.setVisibility(View.GONE);
-            hideActionRowIfNeeded(originalButton);
+        // Design L4: 复制控件 stays as a labeled ghost action, 完成 closes the page,
+        // and delete moves to a danger icon next to the page title.
+        if (copyButton != null) {
+            LinearLayout copyAction = createCrownTextActionButton(
+                    copyButton.getText(), false,
+                    v -> copyButton.performClick());
+            actionBar.addView(copyAction, new LinearLayout.LayoutParams(
+                    0, dp(42), 1f));
+            actionBar.addView(new View(context), new LinearLayout.LayoutParams(dp(8), 1));
+            copyButton.setVisibility(View.GONE);
+            hideActionRowIfNeeded(copyButton);
+        }
+
+        LinearLayout doneAction = createCrownTextActionButton(
+                context.getString(R.string.crown_edit_done), true,
+                v -> {
+                    controllerManager.getSuperPagesController()
+                            .openNewPage(controllerManager.getSuperPagesController().getPageNull());
+                });
+        actionBar.addView(doneAction, new LinearLayout.LayoutParams(0, dp(42), 1.2f));
+
+        if (deleteButton != null) {
+            addCrownHeaderDeleteButton(page, deleteButton);
+            deleteButton.setVisibility(View.GONE);
+            hideActionRowIfNeeded(deleteButton);
         }
 
         page.addView(actionBar, actionBarParams);
+    }
+
+    private Button findCrownActionButton(List<Button> actionButtons, String idSuffix) {
+        for (Button button : actionButtons) {
+            String idName;
+            try {
+                idName = context.getResources().getResourceEntryName(button.getId());
+            } catch (Resources.NotFoundException e) {
+                continue;
+            }
+            if (idName.endsWith(idSuffix)) {
+                return button;
+            }
+        }
+        return null;
+    }
+
+    private LinearLayout createCrownTextActionButton(CharSequence label, boolean primary,
+                                                     View.OnClickListener listener) {
+        LinearLayout actionButton = new LinearLayout(context);
+        actionButton.setGravity(Gravity.CENTER);
+        actionButton.setOrientation(LinearLayout.HORIZONTAL);
+        actionButton.setBackgroundResource(primary
+                ? R.drawable.crown_primary_button_bg
+                : R.drawable.crown_ghost_button_bg);
+        actionButton.setClickable(true);
+        actionButton.setFocusable(true);
+        TextView text = new TextView(context);
+        text.setText(label);
+        text.setTextSize(13f);
+        if (primary) {
+            text.setTypeface(text.getTypeface(), android.graphics.Typeface.BOLD);
+        }
+        text.setTextColor(context.getResources().getColor(primary
+                ? R.color.crown_on_accent
+                : R.color.crown_text_secondary));
+        actionButton.addView(text);
+        actionButton.setOnClickListener(listener);
+        return actionButton;
+    }
+
+    private void addCrownHeaderDeleteButton(SuperPageLayout page, Button originalDelete) {
+        View titleText = page.findViewById(R.id.crown_page_title_text);
+        if (!(titleText != null && titleText.getParent() instanceof ViewGroup)
+                || page.findViewWithTag("crown_header_delete") != null) {
+            return;
+        }
+        ViewGroup header = (ViewGroup) titleText.getParent();
+        ImageButton deleteButton = createCrownIconActionButton(
+                R.drawable.phc_action_trash,
+                originalDelete.getContentDescription() != null
+                        ? originalDelete.getContentDescription()
+                        : originalDelete.getText(),
+                v -> originalDelete.performClick()
+        );
+        deleteButton.setTag("crown_header_delete");
+        deleteButton.setColorFilter(
+                context.getResources().getColor(R.color.app_action_sheet_danger));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(32), dp(32));
+        params.marginStart = dp(8);
+        header.addView(deleteButton, params);
     }
 
     private ScrollView findCrownDetailScrollView(View view) {

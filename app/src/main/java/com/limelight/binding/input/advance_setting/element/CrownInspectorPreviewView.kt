@@ -2,23 +2,18 @@ package com.limelight.binding.input.advance_setting.element
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.content.ContextCompat
-import com.limelight.R
 
 /**
  * A small live snapshot of the element being edited. It reuses the element's
  * own renderer so the Inspector preview stays in sync with the stream canvas.
+ * The host card draws the dark canvas; this view only places the element.
  */
 class CrownInspectorPreviewView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val frame = RectF()
     private var element: Element? = null
 
     fun bind(value: Element?) {
@@ -30,13 +25,6 @@ class CrownInspectorPreviewView @JvmOverloads constructor(
         super.onDraw(canvas)
         val density = resources.displayMetrics.density
         val inset = 6f * density
-        val radius = 10f * density
-
-        paint.style = Paint.Style.FILL
-        paint.color = ContextCompat.getColor(context, R.color.crown_input_background)
-        paint.alpha = 255
-        frame.set(0f, 0f, width.toFloat(), height.toFloat())
-        canvas.drawRoundRect(frame, radius, radius, paint)
 
         val value = element ?: return
         val params = value.layoutParams

@@ -78,7 +78,7 @@ final class CrownColorPickerBinder {
         ColorSwatchDrawable(android.content.Context context, int color) {
             this.color = color;
             density = context.getResources().getDisplayMetrics().density;
-            int size = Math.round(20 * density);
+            int size = Math.round(22 * density);
             setBounds(0, 0, size, size);
             border.setStyle(Paint.Style.STROKE);
             border.setStrokeWidth(Math.max(1f, density));

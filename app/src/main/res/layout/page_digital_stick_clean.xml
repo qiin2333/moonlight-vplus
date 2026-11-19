@@ -9,7 +9,6 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginEnd="8dp"
         android:paddingVertical="12dp"
         android:layout_gravity="center_vertical"
         android:background="@drawable/crown_config_panel_bg"
@@ -273,7 +272,7 @@
                         <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                             android:id="@+id/page_digital_stick_normal_color"
                             android:layout_width="match_parent"
-                            android:layout_height="38dp"
+                            android:layout_height="44dp"
                             android:gravity="center"
                             android:text="#FFFFFF"
                             android:textSize="11sp"
@@ -296,7 +295,7 @@
                         <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                             android:id="@+id/page_digital_stick_pressed_color"
                             android:layout_width="match_parent"
-                            android:layout_height="38dp"
+                            android:layout_height="44dp"
                             android:gravity="center"
                             android:text="#00FF00"
                             android:textSize="11sp"
@@ -320,7 +319,7 @@
                     <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                         android:id="@+id/page_digital_stick_background_color"
                         android:layout_width="match_parent"
-                        android:layout_height="38dp"
+                        android:layout_height="44dp"
                         android:gravity="center"
                         android:text="#80000000"
                         android:textSize="11sp"
