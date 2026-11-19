@@ -1801,39 +1801,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownDetailField(label: String, value: String) {
-        if (value.isBlank()) return
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.alpha(0.7f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 13.sp,
-            lineHeight = 19.sp
-        )
-    }
-
-    @Composable
-    private fun CrownDetailMeta(text: String) {
-        if (text.isBlank()) return
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = text,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp,
-            lineHeight = 17.sp,
-            modifier = Modifier.alpha(0.72f)
-        )
-    }
-
-    @Composable
     private fun CrownMetaText(text: String, strong: Boolean, maxLines: Int = 1) {
         Text(
             text = text,
@@ -1855,25 +1822,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-    }
-
-    @Composable
-    private fun CrownStoreCardFooter(
-        layoutBasis: String,
-        updatedAt: String,
-        elementCount: Int? = null
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            elementCount?.takeIf { it > 0 }?.let {
-                CrownFootnote(stringResource(R.string.crown_store_detail_element_count, it))
-            }
-            if (layoutBasis.isNotBlank()) {
-                CrownFootnote(text = layoutBasis)
-            }
-            if (updatedAt.isNotBlank()) {
-                CrownFootnote(text = updatedAt)
-            }
-        }
     }
 
     @Composable
@@ -1929,20 +1877,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-        }
-    }
-
-    @Composable
-    private fun CrownTags(tags: List<String>) {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            val visibleTags = tags.filter { it.isNotBlank() }.take(2)
-            visibleTags.forEach { tag ->
-                CrownTagChip(tag, Modifier.weight(1f))
-            }
-            val overflowCount = tags.size - visibleTags.size
-            if (overflowCount > 0) {
-                CrownTagChip("+$overflowCount", Modifier.width(36.dp))
             }
         }
     }
