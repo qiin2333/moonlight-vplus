@@ -824,6 +824,12 @@ public class DigitalMovableButton extends Element {
         return digitalMovableButtonPage;
     }
 
+    @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_digital_movable_button_text_e279e);
+    }
+
+
     protected void setElementText(String text) {
         this.text = text;
         invalidate();

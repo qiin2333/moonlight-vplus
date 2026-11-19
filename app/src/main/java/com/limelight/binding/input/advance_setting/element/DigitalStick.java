@@ -734,6 +734,12 @@ public class DigitalStick extends Element {
     }
 
     @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_digital_stick_text_23611);
+    }
+
+
+    @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE, upValue);

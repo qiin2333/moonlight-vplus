@@ -281,7 +281,7 @@
                     android:layout_height="40dp"
                     android:text="@string/layout_keyboard_mini_text_3ae7b"
                     android:gravity="center"
-                    android:textSize="12sp" />
+                    android:textSize="11sp" />
                 <TextView
                     style="@style/KeyboardKeyRefined.Modifier"
                     android:layout_width="100dp"
@@ -289,7 +289,7 @@
                     android:tag="k112"
                     android:text="⌫ Delete"
                     android:gravity="center"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:layout_marginTop="8dp" />
             </LinearLayout>
             <!-- 右侧：方向键区 (占 50% 宽度) -->

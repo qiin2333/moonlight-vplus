@@ -905,7 +905,7 @@
     
     <!-- Crown feature area -->
     <string name="category_crown_features">Crown</string>
-    <string name="title_crown_super_features">Enable Crown profiles</string>
+    <string name="title_crown_super_features">Crown profiles enabled</string>
     <string name="summary_crown_super_features">A virtual on-screen button solution. Switch on-screen buttons, quick actions, touch mode, and vibration feedback settings together as named profiles.</string>
     <string name="summary_export_super_config">Export custom button and streaming settings configuration file</string>
     <string name="title_import_super_config">Import Configuration</string>
@@ -913,11 +913,20 @@
     <string name="summary_merge_super_config">Merge new configuration buttons into existing configuration</string>
     <string name="title_crown_config_management">Manage Crown profiles</string>
     <string name="summary_crown_config_management">Create, select, import, export, or merge on-screen control and touch profiles.</string>
+    <string name="summary_crown_config_management_with_count">%1$d profiles ready to switch</string>
+    <string name="title_crown_edit_current">Edit current layout</string>
+    <string name="summary_crown_edit_current">Open My Crowns to manage the active layout.</string>
+    <string name="summary_crown_enabled_state">%1$s · %2$d controls · ready for the current stream</string>
+    <string name="summary_crown_current_profile">The profile used when Crown input is enabled.</string>
+    <string name="summary_crown_current_profile_empty">No Crown profile selected yet.</string>
+    <string name="summary_crown_store_view">Browse layouts, previews, and community profiles.</string>
+    <string name="title_crown_import_package">Import a Crown package</string>
+    <string name="summary_crown_import_package">Restore a shared Crown package from this device.</string>
     <string name="crown_config_action_import">Import Configuration</string>
     <string name="crown_config_action_export">Export Configuration</string>
     <string name="crown_config_action_import_legacy">Import Legacy .mdat</string>
     <string name="crown_config_no_profiles">No Crown profiles available</string>
-    <string name="title_crown_store_view">Crown</string>
+    <string name="title_crown_store_view">Crown Market</string>
     <string name="crown_store_tab_store">Crown Market</string>
     <string name="crown_store_tab_mine">My Crowns</string>
     <string name="crown_store_store_summary">Browse Crown layouts shared on GitHub. Pick one you like and bring it home.</string>
@@ -927,11 +936,15 @@
     <string name="crown_store_profile_count">Profiles: %1$d</string>
     <string name="crown_store_profile_unit">Profiles</string>
     <string name="crown_store_profile_active">Active</string>
+    <string name="crown_store_featured">Featured this week</string>
     <string name="crown_store_legacy_tool_summary">Restore a Crown profile from a legacy .mdat file.</string>
     <string name="crown_store_action_open">Open</string>
     <string name="crown_store_action_import_package">Import package</string>
     <string name="crown_store_action_refresh">Refresh</string>
     <string name="crown_store_search_hint">Search crowns</string>
+    <string name="crown_store_filter_all">All</string>
+    <string name="crown_store_filter_recent">Recent</string>
+    <string name="crown_store_filter_name">Name</string>
     <string name="crown_store_clear_search">Clear search</string>
     <string name="crown_store_sort_by">Sort: %1$s</string>
     <string name="crown_store_sort_store_order">Store order</string>
@@ -944,7 +957,7 @@
     <string name="crown_store_card_author">By %1$s</string>
     <string name="crown_store_no_search_results">No matching crowns</string>
     <string name="crown_store_try_another_search">Try another name, game, author, or tag.</string>
-    <string name="crown_store_action_import_profile">Bring Home</string>
+    <string name="crown_store_action_import_profile">Import profile</string>
     <string name="crown_store_action_report_profile">Report</string>
     <string name="crown_store_action_edit_publish">Add Details and Submit</string>
     <string name="crown_store_action_publish_profile">Submit</string>
@@ -958,6 +971,7 @@
     <string name="crown_store_my_empty_message">No local profiles yet. Import or create a Crown profile and it will appear here.</string>
     <string name="crown_store_local_tools">Local toolkit</string>
     <string name="crown_store_local_profile_id">Local ID: %1$s</string>
+    <string name="crown_store_action_use_profile">Use this profile</string>
     <string name="crown_store_layout_basis">Fit: %1$s</string>
     <string name="crown_store_layout_orientation_landscape">landscape</string>
     <string name="crown_store_layout_orientation_portrait">portrait</string>
@@ -968,8 +982,19 @@
     <string name="message_crown_store_layout_mismatch">Fit: this Crown was tuned for %1$s. Your screen is %2$s, so buttons may need a tiny nudge after import.</string>
     <string name="action_crown_store_continue_import">Import Anyway</string>
     <string name="crown_store_updated_at">Last updated: %1$s</string>
-    <string name="crown_store_action_publish">Submit to Crown Store</string>
+    <string name="crown_store_detail_ready">Ready to import</string>
+    <string name="crown_store_detail_elements">Layout contents</string>
+    <string name="crown_store_detail_element_count">%1$d controls</string>
+    <string name="crown_store_detail_loading">Reading layout preview…</string>
+    <string name="crown_store_detail_compatibility">Compatibility</string>
+    <string name="crown_store_detail_compatibility_match">Fits this screen</string>
+    <string name="crown_store_detail_compatibility_mismatch">Needs a small adjustment</string>
+    <string name="crown_store_detail_compatibility_unknown">Screen fit is unknown</string>
+    <string name="crown_store_detail_share_package">Share package</string>
+    <string name="crown_store_detail_share_package_value">Crown package (.crown)</string>
+    <string name="crown_store_action_publish">Submit for review</string>
     <string name="crown_store_source_label">Crown Store: %1$s</string>
+    <string name="label_crown_share_source">Source</string>
     <string name="title_crown_store_publish_metadata">Introduce this profile</string>
     <string name="title_crown_store_github_authorization">Connect GitHub first</string>
     <string name="title_crown_store_publish_success">Store PR sent</string>
@@ -1000,6 +1025,7 @@
     <string name="crown_share_install_as_new">Install as New</string>
     <string name="crown_share_merge_into_existing">Merge into Existing</string>
     <string name="crown_share_unknown_value">Unknown</string>
+    <string name="message_crown_share_import_preview_only">Only Crown profile data will be changed.</string>
     <string name="crown_share_source_link">Link</string>
     <string name="crown_share_source_link_host">Link: %1$s</string>
     <string name="hint_crown_share_import_url">GitHub raw, Gist, or Pages URL</string>
@@ -1063,6 +1089,22 @@
     <string name="toast_back_key_menu_switch_2">Entered Crown configuration</string>
     <string name="game_menu_edit_mode">Edit Button Layout</string>
     <string name="game_menu_configure_settings">Switch Config</string>
+    <string name="crown_menu_current_profile">Current profile</string>
+    <string name="crown_menu_profile_summary">%1$s · %2$d controls</string>
+    <string name="crown_menu_profile_hint">Landscape 16:9 · ready for this stream</string>
+    <string name="crown_menu_change_profile">Switch</string>
+    <string name="crown_menu_quick_controls">Quick controls</string>
+    <string name="crown_menu_touch_input">Touch input</string>
+    <string name="crown_menu_touch_input_summary">Touchpad and mouse pointer</string>
+    <string name="crown_menu_vibration">Vibration feedback</string>
+    <string name="crown_menu_vibration_summary">Device and button vibration</string>
+    <string name="crown_menu_current_plan">Current setup</string>
+    <string name="crown_config_segment_layout">Layout</string>
+    <string name="crown_config_segment_touch">Touch</string>
+    <string name="crown_config_segment_feedback">Feedback</string>
+    <string name="crown_menu_settings_summary">Touch sensitivity, wheel speed, and feedback</string>
+    <string name="crown_menu_exit_crown">Disable Crown</string>
+    <string name="crown_menu_edit_layout">Edit layout</string>
     
     <!-- External display -->
     <string name="title_use_external_display">Send stream to external display</string>
@@ -1334,6 +1376,8 @@
     <string name="crown_key_guide_short">Guide</string>
     <string name="crown_key_back_short">Back</string>
     <string name="crown_key_guide_description">Native controller Guide/Home button</string>
+    <string name="crown_key_left_stick_description">Left stick axis</string>
+    <string name="crown_key_right_stick_description">Right stick axis</string>
 
     <!-- 删除自定义按键对话框 -->
     <string name="dialog_title_select_keys_to_delete">Select Custom Keys to Delete</string>
@@ -1786,6 +1830,7 @@ Tap again to replace it.</string>
     <string name="page_config_section_profile">Profile</string>
     <string name="page_config_section_touch">Touch</string>
     <string name="page_config_section_feedback">Vibration feedback</string>
+    <string name="page_config_profile_hint">Choose a profile for this stream</string>
     <string name="crown_profile_name_title">Profile Name</string>
     <string name="crown_profile_name_error">Profile name must be 1-10 characters</string>
     <string name="layout_page_config_text_9eba2">Current Profile</string>
@@ -1838,6 +1883,15 @@ Tap again to replace it.</string>
     <string name="layout_page_edit_text_ed364">Add Combo Key</string>
     <string name="layout_page_edit_text_1483c">Add Wheel Button</string>
     <string name="layout_page_edit_text_bd823">Add Group Button</string>
+    <string name="crown_edit_section_canvas">Canvas</string>
+    <string name="crown_edit_section_buttons">Buttons and pads</string>
+    <string name="crown_edit_section_sticks">Sticks and helpers</string>
+    <string name="crown_edit_section_containers">Groups and wheels</string>
+    <string name="crown_edit_done">Done</string>
+    <string name="crown_edit_drag_summary">Drag controls directly on the stream canvas</string>
+    <string name="crown_edit_snap_summary">Align controls to nearby edges and centers</string>
+    <string name="crown_edit_canvas_hint">Tip: select a control on the canvas to open its inspector.</string>
+    <string name="crown_edit_toolbar_hint">Drag to move · pinch to resize · snapping follows the grid</string>
     <string name="layout_page_group_button_text_6db87">Type: Group Button</string>
     <string name="layout_page_group_button_text_b19b4">Hide Button (for wheel use)</string>
     <string name="layout_page_group_button_text_f57fc">Hold to move button</string>

@@ -935,6 +935,12 @@ public class WheelPad extends Element {
     }
 
     @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_wheel_pad_text_57047);
+    }
+
+
+    @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_INT_ELEMENT_WIDTH, this.diameter);

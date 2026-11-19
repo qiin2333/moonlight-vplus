@@ -4,5 +4,7 @@
     <string name="crown_direct_config_target">Перейти к %1$s</string>
     <string name="crown_direct_config_unavailable">Профиль недоступен (отключён)</string>
     <string name="crown_direct_config_self">Текущий профиль; переход не нужен</string>
+    <string name="crown_direct_config_current">Текущий</string>
+    <string name="crown_direct_config_subtitle">Применяется сразу после выбора; настройки сенсора и вибрации переключаются вместе с ним.</string>
     <string name="crown_direct_config_no_other">Других профилей нет</string>
 </resources>

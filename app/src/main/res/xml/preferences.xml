@@ -1004,15 +1004,32 @@
         android:icon="@drawable/ic_enhance"
         android:order="10"
         android:layout="@layout/preference_category_material">
-        <CheckBoxPreference
+        <SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="checkbox_show_onscreen_keyboard"
+            android:icon="@drawable/phc_crown"
             android:summary="@string/summary_crown_super_features"
             android:title="@string/title_crown_super_features" />
         <Preference
+            android:key="crown_edit_current"
+            android:icon="@drawable/phc_action_edit"
+            android:title="@string/title_crown_edit_current"
+            android:summary="@string/summary_crown_edit_current" />
+        <Preference
             android:key="crown_config_management"
+            android:icon="@drawable/phc_list"
             android:title="@string/title_crown_config_management"
             android:summary="@string/summary_crown_config_management" />
+        <Preference
+            android:key="crown_store_view"
+            android:icon="@drawable/phc_crown"
+            android:title="@string/title_crown_store_view"
+            android:summary="@string/summary_crown_store_view" />
+        <Preference
+            android:key="crown_import_package"
+            android:icon="@drawable/phc_action_copy"
+            android:title="@string/title_crown_import_package"
+            android:summary="@string/summary_crown_import_package" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_host_settings"
         android:key="category_host_settings"

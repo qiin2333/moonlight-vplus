@@ -109,6 +109,10 @@ public abstract class Element extends View {
     private Context context;
     private final Paint paint = new Paint();
     private final RectF rect = new RectF();
+    private final Paint editSelectionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private int lastLabelWidth = -1;
+    private int lastLabelHeight = -1;
+    private String sizeLabel = "";
     protected int centralXMax;
     protected int centralXMin;
     protected int centralYMax;
@@ -241,7 +245,60 @@ public abstract class Element extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         onElementDraw(canvas);
+        if (elementController.getMode() == ElementController.Mode.Edit
+                && elementController.isSelectedElement(this)) {
+            drawEditSelection(canvas);
+        }
         super.onDraw(canvas);
+    }
+
+    private void drawEditSelection(Canvas canvas) {
+        float density = getResources().getDisplayMetrics().density;
+        float inset = 1.5f * density;
+        float handleRadius = 4f * density;
+        int accent = getResources().getColor(R.color.ui_shell_accent);
+
+        Paint selection = editSelectionPaint;
+        selection.reset();
+        selection.setAntiAlias(true);
+        selection.setStyle(Paint.Style.STROKE);
+        selection.setStrokeWidth(1.5f * density);
+        selection.setColor(accent);
+        rect.set(inset, inset, getWidth() - inset, getHeight() - inset);
+        canvas.drawRoundRect(rect, 6f * density, 6f * density, selection);
+
+        selection.setStyle(Paint.Style.FILL);
+        selection.setColor(accent);
+        canvas.drawCircle(inset, inset, handleRadius, selection);
+        canvas.drawCircle(getWidth() - inset, inset, handleRadius, selection);
+        canvas.drawCircle(inset, getHeight() - inset, handleRadius, selection);
+        canvas.drawCircle(getWidth() - inset, getHeight() - inset, handleRadius, selection);
+
+        if (getWidth() >= 56f * density && getHeight() >= 32f * density) {
+            selection.setTextSize(9f * density);
+            selection.setTextAlign(Paint.Align.CENTER);
+            // Rebuild the label only when the size actually changes; drags
+            // invalidate per frame and measureText is not free.
+            if (lastLabelWidth != getWidth() || lastLabelHeight != getHeight()) {
+                lastLabelWidth = getWidth();
+                lastLabelHeight = getHeight();
+                sizeLabel = getWidth() + " × " + getHeight();
+            }
+            float textY = Math.max(12f * density, getHeight() - 5f * density);
+            selection.setColor(0xCC000000);
+            float textWidth = selection.measureText(sizeLabel);
+            canvas.drawRoundRect(
+                    getWidth() / 2f - textWidth / 2f - 4f * density,
+                    textY - 10f * density,
+                    getWidth() / 2f + textWidth / 2f + 4f * density,
+                    textY + 2f * density,
+                    4f * density,
+                    4f * density,
+                    selection
+            );
+            selection.setColor(getResources().getColor(R.color.crown_text_primary));
+            canvas.drawText(sizeLabel, getWidth() / 2f, textY, selection);
+        }
     }
 
     /**
@@ -281,6 +338,7 @@ public abstract class Element extends View {
                 // Edit 模式逻辑
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN: {
+                        elementController.setSelectedElement(this);
                         lastX = event.getX();
                         lastY = event.getY();
                         isClick = true;
@@ -358,6 +416,11 @@ public abstract class Element extends View {
     }
 
     abstract protected SuperPageLayout getInfoPage();
+
+    /** Title shown on the inspector header when this element is selected. */
+    public String getCrownInspectorTitle() {
+        return "";
+    }
 
     abstract protected void updatePage();
 

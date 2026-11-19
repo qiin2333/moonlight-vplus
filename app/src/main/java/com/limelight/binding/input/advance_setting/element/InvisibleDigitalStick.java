@@ -646,6 +646,12 @@ public class InvisibleDigitalStick extends Element {
     }
 
     @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_invisible_digital_stick_text_e60ec);
+    }
+
+
+    @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_UP_VALUE, upValue);

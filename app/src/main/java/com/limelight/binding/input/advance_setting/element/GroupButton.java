@@ -570,6 +570,12 @@ public class GroupButton extends Element {
         return groupButtonPage;
     }
 
+    @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_group_button_text_6db87);
+    }
+
+
     private void setupFullInfoPage(SuperPageLayout page) {
         // Find views
         NumberSeekbar widthNumberSeekbar = page.findViewById(R.id.page_group_button_width);

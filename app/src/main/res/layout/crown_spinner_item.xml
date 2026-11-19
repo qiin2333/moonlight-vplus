@@ -8,4 +8,4 @@
     android:maxLines="1"
     android:paddingHorizontal="12dp"
     android:textColor="@color/crown_text_primary"
-    android:textSize="14sp" />
+    android:textSize="13sp" />

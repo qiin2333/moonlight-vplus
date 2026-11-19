@@ -3,16 +3,14 @@ package com.limelight.binding.input.advance_setting.config;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.app.AlertDialog;
 import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.widget.SwitchCompat;
@@ -21,6 +19,11 @@ import com.limelight.utils.AppSwitchStyle;
 import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.CrownConfigChoiceFactory;
+import com.limelight.binding.input.advance_setting.CrownConfigChoice;
+import com.limelight.binding.input.advance_setting.CrownThumbnailView;
+import com.limelight.binding.input.advance_setting.share.CrownProfileSchema;
+import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
 
@@ -31,7 +34,7 @@ public class PageConfigController {
 
 
     private static final String CURRENT_CONFIG_KEY = "current_config_id";
-    public static final String COLUMN_STRING_CONFIG_NAME = "config_name";
+    public static final String COLUMN_STRING_CONFIG_NAME = CrownProfileSchema.CONFIG_NAME_KEY;
     public static final String COLUMN_BOOLEAN_TOUCH_ENABLE = "touch_enable";
     public static final String COLUMN_BOOLEAN_TOUCH_MODE = "touch_mode";
     private static final String COLUMN_INT_TOUCH_SENSE = "touch_sense";
@@ -49,11 +52,17 @@ public class PageConfigController {
     private Context context;
     private ControllerManager controllerManager;
     private Long currentConfigId = 0L;
-    private Spinner configSelectSpinner;
+    private TextView selectedProfileName;
+    private TextView selectedProfileSummary;
+    private CrownThumbnailView selectedProfileThumbnail;
     private LinearLayout enhancedTouchLayout;
 
     private List<Long> configIds = new ArrayList<>();
     private List<String> configNames = new ArrayList<>();
+
+    private static final int CONFIG_SECTION_LAYOUT = 0;
+    private static final int CONFIG_SECTION_TOUCH = 1;
+    private static final int CONFIG_SECTION_FEEDBACK = 2;
 
     private String getCrownDialogTitle(int titleResId) {
         return "\u265B " + context.getString(titleResId);
@@ -69,7 +78,14 @@ public class PageConfigController {
         this.pageConfig = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_config,null);
         this.enhancedTouchLayout = pageConfig.findViewById(R.id.enhanced_touch_layout);
         this.controllerManager = controllerManager;
-        configSelectSpinner = pageConfig.findViewById(R.id.config_select_spinner);
+        selectedProfileName = pageConfig.findViewById(R.id.config_selected_profile_name);
+        selectedProfileSummary = pageConfig.findViewById(R.id.config_selected_profile_summary);
+        selectedProfileThumbnail = pageConfig.findViewById(R.id.config_selected_profile_thumbnail);
+        ((TextView) pageConfig.findViewById(R.id.crown_page_title_text))
+                .setText(R.string.layout_page_super_menu_text_899a4);
+
+        pageConfig.findViewById(R.id.config_profile_picker).setOnClickListener(v -> openConfigPicker());
+        bindConfigSegments();
 
         //新增布局按钮
         pageConfig.findViewById(R.id.add_config_button).setOnClickListener(new View.OnClickListener() {
@@ -194,14 +210,67 @@ public class PageConfigController {
             String name = (String) controllerManager.getSuperConfigDatabaseHelper().queryConfigAttribute(configId,COLUMN_STRING_CONFIG_NAME,"default");
             configNames.add(name);
         }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                context,
-                R.layout.crown_spinner_item,
-                configNames
-        );
-        adapter.setDropDownViewResource(R.layout.crown_spinner_item);
-        configSelectSpinner.setAdapter(adapter);
+    }
 
+    private void bindConfigSegments() {
+        pageConfig.findViewById(R.id.crown_config_segment_layout)
+                .setOnClickListener(v -> showConfigSection(CONFIG_SECTION_LAYOUT));
+        pageConfig.findViewById(R.id.crown_config_segment_touch)
+                .setOnClickListener(v -> showConfigSection(CONFIG_SECTION_TOUCH));
+        pageConfig.findViewById(R.id.crown_config_segment_feedback)
+                .setOnClickListener(v -> showConfigSection(CONFIG_SECTION_FEEDBACK));
+        showConfigSection(CONFIG_SECTION_TOUCH);
+    }
+
+    private void showConfigSection(int section) {
+        TextView layoutTab = pageConfig.findViewById(R.id.crown_config_segment_layout);
+        TextView touchTab = pageConfig.findViewById(R.id.crown_config_segment_touch);
+        TextView feedbackTab = pageConfig.findViewById(R.id.crown_config_segment_feedback);
+        int primaryText = androidx.core.content.ContextCompat.getColor(context, R.color.crown_text_primary);
+        int secondaryText = androidx.core.content.ContextCompat.getColor(context, R.color.crown_text_secondary);
+        layoutTab.setBackgroundResource(section == CONFIG_SECTION_LAYOUT
+                ? R.drawable.crown_segment_selected_bg : R.drawable.crown_segment_unselected_bg);
+        layoutTab.setTextColor(section == CONFIG_SECTION_LAYOUT ? primaryText : secondaryText);
+        touchTab.setBackgroundResource(section == CONFIG_SECTION_TOUCH
+                ? R.drawable.crown_segment_selected_bg : R.drawable.crown_segment_unselected_bg);
+        touchTab.setTextColor(section == CONFIG_SECTION_TOUCH ? primaryText : secondaryText);
+        feedbackTab.setBackgroundResource(section == CONFIG_SECTION_FEEDBACK
+                ? R.drawable.crown_segment_selected_bg : R.drawable.crown_segment_unselected_bg);
+        feedbackTab.setTextColor(section == CONFIG_SECTION_FEEDBACK ? primaryText : secondaryText);
+
+        boolean showTouch = section == CONFIG_SECTION_TOUCH;
+        boolean showFeedback = section == CONFIG_SECTION_FEEDBACK;
+        pageConfig.findViewById(R.id.crown_config_touch_title)
+                .setVisibility(showTouch ? View.VISIBLE : View.GONE);
+        pageConfig.findViewById(R.id.crown_config_touch_section)
+                .setVisibility(showTouch ? View.VISIBLE : View.GONE);
+        pageConfig.findViewById(R.id.crown_config_layout_section)
+                .setVisibility(section == CONFIG_SECTION_LAYOUT ? View.VISIBLE : View.GONE);
+        pageConfig.findViewById(R.id.crown_config_feedback_title)
+                .setVisibility(showFeedback ? View.VISIBLE : View.GONE);
+        pageConfig.findViewById(R.id.crown_config_feedback_section)
+                .setVisibility(showFeedback ? View.VISIBLE : View.GONE);
+    }
+
+    private void openConfigPicker() {
+        if (configIds.isEmpty()) return;
+        if (!(context instanceof Game)) return;
+
+        // Keep the currently active profile at the top, show its real layout
+        // thumbnail, and let the shared Crown picker handle touch and controller
+        // focus consistently with the in-stream direct-switch action.
+        List<CrownConfigChoice> choices = CrownConfigChoiceFactory.create(
+                controllerManager.getSuperConfigDatabaseHelper(), configIds, currentConfigId);
+        ((Game) context).showCrownConfigPicker(choices, choice -> {
+            if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {
+                return kotlin.Unit.INSTANCE;
+            }
+            PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putLong(CURRENT_CONFIG_KEY, choice.getConfigId())
+                    .apply();
+            initConfig();
+            return kotlin.Unit.INSTANCE;
+        }, () -> kotlin.Unit.INSTANCE);
     }
 
     public void switchDirectlyToConfig(long targetId) {
@@ -232,6 +301,29 @@ public class PageConfigController {
         return enabled;
     }
 
+    public boolean isVibrationEnabled() {
+        return isBooleanConfigEnabled(COLUMN_BOOLEAN_GAME_VIBRATOR)
+                || isBooleanConfigEnabled(COLUMN_BOOLEAN_BUTTON_VIBRATOR);
+    }
+
+    public void setVibrationEnabled(boolean enabled) {
+        long configId = PreferenceManager.getDefaultSharedPreferences(context)
+                .getLong(CURRENT_CONFIG_KEY, currentConfigId);
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_BOOLEAN_GAME_VIBRATOR, String.valueOf(enabled));
+        values.put(COLUMN_BOOLEAN_BUTTON_VIBRATOR, String.valueOf(enabled));
+        controllerManager.getSuperConfigDatabaseHelper().updateConfig(configId, values);
+        controllerManager.getElementController().setGameVibrator(enabled);
+        controllerManager.getElementController().setButtonVibrator(enabled);
+    }
+
+    private boolean isBooleanConfigEnabled(String column) {
+        long configId = PreferenceManager.getDefaultSharedPreferences(context)
+                .getLong(CURRENT_CONFIG_KEY, currentConfigId);
+        return Boolean.parseBoolean((String) controllerManager.getSuperConfigDatabaseHelper()
+                .queryConfigAttribute(configId, column, String.valueOf(false)));
+    }
+
     public List<Long> getDirectSwitchTargetIds() {
         List<Long> targets = new ArrayList<>();
         for (Long id : controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds()) {
@@ -243,33 +335,6 @@ public class PageConfigController {
     private void loadCurrentConfig(){
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         currentConfigId = sharedPreferences.getLong(CURRENT_CONFIG_KEY,0L);
-        //spinner选中
-        for (int i = 0;i < configIds.size();i ++){
-            if (currentConfigId.equals(configIds.get(i))){
-                configSelectSpinner.setOnItemSelectedListener(null);
-                configSelectSpinner.setSelection(i);
-                configSelectSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                        Long configId = configIds.get(position);
-                        SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
-                        editor.putLong(CURRENT_CONFIG_KEY,configId);
-                        editor.apply();
-                        if (!configId.equals(currentConfigId)){
-                            loadCurrentConfig();
-                        }
-
-                    }
-
-                    @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-
-                    }
-                });
-                break;
-            }
-        }
-
         loadMouseEnable();
         loadMouseMode();
         boolean applyInputSettings = ((Game) context).shouldApplyCrownInputProfile(currentConfigId);
@@ -279,6 +344,25 @@ public class PageConfigController {
         loadButtonVibrator();
         loadEnhancedTouch();
         controllerManager.getElementController().loadAllElement(currentConfigId);
+        TextView headerSubtitle = pageConfig.findViewById(R.id.crown_page_subtitle);
+        String currentName = getCurrentConfigName();
+        headerSubtitle.setText(currentName);
+        headerSubtitle.setVisibility(View.VISIBLE);
+        selectedProfileName.setText(currentName);
+        selectedProfileSummary.setText(context.getString(
+                R.string.crown_menu_profile_summary,
+                currentName,
+                getCurrentElementCount()));
+        if (selectedProfileThumbnail != null) {
+            CrownProfileShareManager.ProfilePreview preview = null;
+            try {
+                preview = CrownProfileShareManager.INSTANCE.parsePreview(
+                        controllerManager.getSuperConfigDatabaseHelper().exportConfig(currentConfigId), null);
+            } catch (RuntimeException ignored) {
+                // Keep the empty preview state for legacy profiles without layout data.
+            }
+            selectedProfileThumbnail.bind(preview);
+        }
         if (currentConfigId == 0L){
             pageConfig.findViewById(R.id.rename_config_button).setVisibility(View.GONE);
             pageConfig.findViewById(R.id.delete_config_button).setVisibility(View.GONE);
@@ -492,6 +576,22 @@ public class PageConfigController {
         return currentConfigId;
     }
 
+    /** Returns the profile name used by the Crown panel header. */
+    public String getCurrentConfigName() {
+        long configId = PreferenceManager.getDefaultSharedPreferences(context)
+                .getLong(CURRENT_CONFIG_KEY, currentConfigId);
+        return (String) controllerManager.getSuperConfigDatabaseHelper()
+                .queryConfigAttribute(configId, COLUMN_STRING_CONFIG_NAME, "default");
+    }
+
+    /** Returns the number of controls in the profile used by the Crown panel header. */
+    public int getCurrentElementCount() {
+        long configId = PreferenceManager.getDefaultSharedPreferences(context)
+                .getLong(CURRENT_CONFIG_KEY, currentConfigId);
+        return controllerManager.getSuperConfigDatabaseHelper()
+                .queryAllElementIds(configId).size();
+    }
+
     /**
      * 打开重命名当前配置的对话框
      */
@@ -502,10 +602,7 @@ public class PageConfigController {
         EditText editText = pageWindow.findViewById(R.id.window_edittext);
         
         // 获取当前选中的配置名称
-        String currentName = "";
-        if (configSelectSpinner != null && configSelectSpinner.getSelectedItem() != null) {
-            currentName = (String)configSelectSpinner.getSelectedItem();
-        }
+        String currentName = getCurrentConfigName();
         editText.setText(currentName);
         
         //窗口确认按钮

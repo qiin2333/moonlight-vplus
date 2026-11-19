@@ -71,7 +71,46 @@
         <item name="android:stateListAnimator">@null</item>
         <item name="android:elevation">0dp</item>
     </style>
-    
+
+    <style name="CrownEditActionRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">46dp</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:background">@drawable/crown_config_action_button_bg</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+    </style>
+
+    <style name="CrownEditActionLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/crown_text_primary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="CrownEditActionArrow">
+        <item name="android:layout_width">14dp</item>
+        <item name="android:layout_height">14dp</item>
+        <item name="android:src">@drawable/ic_arrow_right</item>
+        <item name="android:tint">@color/crown_text_secondary</item>
+    </style>
+
+    <!-- Design L1-L4: 9.5sp uppercase accent section label above every crown group card. -->
+    <style name="CrownSectionLabel">
+        <item name="android:textSize">9.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.13</item>
+        <item name="android:textColor">@color/crown_section_label</item>
+    </style>
+
     <!-- 虚拟键盘基础样式 -->
     <style name="VirtualKeyboardStyle">
         <item name="android:background">@drawable/keyboard_refined_bg</item>
@@ -82,8 +121,8 @@
     <!-- 精细化按键样式 -->
     <style name="KeyboardKeyRefined">
         <item name="android:background">@drawable/keyboard_key_refined_selector</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/crown_text_primary</item>
         <item name="android:gravity">center</item>
         <item name="android:layout_margin">2dp</item>
         <item name="android:padding">0dp</item>
@@ -102,7 +141,7 @@
 
     <style name="KeyboardKeyRefined.Modifier">
         <item name="android:background">@drawable/keyboard_modifier_refined_selector</item>
-        <item name="android:textSize">13sp</item>
+        <item name="android:textSize">11sp</item>
     </style>
 
     <!-- 精准权重支持 -->

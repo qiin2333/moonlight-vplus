@@ -569,6 +569,12 @@ public class DigitalSwitchButton extends Element {
         return digitalSwitchButtonPage;
     }
 
+    @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_digital_switch_button_text_a96b6);
+    }
+
+
     protected void setElementText(String text) {
         this.text = text;
         invalidate();

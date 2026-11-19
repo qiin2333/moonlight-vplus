@@ -25,6 +25,7 @@ class DevicePickerLayout @JvmOverloads constructor(
         val keyboardPaddingHeight = keyboard.paddingTop + keyboard.paddingBottom
         val canvasViewportWidth = (viewportWidth - keyboard.paddingLeft - keyboard.paddingRight).coerceAtLeast(1)
         val tabsHeight = findViewById<View>(R.id.keyboard_picker_tabs).layoutParams.height
+        val content = findViewById<View>(R.id.device_content)
         // Fifteen key units across five rows. On narrow/short displays retain
         // usable key sizes and let the enclosing scroll views reveal the rest.
         val numpad = findViewById<View>(R.id.keyboard_picker_num)
@@ -32,10 +33,18 @@ class DevicePickerLayout @JvmOverloads constructor(
         val keyboardWidth = if (isNumpad) {
             canvasViewportWidth
         } else {
-            minOf(canvasViewportWidth, (viewportHeight - tabsHeight - keyboardPaddingHeight) * 3)
-                .coerceAtLeast(dp(600))
+            val preferredWidth = minOf(
+                canvasViewportWidth,
+                (viewportHeight - tabsHeight - keyboardPaddingHeight) * 3
+            )
+            // Keep the 600dp target on narrow portrait panels. The horizontal
+            // scroll view reveals the right side instead of shrinking keys
+            // below a usable touch size.
+            preferredWidth.coerceAtLeast(dp(600))
         }
         val numpadWidth = minOf(dp(360), keyboardWidth)
+        content.findViewById<View>(R.id.device_actions).layoutParams.width =
+            minOf(dp(360), (viewportWidth - dp(32)).coerceAtLeast(1))
         keyboard.layoutParams.apply {
             width = viewportWidth
             height = keyboardPaddingHeight + tabsHeight +
@@ -43,9 +52,11 @@ class DevicePickerLayout @JvmOverloads constructor(
         }
         findViewById<View>(R.id.device_keyboard_pages).layoutParams.width = keyboardWidth
         findViewById<View>(R.id.device_content).minimumHeight = viewportHeight
-        // Illustrations remain centered at their native size inside the active page.
+        // Keep the illustrations at the 560dp design width inside the active page.
+        // The old viewport-width assignment stretched the gamepad body across the
+        // entire panel and left the mouse drawing visually under-weighted.
         for (id in intArrayOf(R.id.mouse_drawing, R.id.gamepad_drawing)) {
-            findViewById<View>(id).layoutParams.width = viewportWidth
+            findViewById<View>(id).layoutParams.width = minOf(dp(560), viewportWidth)
         }
 
         // The six-column, three-row numpad needs its own proportions inside

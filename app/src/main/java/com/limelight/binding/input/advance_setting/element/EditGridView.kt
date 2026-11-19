@@ -11,12 +11,12 @@ import com.limelight.utils.UiHelper
 class EditGridView(context: Context) : View(context) {
 
     private val paint = Paint().apply {
-        color = 0xFF00F5FF.toInt()
-        strokeWidth = 2f
+        color = 0x26FFFFFF
+        strokeWidth = 1f
     }
     private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = UiHelper.accentColor(context)
-        strokeWidth = 2.5f
+        strokeWidth = 1.5f
         pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
     }
     private var editGridWidth = 1

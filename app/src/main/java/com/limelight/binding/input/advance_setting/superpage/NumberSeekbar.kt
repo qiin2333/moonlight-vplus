@@ -24,6 +24,9 @@ class NumberSeekbar : LinearLayout {
     private lateinit var numberSeekbarNumber: TextView
     private lateinit var numberSeekbarAdd: android.view.View
     private lateinit var numberSeekbarSeekbar: SeekBar
+    private lateinit var numberSeekbarRangeEnds: android.view.View
+    private lateinit var numberSeekbarRangeMin: TextView
+    private lateinit var numberSeekbarRangeMax: TextView
     private var minimumValue = 0
     private var onNumberSeekbarChangeListener: OnNumberSeekbarChangeListener? = null
 
@@ -51,6 +54,9 @@ class NumberSeekbar : LinearLayout {
         numberSeekbarNumber = findViewById(R.id.number_seekbar_number)
         numberSeekbarAdd = findViewById(R.id.number_seekbar_add)
         numberSeekbarSeekbar = findViewById(R.id.number_seekbar_seekbar)
+        numberSeekbarRangeEnds = findViewById(R.id.number_seekbar_range_ends)
+        numberSeekbarRangeMin = findViewById(R.id.number_seekbar_range_min)
+        numberSeekbarRangeMax = findViewById(R.id.number_seekbar_range_max)
         numberSeekbarNumber.text = numberSeekbarSeekbar.progress.toString()
 
         if (attrs != null) {
@@ -61,6 +67,7 @@ class NumberSeekbar : LinearLayout {
                 val progressValue = a.getInt(R.styleable.NumberSeekbar_progress, 0)
                 minimumValue = minValue.coerceIn(0, maxValue.coerceAtLeast(0))
                 numberSeekbarSeekbar.max = maxValue.coerceAtLeast(0) - minimumValue
+                updateRangeEndLabels()
                 setValueWithNoCallBack(progressValue)
 
                 val title = a.getString(R.styleable.NumberSeekbar_text)
@@ -143,6 +150,27 @@ class NumberSeekbar : LinearLayout {
         alpha = if (enabled) 1f else 0.5f
     }
 
+    /**
+     * Inspector rows use the design's value pill + track treatment. The +/-
+     * affordances remain available on the full configuration pages, but take
+     * too much horizontal space when two sliders share a row.
+     */
+    fun setCompactMode(compact: Boolean) {
+        val visibility = if (compact) GONE else VISIBLE
+        numberSeekbarMinus.visibility = visibility
+        numberSeekbarAdd.visibility = visibility
+        // Full sliders carry the design's min/max endpoint row; the compact
+        // two-column inspector grid is too short for it.
+        numberSeekbarRangeEnds.visibility = if (compact) GONE else VISIBLE
+        if (compact) {
+            val params = numberSeekbarNumber.layoutParams
+            params.width = (44 * resources.displayMetrics.density).toInt()
+            params.height = (24 * resources.displayMetrics.density).toInt()
+            numberSeekbarNumber.layoutParams = params
+            numberSeekbarNumber.setPadding(0, 0, 0, 0)
+        }
+    }
+
     fun setProgressMax(max: Int) {
         updateRange(minimumValue, max.coerceAtLeast(minimumValue))
     }
@@ -154,14 +182,23 @@ class NumberSeekbar : LinearLayout {
 
     /** Use the same offset on every API level; native min was only added in API 26. */
     private fun updateRange(min: Int, max: Int) {
+        if (min == minimumValue && max == minimumValue + numberSeekbarSeekbar.max) return
         val previousValue = value
         val listener = onNumberSeekbarChangeListener
         onNumberSeekbarChangeListener = null
         minimumValue = min
         numberSeekbarSeekbar.max = max - min
+        updateRangeEndLabels()
         setValueWithNoCallBack(previousValue)
         onNumberSeekbarChangeListener = listener
         if (value != previousValue) listener?.onProgressChanged(numberSeekbarSeekbar, value, false)
+    }
+
+    /** Design L2: the full slider shows its range; compact inspector rows omit it. */
+    private fun updateRangeEndLabels() {
+        if (!::numberSeekbarRangeMin.isInitialized) return
+        numberSeekbarRangeMin.text = minimumValue.toString()
+        numberSeekbarRangeMax.text = (minimumValue + numberSeekbarSeekbar.max).toString()
     }
 
     fun setOnNumberSeekbarChangeListener(listener: OnNumberSeekbarChangeListener?) {

@@ -6,12 +6,10 @@ import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.DialogInterface;
-import android.graphics.drawable.ColorDrawable;
 import android.preference.PreferenceManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -26,6 +24,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
+import android.widget.ScrollView;
 import android.app.AlertDialog;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -37,6 +36,8 @@ import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.CrownConfigChoiceFactory;
+import com.limelight.binding.input.advance_setting.CrownConfigChoice;
 import com.limelight.binding.input.advance_setting.DirectConfigAction;
 import com.limelight.binding.input.advance_setting.DirectConfigSwitchState;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
@@ -141,6 +142,7 @@ public class ElementController {
     private EditGridView editGridView;
     private int editGridWidth = 1;
     private long currentConfigId;
+    private Element selectedElement;
     private boolean gameVibrator = false;
     private boolean buttonVibrator = false;
 
@@ -150,6 +152,7 @@ public class ElementController {
     private static int MOUSE_SCROLL_REPEAT_INTERVAL = 100; // 重复间隔（毫秒）
 
     private static final String CROWN_DETAIL_ACTION_BAR_TAG = "crown_detail_action_bar";
+    private static final String CROWN_INSPECTOR_COMPACT_TAG = "crown_inspector_compact";
     private static final String PREF_CROWN_ALIGNMENT_SNAP_ENABLED = "crown_alignment_snap_enabled";
     private static final int ALIGNMENT_SNAP_THRESHOLD_DP = 8;
 
@@ -230,6 +233,18 @@ public class ElementController {
         this.dragEditEnabled = enabled;
     }
 
+    void setSelectedElement(Element element) {
+        if (selectedElement == element) return;
+        Element previous = selectedElement;
+        selectedElement = element;
+        if (previous != null) previous.invalidate();
+        if (element != null) element.invalidate();
+    }
+
+    boolean isSelectedElement(Element element) {
+        return selectedElement == element;
+    }
+
     // 获取拖动编辑开关状态的方法
     public boolean isDragEditEnabled() {
         return dragEditEnabled;
@@ -266,6 +281,11 @@ public class ElementController {
         this.pageDeviceController = controllerManager.getPageDeviceController();
         this.handler = new Handler(Looper.getMainLooper());
         this.pageEdit = (SuperPageLayout) LayoutInflater.from(context).inflate(R.layout.page_edit, null);
+        ((TextView) pageEdit.findViewById(R.id.crown_page_title_text))
+                .setText(R.string.game_menu_edit_mode);
+        ((TextView) pageEdit.findViewById(R.id.crown_page_subtitle))
+                .setText(R.string.crown_edit_toolbar_hint);
+        pageEdit.findViewById(R.id.crown_page_subtitle).setVisibility(View.VISIBLE);
         this.editGridView = new EditGridView(context);
         this.bottomViewAmount = elementsLayout.getChildCount();
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -277,14 +297,7 @@ public class ElementController {
         pageEdit.findViewById(R.id.page_edit_exit_edit_mode).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                changeMode(Mode.Normal);
-                controllerManager.pageSuperMenuController.open();
-                // 一次性模式（NO_MENU）退出后回到游戏菜单，否则保持王冠模式
-                if (((Game) context).getCurrentBackKeyMenuMode() == Game.BackKeyMenuMode.NO_MENU) {
-                    ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
-                } else {
-                    ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
-                }
+                exitCrownEditMode();
             }
         });
         pageEdit.findViewById(R.id.page_edit_auto_color_all).setOnClickListener(new View.OnClickListener() {
@@ -311,93 +324,30 @@ public class ElementController {
             }
         });
 
-        pageEdit.findViewById(R.id.page_edit_add_digital_common_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = DigitalCommonButton.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_digital_switch_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = DigitalSwitchButton.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_digital_movable_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = DigitalMovableButton.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_pad).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = DigitalPad.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_analog_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = AnalogStick.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_digital_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = DigitalStick.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_invisible_analog_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = InvisibleAnalogStick.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_invisible_digital_stick).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = InvisibleDigitalStick.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_simplify_performance).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-                ContentValues contentValues = SimplifyPerformance.getInitialInfo(context);
-                contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_X, displayMetrics.widthPixels / 2);
-                contentValues.put(Element.COLUMN_INT_ELEMENT_CENTRAL_Y, 30);
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_digital_combine_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = DigitalCombineButton.getInitialInfo(context);
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_group_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = GroupButton.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
-        pageEdit.findViewById(R.id.page_edit_add_wheel_pad).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ContentValues contentValues = WheelPad.getInitialInfo();
-                addElement(contentValues);
-            }
-        });
+        bindAddElementButton(R.id.page_edit_add_digital_common_button,
+                DigitalCommonButton.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_digital_switch_button,
+                DigitalSwitchButton.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_digital_movable_button,
+                DigitalMovableButton.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_pad,
+                DigitalPad.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_analog_stick,
+                AnalogStick.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_digital_stick,
+                DigitalStick.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_invisible_analog_stick,
+                InvisibleAnalogStick.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_invisible_digital_stick,
+                InvisibleDigitalStick.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_simplify_performance,
+                SimplifyPerformance.getInitialInfo(context));
+        bindAddElementButton(R.id.page_edit_add_digital_combine_button,
+                DigitalCombineButton.getInitialInfo(context));
+        bindAddElementButton(R.id.page_edit_add_wheel_pad,
+                WheelPad.getInitialInfo());
+        bindAddElementButton(R.id.page_edit_add_group_button,
+                GroupButton.getInitialInfo());
         SwitchCompat dragEditSwitch = pageEdit.findViewById(R.id.page_edit_drag_edit_switch);
         if (dragEditSwitch != null) {
             AppSwitchStyle.apply(dragEditSwitch);
@@ -428,6 +378,26 @@ public class ElementController {
                     showToast(context.getString(messageResId));
                 }
             });
+        }
+    }
+
+    private void bindAddElementButton(int viewId, ContentValues template) {
+        View view = pageEdit.findViewById(viewId);
+        if (view == null) return;
+        view.setOnClickListener(v -> addElement(new ContentValues(template)));
+    }
+
+    private void exitCrownEditMode() {
+        changeMode(Mode.Normal);
+        controllerManager.pageSuperMenuController.open();
+        SuperPagesController pages = controllerManager.getSuperPagesController();
+        if (pages.getPageNow() == pages.getPageNull()) {
+            handler.post(pages::returnOperation);
+        }
+        if (((Game) context).getCurrentBackKeyMenuMode() == Game.BackKeyMenuMode.NO_MENU) {
+            ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU);
+        } else {
+            ((Game) context).setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE);
         }
     }
 
@@ -762,7 +732,10 @@ public class ElementController {
             controllerManager.getSuperPagesController().openNewPage(
                     controllerManager.getSuperPagesController().getPageNull());
         } else {
+            bindCrownInspectorHeader(elementSettingPage, selectedElement);
+            bindCrownInspectorPreview(elementSettingPage, selectedElement);
             applyCrownDetailStyle(elementSettingPage);
+            compactCrownInspector(elementSettingPage);
             promoteCrownDetailActions(elementSettingPage);
             positionCrownDetailPageAwayFromOwner(elementSettingPage);
             controllerManager.getSuperPagesController().openNewPage(elementSettingPage);
@@ -774,6 +747,107 @@ public class ElementController {
             });
         }
     }
+
+    private void bindCrownInspectorHeader(SuperPageLayout page, Element element) {
+        TextView title = page.findViewById(R.id.crown_page_title_text);
+        if (title != null && element != null) {
+            String titleText = element.getCrownInspectorTitle();
+            if (!titleText.isEmpty()) {
+                title.setText(titleText);
+            }
+        }
+    }
+
+    private void bindCrownInspectorPreview(SuperPageLayout page, Element element) {
+        if (element == null) {
+            return;
+        }
+        CrownInspectorPreviewView preview =
+                page.findViewById(R.id.crown_inspector_preview_view);
+        if (preview != null) {
+            preview.bind(element);
+        }
+    }
+
+    /**
+     * The element pages remain the source of truth for their bindings, but their
+     * original XML is intentionally verbose. Reflow consecutive numeric controls
+     * into compact two-column rows at runtime so every element type gets the same
+     * Inspector density without duplicating 13 page layouts.
+     */
+    private void compactCrownInspector(SuperPageLayout page) {
+        ScrollView scrollView = findCrownDetailScrollView(page);
+        if (scrollView == null || CROWN_INSPECTOR_COMPACT_TAG.equals(scrollView.getTag())
+                || !(scrollView.getChildAt(0) instanceof ViewGroup)) {
+            return;
+        }
+
+        scrollView.setClipToPadding(false);
+        scrollView.setFillViewport(false);
+        scrollView.setPadding(
+                scrollView.getPaddingLeft(),
+                Math.max(scrollView.getPaddingTop(), dp(8)),
+                scrollView.getPaddingRight(),
+                Math.max(scrollView.getPaddingBottom(), dp(82))
+        );
+        compactNumberSeekbars((ViewGroup) scrollView.getChildAt(0));
+        scrollView.setTag(CROWN_INSPECTOR_COMPACT_TAG);
+    }
+
+    private void compactNumberSeekbars(ViewGroup parent) {
+        for (int i = 0; i < parent.getChildCount();) {
+            View child = parent.getChildAt(i);
+            if (child instanceof NumberSeekbar) {
+                int start = i;
+                List<NumberSeekbar> seekbars = new ArrayList<>();
+                while (i < parent.getChildCount() && parent.getChildAt(i) instanceof NumberSeekbar) {
+                    seekbars.add((NumberSeekbar) parent.getChildAt(i));
+                    i++;
+                }
+                for (NumberSeekbar seekbar : seekbars) {
+                    seekbar.setCompactMode(true);
+                }
+
+                if (seekbars.size() >= 2) {
+                    parent.removeViews(start, seekbars.size());
+                    int insertAt = start;
+                    for (int offset = 0; offset < seekbars.size(); offset += 2) {
+                        LinearLayout row = new LinearLayout(context);
+                        row.setOrientation(LinearLayout.HORIZONTAL);
+                        row.setGravity(Gravity.CENTER_VERTICAL);
+                        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+                        if (insertAt > 0) {
+                            rowParams.topMargin = dp(2);
+                        }
+
+                        NumberSeekbar first = seekbars.get(offset);
+                        LinearLayout.LayoutParams firstParams = new LinearLayout.LayoutParams(
+                                0, dp(40), 1f);
+                        firstParams.setMarginEnd(dp(4));
+                        row.addView(first, firstParams);
+
+                        if (offset + 1 < seekbars.size()) {
+                            NumberSeekbar second = seekbars.get(offset + 1);
+                            LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
+                                    0, dp(40), 1f);
+                            secondParams.setMarginStart(dp(4));
+                            row.addView(second, secondParams);
+                        }
+                        parent.addView(row, insertAt++ == start ? start : insertAt - 1, rowParams);
+                    }
+                    i = start + (seekbars.size() + 1) / 2;
+                }
+                continue;
+            }
+
+            if (child instanceof ViewGroup && !"crown_inspector_preview".equals(child.getTag())) {
+                compactNumberSeekbars((ViewGroup) child);
+            }
+            i++;
+        }
+    }
+
 
     private void positionCrownDetailPageAwayFromOwner(SuperPageLayout page) {
         Element owner = getCrownAutoColorOwner(page);
@@ -800,21 +874,36 @@ public class ElementController {
         collectCrownActionButtons(page, actionButtons);
         Element autoColorOwner = getCrownAutoColorOwner(page);
         boolean supportsAutoColor = autoColorOwner != null && autoColorOwner.supportsCrownAutoColors();
-        if (actionButtons.isEmpty() && !supportsAutoColor) {
+        Button copyButton = findCrownActionButton(actionButtons, "_copy");
+        Button deleteButton = findCrownActionButton(actionButtons, "_delete");
+        if (copyButton == null && deleteButton == null && !supportsAutoColor) {
             return;
         }
 
         LinearLayout actionBar = new LinearLayout(context);
         actionBar.setTag(CROWN_DETAIL_ACTION_BAR_TAG);
-        actionBar.setGravity(Gravity.END);
+        actionBar.setGravity(Gravity.CENTER_VERTICAL);
         actionBar.setOrientation(LinearLayout.HORIZONTAL);
+        actionBar.setPadding(dp(12), dp(10), dp(12), dp(14));
+        actionBar.setBackgroundResource(R.drawable.crown_panel_footer_bg);
+
+        ScrollView detailScroll = findCrownDetailScrollView(page);
+        if (detailScroll != null) {
+            detailScroll.setClipToPadding(false);
+            detailScroll.setPadding(
+                    detailScroll.getPaddingLeft(),
+                    detailScroll.getPaddingTop(),
+                    detailScroll.getPaddingRight(),
+                    Math.max(detailScroll.getPaddingBottom(), dp(160))
+            );
+        }
 
         FrameLayout.LayoutParams actionBarParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(32),
-                Gravity.TOP | Gravity.END
+                Gravity.BOTTOM
         );
-        actionBarParams.setMargins(0, dp(10), dp(20), 0);
+        actionBar.setElevation(dp(6));
 
         if (supportsAutoColor) {
             ImageButton autoColorButton = createCrownIconActionButton(
@@ -825,19 +914,119 @@ public class ElementController {
             actionBar.addView(autoColorButton, createCrownIconActionParams());
         }
 
-        for (Button originalButton : actionButtons) {
-            String idName = context.getResources().getResourceEntryName(originalButton.getId());
-            ImageButton actionButton = createCrownIconActionButton(
-                    getCrownActionIconRes(idName),
-                    originalButton.getText(),
-                    v -> originalButton.performClick()
-            );
-            actionBar.addView(actionButton, createCrownIconActionParams());
-            originalButton.setVisibility(View.GONE);
-            hideActionRowIfNeeded(originalButton);
+        // Design L4: 复制控件 stays as a labeled ghost action, 完成 closes the page,
+        // and delete moves to a danger icon next to the page title.
+        if (copyButton != null) {
+            LinearLayout copyAction = createCrownTextActionButton(
+                    copyButton.getText(), false,
+                    v -> copyButton.performClick());
+            actionBar.addView(copyAction, new LinearLayout.LayoutParams(
+                    0, dp(42), 1f));
+            actionBar.addView(new View(context), new LinearLayout.LayoutParams(dp(8), 1));
+            copyButton.setVisibility(View.GONE);
+            hideActionRowIfNeeded(copyButton);
+        }
+
+        LinearLayout doneAction = createCrownTextActionButton(
+                context.getString(R.string.crown_edit_done), true,
+                v -> {
+                    controllerManager.getSuperPagesController()
+                            .openNewPage(controllerManager.getSuperPagesController().getPageNull());
+                });
+        actionBar.addView(doneAction, new LinearLayout.LayoutParams(0, dp(42), 1.2f));
+
+        if (deleteButton != null) {
+            addCrownHeaderDeleteButton(page, deleteButton);
+            deleteButton.setVisibility(View.GONE);
+            hideActionRowIfNeeded(deleteButton);
         }
 
         page.addView(actionBar, actionBarParams);
+    }
+
+    private Button findCrownActionButton(List<Button> actionButtons, String idSuffix) {
+        for (Button button : actionButtons) {
+            String idName;
+            try {
+                idName = context.getResources().getResourceEntryName(button.getId());
+            } catch (Resources.NotFoundException e) {
+                continue;
+            }
+            if (idName.endsWith(idSuffix)) {
+                return button;
+            }
+        }
+        return null;
+    }
+
+    private LinearLayout createCrownTextActionButton(CharSequence label, boolean primary,
+                                                     View.OnClickListener listener) {
+        LinearLayout actionButton = new LinearLayout(context);
+        actionButton.setGravity(Gravity.CENTER);
+        actionButton.setOrientation(LinearLayout.HORIZONTAL);
+        actionButton.setBackgroundResource(primary
+                ? R.drawable.crown_primary_button_bg
+                : R.drawable.crown_ghost_button_bg);
+        actionButton.setClickable(true);
+        actionButton.setFocusable(true);
+        TextView text = new TextView(context);
+        text.setText(label);
+        text.setTextSize(13f);
+        if (primary) {
+            text.setTypeface(text.getTypeface(), android.graphics.Typeface.BOLD);
+        }
+        text.setTextColor(context.getResources().getColor(primary
+                ? R.color.crown_on_accent
+                : R.color.crown_text_secondary));
+        actionButton.addView(text);
+        actionButton.setOnClickListener(listener);
+        return actionButton;
+    }
+
+    private void addCrownHeaderDeleteButton(SuperPageLayout page, Button originalDelete) {
+        // Inspector pages carry their own tagged header row; fall back to the
+        // shared crown_page_title structure for pages that use it.
+        ViewGroup header = null;
+        View tagged = page.findViewWithTag("crown_inspector_header");
+        if (tagged instanceof ViewGroup) {
+            header = (ViewGroup) tagged;
+        } else {
+            View titleText = page.findViewById(R.id.crown_page_title_text);
+            if (titleText != null && titleText.getParent() instanceof ViewGroup) {
+                header = (ViewGroup) titleText.getParent();
+            }
+        }
+        if (header == null || page.findViewWithTag("crown_header_delete") != null) {
+            return;
+        }
+        ImageButton deleteButton = createCrownIconActionButton(
+                R.drawable.phc_action_trash,
+                originalDelete.getContentDescription() != null
+                        ? originalDelete.getContentDescription()
+                        : originalDelete.getText(),
+                v -> originalDelete.performClick()
+        );
+        deleteButton.setTag("crown_header_delete");
+        deleteButton.setColorFilter(
+                context.getResources().getColor(R.color.app_action_sheet_danger));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(32), dp(32));
+        params.setMarginStart(dp(8));
+        header.addView(deleteButton, params);
+    }
+
+    private ScrollView findCrownDetailScrollView(View view) {
+        if (view instanceof ScrollView) {
+            return (ScrollView) view;
+        }
+        if (!(view instanceof ViewGroup)) {
+            return null;
+        }
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            ScrollView result = findCrownDetailScrollView(group.getChildAt(i));
+            if (result != null) return result;
+        }
+        return null;
     }
 
     private ImageButton createCrownIconActionButton(int iconResId, CharSequence contentDescription, View.OnClickListener listener) {
@@ -846,7 +1035,7 @@ public class ElementController {
         actionButton.setColorFilter(context.getResources().getColor(R.color.crown_text_primary));
         actionButton.setContentDescription(contentDescription);
         actionButton.setImageResource(iconResId);
-        actionButton.setPadding(dp(8), dp(8), dp(8), dp(8));
+        actionButton.setPadding(dp(12), dp(12), dp(12), dp(12));
         actionButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         actionButton.setOnClickListener(listener);
         return actionButton;
@@ -854,7 +1043,7 @@ public class ElementController {
 
     private LinearLayout.LayoutParams createCrownIconActionParams() {
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                dp(32),
+                dp(48),
                 ViewGroup.LayoutParams.MATCH_PARENT
         );
         buttonParams.setMarginStart(dp(4));
@@ -927,22 +1116,6 @@ public class ElementController {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private int getCrownActionIconRes(String idName) {
-        if (idName.endsWith("_copy")) {
-            return R.drawable.phc_action_copy;
-        }
-        if (idName.endsWith("_delete")) {
-            return R.drawable.phc_action_trash;
-        }
-        if (idName.endsWith("_reset")) {
-            return R.drawable.phc_action_reset;
-        }
-        if (idName.endsWith("_ensure")) {
-            return R.drawable.phc_action_check;
-        }
-        return R.drawable.phc_settings;
     }
 
     private void collectCrownActionButtons(View view, List<Button> actionButtons) {
@@ -1059,12 +1232,8 @@ public class ElementController {
             button.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
         } else if (view instanceof EditText) {
             EditText editText = (EditText) view;
-            if (!(editText.getBackground() instanceof ColorDrawable)) {
-                editText.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
-                editText.setHintTextColor(context.getResources().getColor(R.color.crown_text_secondary));
-            }
-        } else if (view instanceof TextView) {
-            ((TextView) view).setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+            editText.setTextColor(context.getResources().getColor(R.color.crown_text_primary));
+            editText.setHintTextColor(context.getResources().getColor(R.color.crown_text_secondary));
         }
 
         if (view instanceof ViewGroup) {
@@ -1103,14 +1272,9 @@ public class ElementController {
                 superPagesController.openNewPage(pageNull);
             }
         });
-        pageEdit.post(new Runnable() {
-            @Override
-            public void run() {
-                View scrollView = pageEdit.findViewById(R.id.page_edit_scroll);
-                if (scrollView != null) {
-                    scrollView.scrollTo(0, 0);
-                }
-            }
+        pageEdit.post(() -> {
+            View scrollView = pageEdit.findViewById(R.id.page_edit_scroll);
+            if (scrollView != null) scrollView.scrollTo(0, 0);
         });
     }
 
@@ -1122,6 +1286,7 @@ public class ElementController {
         this.mode = mode;
         switch (mode) {
             case Normal:
+                selectedElement = null;
                 controllerManager.getTouchController().enableTouch(
                         controllerManager.getPageConfigController().isTouchEnabled());
                 this.mode = Mode.Normal;
@@ -1132,6 +1297,7 @@ public class ElementController {
                 }
                 break;
             case Edit:
+                selectedElement = null;
                 controllerManager.getTouchController().enableTouch(false);
                 this.mode = Mode.Edit;
                 FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -1562,43 +1728,27 @@ public class ElementController {
                     }
 
                     try {
-                        // 读取所有配置ID与名称
-                        List<Long> configIds = controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds();
-                        List<String> configNames = new ArrayList<>();
-                        for (Long id : configIds) {
-                            String name = (String) controllerManager.getSuperConfigDatabaseHelper()
-                                    .queryConfigAttribute(id, PageConfigController.COLUMN_STRING_CONFIG_NAME, "default");
-                            configNames.add(name);
-                        }
-
-                        // 弹出选择对话框
-                        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.AppDialogStyle);
-                        AlertDialog dialog = builder.setTitle(R.string.dialog_title_select_config)
-                                .setItems(configNames.toArray(new String[0]), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        if (which < 0 || which >= configIds.size()) return;
-                                        Long newConfigId = configIds.get(which);
-                                        String newName = configNames.get(which);
-
-                                        // 保存到首选项
-                                        PreferenceManager.getDefaultSharedPreferences(context)
-                                                .edit()
-                                                .putLong("current_config_id", newConfigId)
-                                                .apply();
-
-                                        // 刷新配置与元素
-                                        try {
-                                            controllerManager.getPageConfigController().initConfig();
-                                        } catch (Exception ignored) {}
-                                        loadAllElement(newConfigId);
-
-                                        showToast(context.getString(R.string.toast_switched_to_config, newName));
-                                    }
-                                })
-                                .setNegativeButton(R.string.game_menu_cancel, null)
-                                .show();
-                        AppDialogStyler.INSTANCE.applySystemChoiceList(dialog, context);
+                        PageConfigController configController = controllerManager.getPageConfigController();
+                        long currentConfigId = configController.getCurrentConfigId();
+                        List<Long> allConfigIds = controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds();
+                        List<CrownConfigChoice> choices = CrownConfigChoiceFactory.create(
+                                controllerManager.getSuperConfigDatabaseHelper(), allConfigIds, currentConfigId);
+                        game.showCrownConfigPicker(choices, choice -> {
+                            if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {
+                                return kotlin.Unit.INSTANCE;
+                            }
+                            PreferenceManager.getDefaultSharedPreferences(context)
+                                    .edit()
+                                    .putLong("current_config_id", choice.getConfigId())
+                                    .apply();
+                            try {
+                                configController.initConfig();
+                            } catch (Exception ignored) { }
+                            loadAllElement(choice.getConfigId());
+                            showToast(context.getString(
+                                    R.string.toast_switched_to_config, choice.getName()));
+                            return kotlin.Unit.INSTANCE;
+                        }, () -> kotlin.Unit.INSTANCE);
                     } catch (Exception e) {
                         Toast.makeText(context, R.string.toast_config_list_load_failed, Toast.LENGTH_SHORT).show();
                     }

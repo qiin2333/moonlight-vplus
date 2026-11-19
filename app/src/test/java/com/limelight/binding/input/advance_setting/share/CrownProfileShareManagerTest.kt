@@ -250,6 +250,113 @@ class CrownProfileShareManagerTest {
     }
 
     @Test
+    fun parsePreviewMapsProfileElementsToThumbnailGeometry() {
+        val elements = JSONArray()
+            .put(
+                JSONObject()
+                    .put("element_type", 0)
+                    .put("element_central_x", 1600)
+                    .put("element_central_y", 900)
+                    .put("element_width", 240)
+                    .put("element_height", 180)
+                    .put("element_color", 0xF0888888.toInt())
+                    .put("element_text", "A")
+            )
+            .put(
+                JSONObject()
+                    .put("element_type", 30)
+                    .put("element_central_x", 240)
+                    .put("element_central_y", 800)
+                    .put("element_width", 420)
+                    .put("element_height", 420)
+                    .put("element_color", 0x90777777.toInt())
+            )
+            .put(
+                JSONObject()
+                    .put("element_type", 32)
+                    .put("element_central_x", 400)
+                    .put("element_central_y", 500)
+                    .put("element_width", 300)
+                    .put("element_height", 300)
+            )
+        val payload = validPayloadForElements(elements.toString())
+
+        val preview = CrownProfileShareManager.parsePreview(
+            payload,
+            CrownProfileShareManager.LayoutBasis(
+                widthPx = 1920,
+                heightPx = 1080,
+                densityDpi = 420,
+                density = 2.625f,
+                orientation = "landscape"
+            )
+        )
+
+        assertEquals(1920, preview.widthPx)
+        assertEquals(1080, preview.heightPx)
+        assertEquals(3, preview.elements.size)
+        val button = preview.elements.first { it.text == "A" }
+        assertEquals(CrownProfileShareManager.PreviewElementKind.BUTTON, button.kind)
+        val stick = preview.elements.first { it.kind == CrownProfileShareManager.PreviewElementKind.STICK && !it.invisible }
+        assertEquals(420f, stick.width)
+        val invisibleStick = preview.elements.first { it.invisible }
+        assertTrue(invisibleStick.alpha <= 0.28f)
+    }
+
+    @Test
+    fun parsePreviewInfersCanvasWhenLayoutBasisIsMissing() {
+        val elements = JSONArray()
+            .put(
+                JSONObject()
+                    .put("element_type", 20)
+                    .put("element_central_x", 240)
+                    .put("element_central_y", 360)
+                    .put("element_width", 200)
+                    .put("element_height", 180)
+            )
+        val preview = CrownProfileShareManager.parsePreview(
+            validPayloadForElements(elements.toString())
+        )
+
+        assertEquals(340, preview.widthPx)
+        assertEquals(450, preview.heightPx)
+        assertFalse(preview.isEmpty)
+    }
+
+    @Test
+    fun parsePreviewUsesElementCanvasWhenDeviceMetadataIsPortrait() {
+        val elements = JSONArray()
+            .put(
+                JSONObject()
+                    .put("element_type", 0)
+                    .put("element_central_x", 1900)
+                    .put("element_central_y", 240)
+                    .put("element_width", 220)
+                    .put("element_height", 160)
+            )
+        val preview = CrownProfileShareManager.parsePreview(
+            validPayloadForElements(elements.toString()),
+            CrownProfileShareManager.LayoutBasis(
+                widthPx = 1080,
+                heightPx = 2400,
+                densityDpi = 420,
+                density = 2.625f,
+                orientation = "portrait"
+            )
+        )
+
+        assertEquals(2010, preview.widthPx)
+        assertEquals(320, preview.heightPx)
+    }
+
+    @Test
+    fun parsePreviewReturnsEmptyModelForBrokenOptionalData() {
+        val preview = CrownProfileShareManager.parsePreview("not-json")
+
+        assertTrue(preview.isEmpty)
+    }
+
+    @Test
     fun resolveStoreProfileUrlAcceptsRelativeUrls() {
         val resolved = CrownProfileShareManager.resolveStoreProfileUrl(
             indexUrl = "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json",

@@ -27,14 +27,33 @@ class CrownConfigPickerDialogTest {
             .setData(Uri.parse("about:blank"))
     )
     private lateinit var dialog: CrownConfigPickerDialog
-    private val selections = mutableListOf<Int>()
+    private val selections = mutableListOf<Long>()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
     private fun show() {
+        // ListView selection navigation requires the display to be out of touch
+        // mode; a real (UiAutomation-injected) key event flips it regardless of
+        // whatever taps happened on the device before the run.
+        val uiAutomation = instrumentation.uiAutomation
+        val now = SystemClock.uptimeMillis()
+        uiAutomation.injectInputEvent(KeyEvent(now, now,
+            KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, 0), true)
+        uiAutomation.injectInputEvent(KeyEvent(now, now,
+            KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN, 0), true)
+        SystemClock.sleep(100)
         activityRule.scenario.onActivity { activity ->
-            dialog = CrownConfigPickerDialog(activity, (0..39).map { "Config $it" },
+            dialog = CrownConfigPickerDialog(activity, (0..39).map {
+                CrownConfigChoice(
+                    name = "Config $it",
+                    elementCount = it,
+                    preview = null,
+                    configId = 9000L + it * 10L,
+                    isCurrent = false,
+                    isSelectable = true
+                )
+            },
                 readAxes = { emptyList<Pair<Float, Float>>() to 0f },
-                onSelected = selections::add)
+                onSelected = { selections += it.configId })
             dialog.show()
         }
         instrumentation.waitForIdleSync()
@@ -72,7 +91,7 @@ class CrownConfigPickerDialogTest {
             key(KeyEvent.KEYCODE_BUTTON_A, true)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
-            assertEquals(listOf(1), selections)
+            assertEquals(listOf(9010L), selections)
             assertFalse(dialog.isShowing)
         }
     }
@@ -137,7 +156,7 @@ class CrownConfigPickerDialogTest {
             assertTrue(dialog.isShowing)
             key(KeyEvent.KEYCODE_BUTTON_A, true)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
-            assertEquals(listOf(1), selections)
+            assertEquals(listOf(9010L), selections)
         }
     }
 
@@ -156,6 +175,7 @@ class CrownConfigPickerDialogTest {
             assertEquals(2, (dialog.currentFocus as ListView).selectedItemPosition)
         }
     }
+
 
     private fun coverAndReturn() {
         lateinit var cover: android.app.AlertDialog

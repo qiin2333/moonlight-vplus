@@ -12,19 +12,19 @@
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp" android:layout_weight="1.2" android:tag="k111" android:text="Esc" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k131" android:text="F1" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k132" android:text="F2" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k133" android:text="F3" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k134" android:text="F4" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k135" android:text="F5" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k136" android:text="F6" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k137" android:text="F7" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k138" android:text="F8" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k139" android:text="F9" android:textSize="10sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k140" android:text="F10" android:textSize="9sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k141" android:text="F11" android:textSize="9sp" />
-        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k142" android:text="F12" android:textSize="9sp" />
+        <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="0dp" android:layout_weight="1.2" android:tag="k111" android:text="Esc" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k131" android:text="F1" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k132" android:text="F2" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k133" android:text="F3" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k134" android:text="F4" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k135" android:text="F5" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k136" android:text="F6" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k137" android:text="F7" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k138" android:text="F8" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k139" android:text="F9" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k140" android:text="F10" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k141" android:text="F11" android:textSize="11sp" />
+        <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k142" android:text="F12" android:textSize="11sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -40,9 +40,9 @@
             android:layout_weight="1.2"
             android:orientation="vertical">
 
-            <TextView style="@style/KeyboardKeyRefined" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k120" android:text="PrtSc" android:textSize="9sp" />
-            <TextView style="@style/KeyboardKeyRefined" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k116" android:text="ScrLk" android:textSize="9sp" />
-            <TextView style="@style/KeyboardKeyRefined" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k121" android:text="Pause" android:textSize="9sp" />
+            <TextView style="@style/KeyboardKeyRefined" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k120" android:text="PrtSc" android:textSize="11sp" />
+            <TextView style="@style/KeyboardKeyRefined" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k116" android:text="ScrLk" android:textSize="11sp" />
+            <TextView style="@style/KeyboardKeyRefined" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k121" android:text="Pause" android:textSize="11sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -51,8 +51,8 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k118" android:text="@string/keyboard_key_right_win" android:textSize="9sp" />
-            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k82" android:text="@string/keyboard_key_menu" android:textSize="9sp" />
+            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k118" android:text="@string/keyboard_key_right_win" android:textSize="11sp" />
+            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k82" android:text="@string/keyboard_key_menu" android:textSize="11sp" />
         </LinearLayout>
 
         <LinearLayout

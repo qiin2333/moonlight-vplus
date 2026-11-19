@@ -156,16 +156,15 @@ class PageDeviceController(
             Toast.makeText(context, R.string.crown_direct_config_no_other, Toast.LENGTH_SHORT).show()
             return
         }
-        val names = ids.map {
-            database.queryConfigAttribute(it, PageConfigController.COLUMN_STRING_CONFIG_NAME, "") as String
-        }
+        val choices = CrownConfigChoiceFactory.create(database, ids, sourceId)
         val callback = deviceCallBack ?: return
-        game.showCrownConfigPicker(names, onSelected = { index ->
+        game.showCrownConfigPicker(choices, onSelected = { choice ->
+            val selectedId = choice.configId
             if (deviceCallBack === callback && controllerManager.superPagesController?.pageNow === devicePage &&
-                configController.currentConfigId == sourceId && index in ids.indices &&
-                ids[index] in configController.directSwitchTargetIds) {
+                configController.currentConfigId == sourceId &&
+                selectedId != sourceId && selectedId in configController.directSwitchTargetIds) {
                 val key = TextView(context).apply {
-                    tag = DirectConfigAction.encode(ids[index])
+                    tag = DirectConfigAction.encode(selectedId)
                     text = getKeyNameByValue(tag.toString())
                 }
                 callback.OnKeyClick(key)
