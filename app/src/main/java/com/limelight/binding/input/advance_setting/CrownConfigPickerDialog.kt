@@ -12,6 +12,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
+import android.widget.AdapterView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
@@ -47,15 +48,24 @@ class CrownConfigPickerDialog(
         divider = null
         dividerHeight = 0
         clipToPadding = false
-        setPadding(dp(8), dp(4), dp(8), dp(4))
-        adapter = ConfigChoiceAdapter(context, configChoices)
-        setOnItemClickListener { _, _, position, _ ->
-            val choice = (adapter as? ConfigChoiceAdapter)?.getItem(position)
-            if (choice?.isSelectable != true) return@setOnItemClickListener
-            dismiss()
-            onSelected(choice)
+        setPadding(dp(12), dp(4), dp(12), dp(4))
+        // Rows draw their own selection state; the default focus highlight would double-draw.
+        setSelector(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        adapter = ConfigChoiceAdapter(context, configChoices) { position -> select(position) }
+        // Rows are not clickable, so ListView routes taps here.
+        setOnItemClickListener { _, _, position, _ -> select(position) }
+        // Gamepad/axis navigation moves the ListView selection; mirror it into the row state.
+        onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (position != AdapterView.INVALID_POSITION) syncSelection(position)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
     }
+
+    /** Row highlighted as the pending choice; confirmed by the positive button. */
+    private var selectedPosition = configChoices.indexOfFirst { it.isCurrent }.coerceAtLeast(0)
     private val repeat = object : Runnable {
         override fun run() {
             repeatScheduled = false
@@ -79,17 +89,34 @@ class CrownConfigPickerDialog(
 
     init {
         setTitle(R.string.crown_direct_config_action)
-        setView(choices)
+        // Design L7: state the consequence up front, before the user picks a row.
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(context).apply {
+                setPadding(dp(24), dp(2), dp(24), dp(6))
+                setTextColor(context.resources.getColor(R.color.crown_text_secondary))
+                textSize = 11f
+                text = context.getString(R.string.crown_direct_config_subtitle)
+            })
+            addView(choices)
+        }
+        setView(content)
+        // L7 flow: a tap only highlights the row; the positive button applies it.
+        setButton(BUTTON_POSITIVE, context.getString(R.string.crown_menu_change_profile)) { _, _ ->
+            confirmSelection()
+        }
         setButton(BUTTON_NEGATIVE, context.getString(R.string.game_menu_cancel)) { _, _ -> cancel() }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppDialogStyler.applySystemChoiceList(this, context)
+        // Keep the styled title/buttons; the list is our own ListView, not the system one.
+        AppDialogStyler.applyChrome(this, context)
         choices.post {
             if (isShowing) {
                 choices.requestFocus()
-                choices.setSelection(0)
+                choices.setSelection(selectedPosition)
+                (choices.adapter as? ConfigChoiceAdapter)?.notifyDataSetChanged()
             }
         }
     }
@@ -105,8 +132,12 @@ class CrownConfigPickerDialog(
 
     private class ConfigChoiceAdapter(
         private val context: Context,
-        private val choices: List<CrownConfigChoice>
+        private val choices: List<CrownConfigChoice>,
+        private val onSelect: (Int) -> Unit
     ) : BaseAdapter() {
+        /** Mirrors the dialog's pending selection so rows can highlight themselves. */
+        var highlightedPosition = -1
+
         override fun getCount(): Int = choices.size
 
         override fun getItem(position: Int): CrownConfigChoice = choices[position]
@@ -116,6 +147,11 @@ class CrownConfigPickerDialog(
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val root = (convertView as? LinearLayout) ?: createRow()
             val choice = getItem(position)
+            val selected = position == highlightedPosition
+            root.background = context.resources.getDrawable(
+                if (selected) R.drawable.crown_picker_row_selected_bg
+                else R.drawable.crown_picker_row_normal_bg
+            )
             (root.getChildAt(0) as? CrownThumbnailView)?.bind(choice.preview)
             (root.getChildAt(1) as? LinearLayout)?.apply {
                 (getChildAt(0) as? TextView)?.text = choice.name
@@ -131,9 +167,13 @@ class CrownConfigPickerDialog(
                 }
             }
             (root.getChildAt(2) as? TextView)?.apply {
-                text = if (choice.isCurrent) "✓" else ""
-                setTextColor(context.resources.getColor(R.color.crown_text_primary))
-                alpha = if (choice.isCurrent) 1f else 0f
+                text = if (choice.isCurrent || selected) "✓" else ""
+                setTextColor(context.resources.getColor(R.color.crown_on_accent))
+                background = context.resources.getDrawable(
+                    if (choice.isCurrent || selected) R.drawable.crown_picker_check_on_bg
+                    else R.drawable.crown_picker_check_off_bg
+                )
+                visibility = if (choice.isCurrent || selected) View.VISIBLE else View.INVISIBLE
             }
             root.alpha = if (choice.isSelectable) 1f else 0.72f
             return root
@@ -142,38 +182,78 @@ class CrownConfigPickerDialog(
         private fun createRow(): LinearLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            minimumHeight = dp(72)
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            isFocusable = true
-            isClickable = true
-            background = context.resources.getDrawable(R.drawable.crown_config_action_button_bg)
-            addView(CrownThumbnailView(context), LinearLayout.LayoutParams(dp(102), dp(56)))
+            minimumHeight = dp(50)
+            setPadding(dp(8), dp(8), dp(10), dp(8))
+            // Not clickable: ListView owns taps and forwards them to the item click listener.
+            isFocusable = false
+            isClickable = false
+            addView(CrownThumbnailView(context), LinearLayout.LayoutParams(dp(34), dp(34)))
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(dp(12), 0, 0, 0)
+                setPadding(dp(11), 0, dp(8), 0)
                 addView(TextView(context).apply {
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                     setTextColor(context.resources.getColor(R.color.crown_text_primary))
-                    textSize = 14f
-                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    textSize = 13f
+                }, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ))
                 addView(TextView(context).apply {
                     maxLines = 1
                     setTextColor(context.resources.getColor(R.color.crown_text_secondary))
                     textSize = 11f
-                    setPadding(0, dp(3), 0, 0)
-                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    setPadding(0, dp(2), 0, 0)
+                }, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ))
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(TextView(context).apply {
-                textSize = 20f
                 gravity = android.view.Gravity.CENTER
-                setTextColor(context.resources.getColor(R.color.crown_text_primary))
-            }, LinearLayout.LayoutParams(dp(28), ViewGroup.LayoutParams.MATCH_PARENT))
+                textSize = 10f
+                setTextColor(context.resources.getColor(R.color.crown_on_accent))
+            }, LinearLayout.LayoutParams(dp(18), dp(18)))
         }
 
         private fun dp(value: Int): Int =
             (value * context.resources.displayMetrics.density).toInt()
+    }
+
+    private fun select(position: Int) {
+        val adapter = choices.adapter as? ConfigChoiceAdapter ?: return
+        if (position !in 0 until adapter.count) return
+        if (!adapter.getItem(position).isSelectable) return
+        adapter.highlightedPosition = position
+        adapter.notifyDataSetChanged()
+        choices.setSelection(position)
+    }
+
+    private fun syncSelection(position: Int) {
+        val adapter = choices.adapter as? ConfigChoiceAdapter ?: return
+        if (position !in 0 until adapter.count) return
+        if (adapter.highlightedPosition == position) return
+        adapter.highlightedPosition = position
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun confirmSelection() {
+        val adapter = choices.adapter as? ConfigChoiceAdapter ?: return
+        val position = if (adapter.highlightedPosition in 0 until adapter.count) {
+            adapter.highlightedPosition
+        } else {
+            choices.selectedItemPosition
+        }
+        if (position !in 0 until adapter.count) return
+        val choice = adapter.getItem(position)
+        if (!choice.isSelectable) return
+        // Confirming the active profile is a no-op; keep the dialog's state unchanged.
+        if (choice.isCurrent) {
+            dismiss()
+            return
+        }
+        dismiss()
+        onSelected(choice)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -196,12 +276,7 @@ class CrownConfigPickerDialog(
         if (UiDialogKeyHandler.handle(event.action, event.keyCode, { cancel() }, {
                 val focus = currentFocus
                 if (focus === choices || focus == null) {
-                    val position = choices.selectedItemPosition
-                    val choice = (choices.adapter as? ConfigChoiceAdapter)?.getItem(position)
-                    if (position in 0 until choices.count && choice?.isSelectable == true) {
-                        dismiss()
-                        onSelected(choice)
-                    }
+                    confirmSelection()
                 } else {
                     focus.performClick()
                 }
