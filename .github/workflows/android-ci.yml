@@ -44,7 +44,12 @@ jobs:
           # 全量历史 + tags 只有 tag 构建需要（release notes diff / version floor 推导），PR 用浅克隆提速
           fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
           fetch-tags: ${{ github.ref_type == 'tag' }}
-      
+
+      # Thor fork: one script applies patches/common-c/* in every job, so tests,
+      # builds and releases all compile the same code; then check the fixes are present.
+      - name: Apply Thor fork patches
+        run: bash .github/thor/apply-patches.sh && bash .github/thor/check-invariants.sh
+
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
         with:
@@ -131,11 +136,10 @@ jobs:
           fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
           fetch-tags: ${{ github.ref_type == 'tag' }}
 
-      - name: Apply gyro throttle patch
-        run: git -C app/src/main/jni/moonlight-core/moonlight-common-c apply "$GITHUB_WORKSPACE/gyro-throttle.patch"
-
-      - name: Apply DS4 bottom-screen touchpad patch
-        run: git apply "$GITHUB_WORKSPACE/ds4-bottom-trackpad.patch"
+      # Thor fork: one script applies patches/common-c/* in every job, so tests,
+      # builds and releases all compile the same code; then check the fixes are present.
+      - name: Apply Thor fork patches
+        run: bash .github/thor/apply-patches.sh && bash .github/thor/check-invariants.sh
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -338,6 +342,11 @@ jobs:
           # 发版需要全量历史与 tags：version floor 推导和 release notes diff 都按 tag 检索
           fetch-depth: 0
           fetch-tags: true
+
+      # Thor fork: one script applies patches/common-c/* in every job, so tests,
+      # builds and releases all compile the same code; then check the fixes are present.
+      - name: Apply Thor fork patches
+        run: bash .github/thor/apply-patches.sh && bash .github/thor/check-invariants.sh
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
