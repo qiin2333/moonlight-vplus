@@ -827,7 +827,6 @@
     <string name="title_crown_edit_current">编辑当前布局</string>
     <string name="summary_crown_edit_current">打开「我的王冠」管理当前布局。</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d 个控件 · 已适配当前串流</string>
-    <string name="title_crown_current_profile">当前王冠</string>
     <string name="summary_crown_current_profile">启用王冠输入时使用的配置。</string>
     <string name="summary_crown_current_profile_empty">还没有选择王冠配置。</string>
     <string name="summary_crown_store_view">浏览布局预览和社区分享的配置。</string>
@@ -1457,9 +1456,6 @@
     <string name="page_config_section_touch">触控</string>
     <string name="page_config_section_feedback">振动反馈</string>
     <string name="page_config_profile_hint">为本次串流选择一个配置</string>
-    <string name="page_config_touch_hint">鼠标指针、触控板与手势输入</string>
-    <string name="page_config_feedback_hint">统一管理设备与虚拟按键反馈</string>
-    <string name="page_config_restore_default">恢复默认</string>
     <string name="crown_profile_name_title">档案名称</string>
     <string name="crown_profile_name_error">档案名称需为 1-10 个字符</string>
     <string name="layout_page_config_text_9eba2">当前档案</string>
@@ -1520,17 +1516,11 @@
     <string name="crown_edit_section_buttons">按钮与方向键</string>
     <string name="crown_edit_section_sticks">摇杆与辅助控件</string>
     <string name="crown_edit_section_containers">组合与轮盘</string>
-    <string name="crown_edit_add_hint">选择一个控件放置到画布上</string>
-    <string name="crown_edit_add_control">添加控件</string>
     <string name="crown_edit_done">完成</string>
     <string name="crown_edit_drag_summary">直接在串流画布上拖动控件</string>
     <string name="crown_edit_snap_summary">自动吸附到附近边缘和中心线</string>
     <string name="crown_edit_canvas_hint">提示：在画布上选择控件即可打开属性面板。</string>
     <string name="crown_edit_toolbar_hint">拖动移动 · 双指缩放 · 对齐吸附跟随网格</string>
-    <string name="crown_edit_toolbar_snap">对齐吸附</string>
-    <string name="crown_edit_toolbar_grid">显示网格</string>
-    <string name="crown_edit_toolbar_undo">撤销</string>
-    <string name="crown_edit_toolbar_undo_unavailable">撤销功能暂不可用</string>
     <string name="layout_page_group_button_text_6db87">类型 : 组按键</string>
     <string name="layout_page_group_button_text_b19b4">隐藏按钮 (轮盘使用下)</string>
     <string name="layout_page_group_button_text_f57fc">按住可移动按键</string>

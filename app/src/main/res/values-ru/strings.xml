@@ -791,7 +791,6 @@
     <string name="title_crown_edit_current">Изменить текущую раскладку</string>
     <string name="summary_crown_edit_current">Открыть «Мои Crown» для управления текущей раскладкой.</string>
     <string name="summary_crown_enabled_state">%1$s · элементов: %2$d · готово для текущего стрима</string>
-    <string name="title_crown_current_profile">Текущий Crown</string>
     <string name="summary_crown_current_profile">Профиль, используемый при включённом вводе Crown.</string>
     <string name="summary_crown_current_profile_empty">Профиль Crown ещё не выбран.</string>
     <string name="summary_crown_store_view">Просмотр раскладок, превью и профилей сообщества.</string>
