@@ -51,7 +51,8 @@ import com.limelight.utils.UiHelper
 
 object UpdateManager {
     private const val TAG = "UpdateManager"
-    private const val UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000L
+    // Thor fork: 30 min (upstream: 4 h) so a new build shows up soon after CI publishes it.
+    private const val UPDATE_CHECK_INTERVAL = 30 * 60 * 1000L
 
     // 仅用于设置页远程背景图，不参与版本检查或 APK 下载。
     private const val PROXY_DISCOVERY_URL = "https://ghproxy.link/js/src_views_home_HomeView_vue.js"
@@ -428,11 +429,9 @@ object UpdateManager {
     // ------------------------------------------------------------------
 
     private fun fetchUpdateInfo(context: Context): UpdateInfo? {
-        val metadata = if (isChineseLocale(context)) {
-            UpdateMetadataClient.fetchForChinese()
-        } else {
-            UpdateMetadataClient.fetchForGithub()
-        } ?: return null
+        // Thor fork: the official/CNB mirrors only carry upstream V+, so every
+        // locale reads this fork's GitHub releases.
+        val metadata = UpdateMetadataClient.fetchForGithub() ?: return null
 
         return UpdateInfo(
             version = metadata.version,

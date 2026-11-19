@@ -36,10 +36,12 @@ internal object UpdateMetadataClient {
         "https://www.alkaidlab.cn/release-metadata/moonlight-vplus.json"
     private const val CNB_RELEASE_PAGE_URL =
         "https://cnb.cool/AlkaidLab/moonlight-vplus-android-release/-/releases"
+    // Thor fork: check this fork's own builds (published by CI as thor-<version>
+    // releases), not upstream V+, whose APK is a different app id.
     private const val GITHUB_API_URL =
-        "https://api.github.com/repos/qiin2333/moonlight-vplus/releases/latest"
+        "https://api.github.com/repos/Zach200910/moonlight-vplus-aynthor-gyro/releases/latest"
     internal const val GITHUB_RELEASE_PAGE_URL =
-        "https://github.com/qiin2333/moonlight-vplus/releases/latest"
+        "https://github.com/Zach200910/moonlight-vplus-aynthor-gyro/releases/latest"
 
     private const val PRODUCT = "moonlight-vplus"
     private const val CHANNEL = "latest"
@@ -132,6 +134,7 @@ internal object UpdateMetadataClient {
         val json = executeText("github", GITHUB_API_URL) ?: return null
         val response = runCatching { JSONObject(json) }.getOrNull() ?: return null
         val version = response.optString("tag_name")
+            .removePrefix("thor-")
             .replaceFirst("^[Vv]".toRegex(), "")
             .takeIf { it.isNotBlank() }
             ?: return null
