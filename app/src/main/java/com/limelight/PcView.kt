@@ -713,17 +713,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
             toggleUnpairedDevices()
         }
 
-        addToolbarMenuItem(
-            menu,
-            R.drawable.ic_theme_mode,
-            getString(R.string.pcview_toolbar_theme),
-            getThemeSummary(),
-            accent = true
-        ) {
-            popup.dismiss()
-            showAppThemeSheet(this) { recreate() }
-        }
-
         menu.measure(
             View.MeasureSpec.makeMeasureSpec(popupWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -821,13 +810,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         })
     }
 
-    private fun getThemeSummary(): String = getString(
-        R.string.theme_summary,
-        getThemeModeLabel(AppTheme.getAppThemeMode(this)),
-        getString(if (AppTheme.getAccentMode(this) == AppTheme.ACCENT_MODE_BG)
-            R.string.theme_accent_background else R.string.theme_accent_pink),
-    )
-
     /**
      * 背景换桶后重染工具栏上以 ?attr/appAccent 着色的图标。
      * 矢量在膨胀时一次性解析主题属性，主题 overlay 更新后不会自动重解析。
@@ -845,14 +827,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, ShakeDetector.Listene
         findViewById<ImageButton?>(R.id.easyTierControlButton)?.imageTintList = tint
         findViewById<ImageButton?>(R.id.pcToolbarMenuButton)?.imageTintList =
             ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ui_shell_text_primary))
-    }
-
-    private fun getThemeModeLabel(mode: String): String {
-        return when (mode) {
-            AppTheme.THEME_MODE_LIGHT -> getString(R.string.pcview_theme_light)
-            AppTheme.THEME_MODE_DARK -> getString(R.string.pcview_theme_dark)
-            else -> getString(R.string.pcview_theme_follow_system)
-        }
     }
 
     private fun dpToPx(value: Int): Int {

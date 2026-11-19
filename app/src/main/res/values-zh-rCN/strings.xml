@@ -561,11 +561,6 @@
     <string name="pcview_toolbar_restore_session">恢复会话</string>
     <string name="pcview_toolbar_toggle_unpaired_show">显示未配对主机</string>
     <string name="pcview_toolbar_toggle_unpaired_hide">隐藏未配对主机</string>
-    <string name="pcview_toolbar_theme">主题</string>
-    <string name="pcview_theme_dialog_title">主题</string>
-    <string name="pcview_theme_follow_system">跟随系统</string>
-    <string name="pcview_theme_light">浅色</string>
-    <string name="pcview_theme_dark">深色</string>
     <string name="pcview_theme_applied">主题已切换为%1$s</string>
 
     <string name="pcview_press_back_again_to_exit">再按一次返回键退出</string>
@@ -2311,14 +2306,6 @@
     <string name="stick_calibration_summary">将摇杆当前位置设为此控制器的中立位置</string>
 
     <string name="osc_layout_title">虚拟手柄布局</string>
-    <string name="theme_appearance">明暗模式</string>
-    <string name="theme_accent_source">强调色来源</string>
-    <string name="theme_accent_pink">品牌粉</string>
-    <string name="theme_accent_background">跟随首页背景</string>
-    <string name="theme_icon_style">应用图标</string>
-    <string name="theme_icon_standard">标准</string>
-    <string name="theme_icon_dark">暗黑</string>
-    <string name="theme_summary">%1$s · %2$s</string>
     <string name="title_experimental_haptic_protocols">允许实验性触觉协议</string>
     <string name="summary_experimental_haptic_protocols">自动识别手柄。允许尝试已识别但尚未验证的波形协议；未知协议继续使用普通振动。更改后重新串流。</string>
     <string name="waveform_status_ready">波形通道已就绪，播放仍需触觉内容。</string>

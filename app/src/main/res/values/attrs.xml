@@ -13,7 +13,7 @@
 
     <!--
         首页背景强调色槽位。默认值指向品牌粉（ui_shell_accent 系）；
-        选择“跟随壁纸”后，由 YouAccentOverlayBg0..11 切换到背景对应的色相桶。
+        Thor build: fixed single accent (AppAccentBrand).
     -->
     <attr name="appAccent" format="color" />
     <attr name="appAccentSoft" format="color" />

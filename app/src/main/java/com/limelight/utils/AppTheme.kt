@@ -35,12 +35,12 @@ object AppTheme {
         }
     }
 
-    fun getAppThemeMode(context: Context): String {
-        val storedMode = context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(APP_THEME_MODE_KEY, THEME_MODE_SYSTEM)
-            ?: THEME_MODE_SYSTEM
-        return normalizeThemeMode(storedMode)
-    }
+    /**
+     * The Thor build is dark-only (Nintendo Minimal palette). Any stored choice from older
+     * builds is left in place untouched but ignored, so downgrading keeps working.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun getAppThemeMode(context: Context): String = THEME_MODE_DARK
 
     /** Commit the two independent choices together before triggering a configuration change. */
     fun save(context: Context, mode: String, accent: String) {
@@ -97,22 +97,6 @@ object AppTheme {
     }
     const val ACCENT_MODE_PINK = "pink"
     const val ACCENT_MODE_BG = "bg"
-
-    /** 首页背景取色的 12 个色相桶对应的 overlay（由 BgAccent 选中其一）。 */
-    private val BG_OVERLAY_STYLES = intArrayOf(
-        R.style.YouAccentOverlayBg0, R.style.YouAccentOverlayBg1,
-        R.style.YouAccentOverlayBg2, R.style.YouAccentOverlayBg3,
-        R.style.YouAccentOverlayBg4, R.style.YouAccentOverlayBg5,
-        R.style.YouAccentOverlayBg6, R.style.YouAccentOverlayBg7,
-        R.style.YouAccentOverlayBg8, R.style.YouAccentOverlayBg9,
-        R.style.YouAccentOverlayBg10, R.style.YouAccentOverlayBg11,
-    )
-
-    /** 当前强调色模式：品牌粉 / 跟随首页背景。 */
-    fun getAccentMode(context: Context): String =
-        context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)
-            .getString(ACCENT_MODE_KEY, ACCENT_MODE_PINK)
-            .let { if (it == ACCENT_MODE_BG) ACCENT_MODE_BG else ACCENT_MODE_PINK }
 
     /** Refresh live views on a bucket change, including changes made while the page was stopped. */
     fun observeAccent(context: Context, owner: LifecycleOwner, onChanged: () -> Unit) {
@@ -197,10 +181,11 @@ object AppTheme {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun applyPalette(theme: android.content.res.Resources.Theme, bucket: Int) {
         // Reset first: removing a background or disabling its accent must not retain the old overlay.
+        // Single fixed accent; `bucket` is kept in the signature for existing callers.
         theme.applyStyle(R.style.AppAccentBrand, true)
-        if (bucket in BG_OVERLAY_STYLES.indices) theme.applyStyle(BG_OVERLAY_STYLES[bucket], true)
     }
 
     fun applyStyle(context: Context, style: Int) {

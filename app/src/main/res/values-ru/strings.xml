@@ -1157,11 +1157,6 @@
     <string name="pcview_toolbar_restore_session">Восстановить сеанс</string>
     <string name="pcview_toolbar_toggle_unpaired_show">Показать несопряжённые ПК</string>
     <string name="pcview_toolbar_toggle_unpaired_hide">Скрыть несопряжённые ПК</string>
-    <string name="pcview_toolbar_theme">Тема</string>
-    <string name="pcview_theme_dialog_title">Тема</string>
-    <string name="pcview_theme_follow_system">Системная</string>
-    <string name="pcview_theme_light">Светлая</string>
-    <string name="pcview_theme_dark">Тёмная</string>
     <string name="pcview_theme_applied">Тема: %1$s</string>
     <string name="pcview_press_back_again_to_exit">Нажмите «Назад» ещё раз для выхода</string>
     <string name="save_to_scene">В сценарий %1$d</string>
@@ -1999,14 +1994,6 @@
     <string name="stick_calibration_title">Калибровка центра стиков</string>
     <string name="stick_calibration_summary">Принять текущее положение стиков за центр этого геймпада</string>
     <string name="osc_layout_title">Раскладка экранного геймпада</string>
-    <string name="theme_appearance">Внешний вид</string>
-    <string name="theme_accent_source">Акцентный цвет</string>
-    <string name="theme_accent_pink">Розовый V+</string>
-    <string name="theme_accent_background">По фону главного экрана</string>
-    <string name="theme_icon_style">Значок приложения</string>
-    <string name="theme_icon_standard">Стандартный</string>
-    <string name="theme_icon_dark">Тёмный</string>
-    <string name="theme_summary">%1$s · %2$s</string>
     <string name="title_experimental_haptic_protocols">Экспериментальные протоколы вибрации</string>
     <string name="summary_experimental_haptic_protocols">Геймпады определяются автоматически. Разрешить известные, но непроверенные волновые протоколы. Для неизвестных остаётся обычная вибрация. После изменения переподключитесь.</string>
     <string name="waveform_status_ready">Волновой канал готов; нужен контент с тактильными эффектами.</string>
