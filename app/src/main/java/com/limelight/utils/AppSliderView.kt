@@ -25,7 +25,7 @@ class AppSliderView @JvmOverloads constructor(context: Context, attrs: Attribute
     }
 
     override fun onDraw(canvas: Canvas) {
-        val trackHeight = (6 * resources.displayMetrics.density + 0.5f).toInt()
+        val trackHeight = (4 * resources.displayMetrics.density + 0.5f).toInt()
         val top = paddingTop + (height - paddingTop - paddingBottom - trackHeight) / 2
         val left = paddingLeft
         val right = (width - paddingRight).coerceAtLeast(left + 1)
