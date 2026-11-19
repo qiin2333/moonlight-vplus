@@ -1086,7 +1086,7 @@ class WheelPad(attributesMap: Map<String, Any>,
             elementController.addElement(cv)
         }
         delete.setOnClickListener {
-            elementController.toggleInfoPage(wheelPadPage)
+            elementController.toggleInfoPage(wheelPadPage!!)
             elementController.deleteElement(wheelPad)
         }
     }
@@ -1259,7 +1259,7 @@ class WheelPad(attributesMap: Map<String, Any>,
                                 elementController.superPagesController.openNewPage(wheelPadSettingsPage)
                             }
                         })
-                        elementController.getSuperPagesController().openNewPage(groupButtonSettingsPage)
+                        elementController.superPagesController.openNewPage(groupButtonSettingsPage)
                     }
 
                     // 长按删除
@@ -1397,7 +1397,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         addGroupButton.setOnClickListener {
             // 1. 查找所有现有的 GroupButton
             val groupButtons = ArrayList<GroupButton>()
-            for (el in elementController.getElements()) {
+            for (el in elementController.elements) {
                 if (el is GroupButton) {
                     groupButtons.add(el as GroupButton)
                 }

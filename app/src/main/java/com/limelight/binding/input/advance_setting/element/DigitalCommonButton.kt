@@ -194,7 +194,7 @@ class DigitalCommonButton(attributesMap: Map<String, Any>,
         if (inRange(x, y)) {
             return
         }
-        for (element in elementController.getElements()) {
+        for (element in elementController.elements) {
             if (element !== this && element is DigitalCommonButton && element.visibility == VISIBLE) {
                 (element as DigitalCommonButton).checkMovement(x, y, this)
             }

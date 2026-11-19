@@ -813,7 +813,7 @@ class GroupButton(attributesMap: Map<String, Any>,
                 element.invalidate()
             }
             for (element in childElementList) element.setEditColor(EDIT_COLOR_SELECTED)
-            for (element in elementController.getElements())
+            for (element in elementController.elements)
                 element.setElementSelectedCallBack(elementSelectedCallBack)
 
             val pageNull = superPagesController!!.pageNull
@@ -846,13 +846,13 @@ class GroupButton(attributesMap: Map<String, Any>,
 
         deleteButton.setOnClickListener {
             if (deleteEditText.text.toString() == "DELETE") {
-                val allElement = ArrayList(elementController.getElements())
+                val allElement = ArrayList(elementController.elements)
                 for (element in childElementList) {
                     if (allElement.contains(element)) {
                         elementController.deleteElement(element)
                     }
                 }
-                elementController.toggleInfoPage(groupButtonPage)
+                elementController.toggleInfoPage(groupButtonPage!!)
                 elementController.deleteElement(groupButton!!)
                 Toast.makeText(this@GroupButton.context, R.string.delete_success, Toast.LENGTH_SHORT).show()
             }
@@ -1005,7 +1005,7 @@ class GroupButton(attributesMap: Map<String, Any>,
             if (resizeXBorder) {
                 var leftMargin = centralXMax
                 var rightMargin = centralXMax
-                val allElement = elementController.getElements()
+                val allElement = elementController.elements
                 for (element in childElementList) {
                     if (!allElement.contains(element)) {
                         continue
@@ -1042,7 +1042,7 @@ class GroupButton(attributesMap: Map<String, Any>,
             if (resizeYBorder) {
                 var bottomMargin = centralYMax
                 var topMargin = centralYMax
-                val allElement = elementController.getElements()
+                val allElement = elementController.elements
                 for (element in childElementList) {
                     if (!allElement.contains(element)) {
                         continue
