@@ -100,6 +100,10 @@ object AppTheme {
     /** Wallpaper hue buckets are retired; the active bucket is always "none". */
     const val NO_ACCENT_BUCKET = -1
 
+    /** Single fixed accent (thor_accent); wallpaper-derived accents are retired. */
+    @Suppress("UNUSED_PARAMETER")
+    fun getAccentMode(context: Context): String = ACCENT_MODE_PINK
+
     /** Refresh live views on a bucket change, including changes made while the page was stopped. */
     fun observeAccent(context: Context, owner: LifecycleOwner, onChanged: () -> Unit) {
         val prefs = context.getSharedPreferences(APP_THEME_PREFS, Context.MODE_PRIVATE)

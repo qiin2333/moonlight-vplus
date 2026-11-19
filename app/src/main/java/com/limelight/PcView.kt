@@ -2603,7 +2603,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, EasyTierController.Vp
         handleFirstLoadAnimation(listView)
         setupListItemClick(listView)
         setupGridColumnWidth(view)
-        setupEmptyAreaLongPress(listView)
 
         UiHelper.applyStatusBarPadding(listView)
         setupHostActionSheet(listView)
@@ -2672,24 +2671,6 @@ class PcView : ThemedActivity(), AdapterFragmentCallbacks, EasyTierController.Vp
                 showHostActionSheet(computer.details)
                 true
             }
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupEmptyAreaLongPress(listView: AbsListView) {
-        val detector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onLongPress(e: MotionEvent) {
-                if (listView.pointToPosition(e.x.toInt(), e.y.toInt()) == AdapterView.INVALID_POSITION) {
-                    saveImageWithPermissionCheck()
-                }
-            }
-        })
-
-        listView.setOnTouchListener { _, event ->
-            if (listView.pointToPosition(event.x.toInt(), event.y.toInt()) == AdapterView.INVALID_POSITION) {
-                detector.onTouchEvent(event)
-            }
-            false
         }
     }
 
