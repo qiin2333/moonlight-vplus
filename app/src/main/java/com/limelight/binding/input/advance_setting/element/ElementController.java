@@ -402,7 +402,7 @@ public class ElementController {
     }
 
 
-    protected Handler getHandler() {
+    public Handler getHandler() {
         return handler;
     }
 
@@ -463,7 +463,7 @@ public class ElementController {
         }
     }
 
-    protected Element addElement(ContentValues contentValues) {
+    public Element addElement(ContentValues contentValues) {
         Long configId = controllerManager.getPageConfigController().getCurrentConfigId();
         Long elementId = System.currentTimeMillis();
         contentValues.put(Element.COLUMN_LONG_CONFIG_ID, configId);
@@ -473,11 +473,11 @@ public class ElementController {
         return loadElement(elementId);
     }
 
-    protected void updateElement(long elementId, ContentValues contentValues) {
+    public void updateElement(long elementId, ContentValues contentValues) {
         controllerManager.getSuperConfigDatabaseHelper().updateElement(currentConfigId, elementId, contentValues);
     }
 
-    protected void deleteElement(Element element) {
+    public void deleteElement(Element element) {
         controllerManager.getSuperConfigDatabaseHelper().deleteElement(currentConfigId, element.elementId);
         if (elements.contains(element)) {
             element.releaseLatchedInput();
@@ -609,7 +609,7 @@ public class ElementController {
         return element;
     }
 
-    protected void adjustLayer(Element element) {
+    public void adjustLayer(Element element) {
 
         int elementWidth = element.getElementWidth();
         int elementHeight = element.getElementHeight();
@@ -641,11 +641,11 @@ public class ElementController {
 
     }
 
-    protected int editGridHandle(int position) {
+    public int editGridHandle(int position) {
         return position - position % editGridWidth;
     }
 
-    protected SnapResult snapElementPosition(Element movingElement, int candidateCentralX, int candidateCentralY) {
+    public SnapResult snapElementPosition(Element movingElement, int candidateCentralX, int candidateCentralY) {
         int snappedCentralX = editGridHandle(candidateCentralX);
         int snappedCentralY = editGridHandle(candidateCentralY);
         if (mode != Mode.Edit || !alignmentSnapEnabled || movingElement == null || elementsLayout == null) {
@@ -702,7 +702,7 @@ public class ElementController {
         return new SnapResult(finalCentralX, finalCentralY);
     }
 
-    protected void clearAlignmentGuides() {
+    public void clearAlignmentGuides() {
         if (editGridView != null) {
             editGridView.clearAlignmentGuides();
         }
