@@ -33,7 +33,7 @@ class CrownConfigPickerDialogTest {
     private fun show() {
         activityRule.scenario.onActivity { activity ->
             dialog = CrownConfigPickerDialog(activity, (0..39).map {
-                CrownConfigPickerDialog.ConfigChoice(
+                CrownConfigChoice(
                     name = "Config $it",
                     elementCount = it,
                     preview = null,

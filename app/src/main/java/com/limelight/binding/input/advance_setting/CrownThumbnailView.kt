@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat
 import com.limelight.R
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 
-/** Small, data driven Crown layout preview used by the streaming side panel. */
+/** Reusable, data-driven Crown layout preview for profile surfaces. */
 class CrownThumbnailView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null

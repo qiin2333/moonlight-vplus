@@ -11,7 +11,7 @@ object CrownConfigChoiceFactory {
         database: SuperConfigDatabaseHelper,
         orderedConfigIds: List<Long>,
         currentConfigId: Long
-    ): List<CrownConfigPickerDialog.ConfigChoice> = orderedConfigIds.map { configId ->
+    ): List<CrownConfigChoice> = orderedConfigIds.map { configId ->
         val name = database.queryConfigAttribute(
             configId,
             CrownProfileSchema.CONFIG_NAME_KEY,
@@ -21,7 +21,7 @@ object CrownConfigChoiceFactory {
             CrownProfileShareManager.parsePreview(database.exportConfig(configId))
         }.getOrNull()
 
-        CrownConfigPickerDialog.ConfigChoice(
+        CrownConfigChoice(
             name = name,
             elementCount = database.queryAllElementIds(configId).size,
             preview = preview,

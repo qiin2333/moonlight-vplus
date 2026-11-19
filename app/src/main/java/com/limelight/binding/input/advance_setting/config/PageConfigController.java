@@ -20,7 +20,7 @@ import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.CrownConfigChoiceFactory;
-import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog;
+import com.limelight.binding.input.advance_setting.CrownConfigChoice;
 import com.limelight.binding.input.advance_setting.CrownThumbnailView;
 import com.limelight.binding.input.advance_setting.share.CrownProfileSchema;
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager;
@@ -259,7 +259,7 @@ public class PageConfigController {
         for (Long id : configIds) {
             if (!orderedIds.contains(id)) orderedIds.add(id);
         }
-        List<CrownConfigPickerDialog.ConfigChoice> choices = CrownConfigChoiceFactory.create(
+        List<CrownConfigChoice> choices = CrownConfigChoiceFactory.create(
                 controllerManager.getSuperConfigDatabaseHelper(), orderedIds, currentConfigId);
         ((Game) context).showCrownConfigPicker(choices, choice -> {
             if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {

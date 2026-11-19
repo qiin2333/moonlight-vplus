@@ -37,7 +37,7 @@ import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
 import com.limelight.binding.input.advance_setting.CrownConfigChoiceFactory;
-import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog;
+import com.limelight.binding.input.advance_setting.CrownConfigChoice;
 import com.limelight.binding.input.advance_setting.DirectConfigAction;
 import com.limelight.binding.input.advance_setting.DirectConfigSwitchState;
 import com.limelight.binding.input.advance_setting.PageDeviceController;
@@ -1718,7 +1718,7 @@ public class ElementController {
                         for (Long id : allConfigIds) {
                             if (!orderedIds.contains(id)) orderedIds.add(id);
                         }
-                        List<CrownConfigPickerDialog.ConfigChoice> choices = CrownConfigChoiceFactory.create(
+                        List<CrownConfigChoice> choices = CrownConfigChoiceFactory.create(
                                 controllerManager.getSuperConfigDatabaseHelper(), orderedIds, currentConfigId);
                         game.showCrownConfigPicker(choices, choice -> {
                             if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {

@@ -18,26 +18,16 @@ import android.widget.TextView
 import android.view.WindowManager
 import com.limelight.R
 import com.limelight.binding.input.MenuAxisNavigationState
-import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.ui.UiDialogKeyHandler
 import com.limelight.utils.AppDialogStyler
 
 /** Only the configuration editor opens this picker; executing a bound action never does. */
 class CrownConfigPickerDialog(
     context: Context,
-    configChoices: List<ConfigChoice>,
+    configChoices: List<CrownConfigChoice>,
     private val readAxes: (MotionEvent) -> Pair<List<Pair<Float, Float>>, Float>,
-    private val onSelected: (ConfigChoice) -> Unit
+    private val onSelected: (CrownConfigChoice) -> Unit
 ) : AlertDialog(context, R.style.AppDialogStyle) {
-    data class ConfigChoice(
-        val name: String,
-        val elementCount: Int,
-        val preview: CrownProfileShareManager.ProfilePreview?,
-        val configId: Long = -1L,
-        val isCurrent: Boolean = false,
-        val isSelectable: Boolean = true
-    )
-
     private class Source {
         val navigation = MenuAxisNavigationState()
         val scroll = MenuAxisNavigationState()
@@ -115,11 +105,11 @@ class CrownConfigPickerDialog(
 
     private class ConfigChoiceAdapter(
         private val context: Context,
-        private val choices: List<ConfigChoice>
+        private val choices: List<CrownConfigChoice>
     ) : BaseAdapter() {
         override fun getCount(): Int = choices.size
 
-        override fun getItem(position: Int): ConfigChoice = choices[position]
+        override fun getItem(position: Int): CrownConfigChoice = choices[position]
 
         override fun getItemId(position: Int): Long = position.toLong()
 
