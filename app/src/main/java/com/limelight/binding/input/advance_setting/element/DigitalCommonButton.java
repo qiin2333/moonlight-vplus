@@ -354,7 +354,7 @@ public class DigitalCommonButton extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (digitalButtonPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
@@ -621,28 +621,28 @@ public class DigitalCommonButton extends Element {
         invalidate();
     }
 
-    protected void setElementNormalColor(int normalColor) {
+    public void setElementNormalColor(int normalColor) {
         this.normalColor = normalColor;
         invalidate();
     }
 
-    protected void setElementPressedColor(int pressedColor) {
+    public void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
         invalidate();
     }
 
-    protected void setElementBackgroundColor(int backgroundColor) {
+    public void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
     }
 
     // New setters for text properties
-    protected void setElementNormalTextColor(int normalTextColor) {
+    public void setElementNormalTextColor(int normalTextColor) {
         this.normalTextColor = normalTextColor;
         invalidate();
     }
 
-    protected void setElementPressedTextColor(int pressedTextColor) {
+    public void setElementPressedTextColor(int pressedTextColor) {
         this.pressedTextColor = pressedTextColor;
         invalidate();
     }

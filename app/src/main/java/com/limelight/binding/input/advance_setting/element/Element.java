@@ -101,18 +101,18 @@ public abstract class Element extends View {
     }
 
 
-    protected final Long elementId;
+    public final Long elementId;
     protected final Long configId;
-    protected final int elementType;
-    protected int layer;
+    public final int elementType;
+    public int layer;
     protected final ElementController elementController;
     private Context context;
     private final Paint paint = new Paint();
     private final RectF rect = new RectF();
-    protected int centralXMax;
-    protected int centralXMin;
-    protected int centralYMax;
-    protected int centralYMin;
+    public int centralXMax;
+    public int centralXMin;
+    public int centralYMax;
+    public int centralYMin;
     protected int widthMax;
     protected int widthMin;
     protected int heightMax;
@@ -135,27 +135,27 @@ public abstract class Element extends View {
 
     }
 
-    protected int getElementCentralX() {
+    public int getElementCentralX() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.leftMargin + layoutParams.width / 2;
     }
 
-    protected int getElementCentralY() {
+    public int getElementCentralY() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.topMargin + layoutParams.height / 2;
     }
 
-    protected int getElementWidth() {
+    public int getElementWidth() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.width;
     }
 
-    protected int getElementHeight() {
+    public int getElementHeight() {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         return layoutParams.height;
     }
 
-    protected void setElementCentralX(int centralX) {
+    public void setElementCentralX(int centralX) {
         centralX = elementController.editGridHandle(centralX);
         if (centralX > centralXMax) {
             centralX = elementController.editGridHandle(centralXMax);
@@ -163,7 +163,7 @@ public abstract class Element extends View {
         innerSetElementCentralX(centralX);
     }
 
-    protected void setElementCentralY(int centralY) {
+    public void setElementCentralY(int centralY) {
 
         centralY = elementController.editGridHandle(centralY);
         if (centralY > centralYMax) {
@@ -199,7 +199,7 @@ public abstract class Element extends View {
         requestLayout();
     }
 
-    protected void setElementWidth(int width) {
+    public void setElementWidth(int width) {
         int centralPosX = getElementCentralX();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         if (width > widthMax) {
@@ -212,7 +212,7 @@ public abstract class Element extends View {
         innerSetElementCentralX(centralPosX);
     }
 
-    protected void setElementHeight(int height) {
+    public void setElementHeight(int height) {
         int centralPosY = getElementCentralY();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
         if (height > heightMax) {
@@ -225,7 +225,7 @@ public abstract class Element extends View {
         innerSetElementCentralY(centralPosY);
     }
 
-    protected void setElementLayer(int layer) {
+    public void setElementLayer(int layer) {
         this.layer = layer;
         elementController.adjustLayer(this);
     }
@@ -298,7 +298,7 @@ public abstract class Element extends View {
     }
 
     /** Release input that outlives a touch before permanently removing this element. */
-    protected void releaseLatchedInput() {
+    public void releaseLatchedInput() {
     }
 
     @Override
@@ -405,15 +405,15 @@ public abstract class Element extends View {
 
     abstract protected SuperPageLayout getInfoPage();
 
-    abstract protected void updatePage();
+    abstract public void updatePage();
 
-    abstract protected void save();
+    abstract public void save();
 
-    protected boolean supportsCrownAutoColors() {
+    public boolean supportsCrownAutoColors() {
         return CrownAutoColorApplier.supports(this);
     }
 
-    protected boolean applyCrownAutoColors(CrownAutoColorPalette palette, SuperPageLayout page) {
+    public boolean applyCrownAutoColors(CrownAutoColorPalette palette, SuperPageLayout page) {
         return CrownAutoColorApplier.apply(this, palette, page);
     }
 

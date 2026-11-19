@@ -584,7 +584,7 @@ public class DigitalPad extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (digitalPadPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
@@ -617,17 +617,17 @@ public class DigitalPad extends Element {
         invalidate();
     }
 
-    protected void setElementNormalColor(int normalColor) {
+    public void setElementNormalColor(int normalColor) {
         this.normalColor = normalColor;
         invalidate();
     }
 
-    protected void setElementPressedColor(int pressedColor) {
+    public void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
         invalidate();
     }
 
-    protected void setElementBackgroundColor(int backgroundColor) {
+    public void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
     }

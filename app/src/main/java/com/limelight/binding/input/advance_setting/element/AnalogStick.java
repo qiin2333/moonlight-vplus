@@ -698,7 +698,7 @@ public class AnalogStick extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (analogStickPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());

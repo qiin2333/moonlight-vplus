@@ -563,7 +563,7 @@ public class InvisibleAnalogStick extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (invisibleAnalogStickPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());

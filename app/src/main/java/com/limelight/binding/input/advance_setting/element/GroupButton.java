@@ -550,7 +550,7 @@ public class GroupButton extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (groupButtonPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
@@ -996,7 +996,7 @@ public class GroupButton extends Element {
     }
 
     @Override
-    protected void setElementCentralX(int centralX) {
+    public void setElementCentralX(int centralX) {
         if (childPositionAttributeFollow) {
             int previousX = getElementCentralX();
             super.setElementCentralX(centralX);
@@ -1035,7 +1035,7 @@ public class GroupButton extends Element {
     }
 
     @Override
-    protected void setElementCentralY(int centralY) {
+    public void setElementCentralY(int centralY) {
         if (childPositionAttributeFollow) {
             int previousY = getElementCentralY();
             super.setElementCentralY(centralY);
@@ -1074,7 +1074,7 @@ public class GroupButton extends Element {
     }
 
     @Override
-    protected void setElementWidth(int width) {
+    public void setElementWidth(int width) {
         super.setElementWidth(width);
         if (childOtherAttributeFollow) {
             for (Element element : childElementList) {
@@ -1097,7 +1097,7 @@ public class GroupButton extends Element {
     }
 
     @Override
-    protected void setElementHeight(int height) {
+    public void setElementHeight(int height) {
         super.setElementHeight(height);
         if (childOtherAttributeFollow) {
             for (Element element : childElementList) {
@@ -1200,7 +1200,7 @@ public class GroupButton extends Element {
     }
 
     @Override
-    protected void setElementLayer(int layer) {
+    public void setElementLayer(int layer) {
         super.setElementLayer(layer);
         if (childOtherAttributeFollow) {
             for (Element element : childElementList) {
@@ -1211,7 +1211,7 @@ public class GroupButton extends Element {
         }
     }
 
-    protected void setElementNormalColor(int normalColor) {
+    public void setElementNormalColor(int normalColor) {
         this.normalColor = normalColor;
         invalidate();
         if (childOtherAttributeFollow) {
@@ -1255,7 +1255,7 @@ public class GroupButton extends Element {
         }
     }
 
-    protected void setElementPressedColor(int pressedColor) {
+    public void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
         invalidate();
         if (childOtherAttributeFollow) {
@@ -1299,7 +1299,7 @@ public class GroupButton extends Element {
         }
     }
 
-    protected void setElementBackgroundColor(int backgroundColor) {
+    public void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
         if (childOtherAttributeFollow) {
@@ -1343,7 +1343,7 @@ public class GroupButton extends Element {
         }
     }
 
-    protected void setElementNormalTextColor(int normalTextColor) {
+    public void setElementNormalTextColor(int normalTextColor) {
         this.normalTextColor = normalTextColor;
         invalidate();
         if (childOtherAttributeFollow) {
@@ -1370,7 +1370,7 @@ public class GroupButton extends Element {
         }
     }
 
-    protected void setElementPressedTextColor(int pressedTextColor) {
+    public void setElementPressedTextColor(int pressedTextColor) {
         this.pressedTextColor = pressedTextColor;
         invalidate();
         if (childOtherAttributeFollow) {

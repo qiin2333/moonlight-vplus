@@ -467,7 +467,7 @@ public class SimplifyPerformance extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (simplifyPerformancePage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());

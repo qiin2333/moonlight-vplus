@@ -1193,32 +1193,32 @@ public class WheelPad extends Element {
         invalidate();
     }
 
-    protected void setElementNormalColor(int normalColor) {
+    public void setElementNormalColor(int normalColor) {
         this.normalColor = normalColor;
         invalidate();
     }
 
-    protected void setElementPressedColor(int pressedColor) {
+    public void setElementPressedColor(int pressedColor) {
         this.pressedColor = pressedColor;
         invalidate();
     }
 
-    protected void setElementBackgroundColor(int backgroundColor) {
+    public void setElementBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         invalidate();
     }
 
-    protected void setElementNormalTextColor(int normalTextColor) {
+    public void setElementNormalTextColor(int normalTextColor) {
         this.normalTextColor = normalTextColor;
         invalidate();
     }
 
-    protected void setElementPressedTextColor(int pressedTextColor) {
+    public void setElementPressedTextColor(int pressedTextColor) {
         this.pressedTextColor = pressedTextColor;
         invalidate();
     }
 
-    protected void setElementCenterTextColor(int centerTextColor) {
+    public void setElementCenterTextColor(int centerTextColor) {
         this.centerTextColor = centerTextColor;
         invalidate();
     }
@@ -1230,7 +1230,7 @@ public class WheelPad extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (wheelPadPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());

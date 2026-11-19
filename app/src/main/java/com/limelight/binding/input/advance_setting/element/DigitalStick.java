@@ -757,7 +757,7 @@ public class DigitalStick extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (digitalStickPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());

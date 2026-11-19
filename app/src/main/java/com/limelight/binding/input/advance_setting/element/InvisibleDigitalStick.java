@@ -669,7 +669,7 @@ public class InvisibleDigitalStick extends Element {
     }
 
     @Override
-    protected void updatePage() {
+    public void updatePage() {
         if (invisibleDigitalStickPage != null) {
             centralXNumberSeekbar.setValueWithNoCallBack(getElementCentralX());
             centralYNumberSeekbar.setValueWithNoCallBack(getElementCentralY());
