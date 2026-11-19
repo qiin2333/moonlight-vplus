@@ -18,6 +18,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.perfhud.PerfHudView
 import com.limelight.perfhud.PerfHudVisibility
+import com.limelight.perfhud.PerfOverlayGestures
 import com.limelight.preferences.PreferenceConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -45,6 +46,7 @@ class PerformanceOverlayGestureIntegrationTest {
         var manager: PerformanceOverlayManager? = null
         try {
             overlayPrefs.edit().also { editor -> overlayKeys.forEach { editor.remove(it) } }.commit()
+            defaults.edit().remove(PerfOverlayGestures.KEY).remove("perf_overlay_health_migrated").commit()
             defaults.edit().putStringSet("perf_overlay_display_items", setOf("resolution", "decoder")).commit()
             setup(overlayPrefs, defaults)
             val config = PreferenceConfiguration().apply {
@@ -78,17 +80,17 @@ class PerformanceOverlayGestureIntegrationTest {
     }
 
     @Test
-    fun disabledDefaultsAndGestureCancellationOnLockAndConfigurationChange() = withOverlay { scenario, manager, config ->
+    fun gestureCancellationOnLockAndConfigurationChange() = withOverlay { scenario, manager, config ->
         scenario.onActivity { activity ->
-            assertFalse(manager.perfOverlaySingleTapEnabled)
-            assertFalse(manager.perfOverlayDoubleTapEnabled)
+            assertTrue(manager.perfOverlaySingleTapEnabled)
+            assertTrue(manager.perfOverlayDoubleTapEnabled)
             assertTrue(manager.perfOverlayLongPressEnabled)
             assertTrue(manager.perfOverlayHealthVisible)
             val overlay = activity.findViewById<LinearLayout>(R.id.performanceOverlay)
+            manager.setPerfOverlayGestureMode(PerfOverlayGestures.LONG_ONLY)
             tap(overlay)
             assertEquals(PerfHudDensity.STANDARD, config.perfOverlayStyle)
-            manager.setPerfOverlaySingleTapEnabled(true)
-            manager.setPerfOverlayDoubleTapEnabled(true)
+            manager.setPerfOverlayGestureMode(PerfOverlayGestures.FULL)
             tap(overlay)
             config.perfOverlayLocked = true
             manager.applyOverlayState()
@@ -109,8 +111,7 @@ class PerformanceOverlayGestureIntegrationTest {
     fun cancelHideAndDestroyCancelScheduledSingleTaps() = withOverlay { scenario, manager, config ->
         scenario.onActivity { activity ->
             val overlay = activity.findViewById<LinearLayout>(R.id.performanceOverlay)
-            manager.setPerfOverlaySingleTapEnabled(true)
-            manager.setPerfOverlayDoubleTapEnabled(true)
+            manager.setPerfOverlayGestureMode(PerfOverlayGestures.FULL)
             tap(overlay)
             val now = SystemClock.uptimeMillis()
             // Dispatch the next gesture without waiting for another emulator frame.

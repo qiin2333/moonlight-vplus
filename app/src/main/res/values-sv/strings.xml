@@ -364,4 +364,9 @@
     <string name="perf_overlay_anchor_bottom_left">Nedre vänster</string>
     <string name="perf_overlay_anchor_bottom_center">Nedre mitten</string>
     <string name="perf_overlay_anchor_bottom_right">Nedre höger</string>
+    <string name="game_menu_perf_gestures">Gester</string>
+    <string name="game_menu_perf_gestures_full">Alla</string>
+    <string name="game_menu_perf_gestures_long_only">Endast långt tryck</string>
+    <string name="game_menu_perf_gestures_custom">Aktuella gester är anpassade</string>
+    <string name="game_menu_perf_moon">Månfas</string>
 </resources>

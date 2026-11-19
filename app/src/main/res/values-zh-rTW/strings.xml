@@ -741,6 +741,11 @@
     <string name="game_menu_perf_overlay_style">覆蓋層樣式</string>
     <string name="game_menu_perf_metrics">顯示指標</string>
     <string name="game_menu_perf_health">健康狀態提示</string>
+    <string name="game_menu_perf_gestures">手勢</string>
+    <string name="game_menu_perf_gestures_full">完整</string>
+    <string name="game_menu_perf_gestures_long_only">僅長按</string>
+    <string name="game_menu_perf_gestures_custom">目前為自訂手勢設定</string>
+    <string name="game_menu_perf_moon">月相狀態</string>
     <string name="game_menu_perf_health_summary">顯示整體狀態</string>
     <string name="game_menu_perf_position">快速定位</string>
     <string name="game_menu_perf_position_reset">恢復預設位置</string>

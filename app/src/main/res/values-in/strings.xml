@@ -295,4 +295,9 @@
     <string name="perf_overlay_anchor_bottom_left">Kiri bawah</string>
     <string name="perf_overlay_anchor_bottom_center">Bawah tengah</string>
     <string name="perf_overlay_anchor_bottom_right">Kanan bawah</string>
+    <string name="game_menu_perf_gestures">Gestur</string>
+    <string name="game_menu_perf_gestures_full">Lengkap</string>
+    <string name="game_menu_perf_gestures_long_only">Tekan lama</string>
+    <string name="game_menu_perf_gestures_custom">Gestur saat ini disesuaikan</string>
+    <string name="game_menu_perf_moon">Fase bulan</string>
 </resources>

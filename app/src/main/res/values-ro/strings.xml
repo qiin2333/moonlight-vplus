@@ -262,4 +262,9 @@
     <string name="perf_overlay_anchor_bottom_left">Stânga jos</string>
     <string name="perf_overlay_anchor_bottom_center">Jos centru</string>
     <string name="perf_overlay_anchor_bottom_right">Dreapta jos</string>
+    <string name="game_menu_perf_gestures">Gesturi</string>
+    <string name="game_menu_perf_gestures_full">Complete</string>
+    <string name="game_menu_perf_gestures_long_only">Doar apăsare lungă</string>
+    <string name="game_menu_perf_gestures_custom">Gesturile actuale sunt personalizate</string>
+    <string name="game_menu_perf_moon">Faza lunii</string>
 </resources>

@@ -336,4 +336,9 @@
     <string name="perf_overlay_anchor_bottom_left">Bal alsó</string>
     <string name="perf_overlay_anchor_bottom_center">Lent középen</string>
     <string name="perf_overlay_anchor_bottom_right">Jobb alsó</string>
+    <string name="game_menu_perf_gestures">Gesztusok</string>
+    <string name="game_menu_perf_gestures_full">Teljes</string>
+    <string name="game_menu_perf_gestures_long_only">Csak hosszan</string>
+    <string name="game_menu_perf_gestures_custom">A jelenlegi gesztusok egyéniek</string>
+    <string name="game_menu_perf_moon">Holdfázis</string>
 </resources>

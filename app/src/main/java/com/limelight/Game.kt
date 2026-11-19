@@ -3705,51 +3705,23 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         get() = performanceOverlayMode != PerformanceOverlayMode.HIDDEN &&
             performanceOverlayManager?.isPerfOverlayMovable == true
 
-    val perfOverlayAnchor: PerfOverlayAnchor?
-        get() = performanceOverlayManager?.perfOverlayAnchor
-
     fun setPerfOverlayStyle(style: PerfHudDensity) {
         performanceOverlayManager?.setPerfOverlayStyle(style)
     }
 
-    val perfOverlayHealthVisible: Boolean
-        get() = performanceOverlayManager?.perfOverlayHealthVisible ?: true
+    val perfOverlayGestureMode: String
+        get() = performanceOverlayManager?.perfOverlayGestureState?.mode
+            ?: com.limelight.perfhud.PerfOverlayGestures.FULL
 
-    val perfOverlaySingleTapEnabled: Boolean
-        get() = performanceOverlayManager?.perfOverlaySingleTapEnabled ?: false
+    val hasCustomPerfOverlayPosition: Boolean
+        get() = performanceOverlayManager?.hasCustomPerfOverlayPosition == true
 
-    val perfOverlayDoubleTapEnabled: Boolean
-        get() = performanceOverlayManager?.perfOverlayDoubleTapEnabled ?: false
-
-    val perfOverlayLongPressEnabled: Boolean
-        get() = performanceOverlayManager?.perfOverlayLongPressEnabled ?: true
-
-    fun setPerfOverlayHealthVisible(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlayHealthVisible(enabled)
-    }
-
-    fun setPerfOverlaySingleTapEnabled(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlaySingleTapEnabled(enabled)
-    }
-
-    fun setPerfOverlayDoubleTapEnabled(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlayDoubleTapEnabled(enabled)
-    }
-
-    fun setPerfOverlayLongPressEnabled(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlayLongPressEnabled(enabled)
-    }
-
-    fun setPerfOverlayOrientation(orientation: PreferenceConfiguration.PerfOverlayOrientation) {
-        performanceOverlayManager?.setPerfOverlayOrientation(orientation)
+    fun setPerfOverlayGestureMode(mode: String) {
+        performanceOverlayManager?.setPerfOverlayGestureMode(mode)
     }
 
     fun setPerfOverlayDisplayItems(items: Set<String>) {
         performanceOverlayManager?.setPerfOverlayDisplayItems(items)
-    }
-
-    fun setPerfOverlayAnchor(anchor: PerfOverlayAnchor) {
-        performanceOverlayManager?.setPerfOverlayAnchor(anchor)
     }
 
     fun resetPerfOverlayPosition() {

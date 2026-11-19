@@ -375,4 +375,9 @@
     <string name="perf_overlay_anchor_bottom_left">Знизу ліворуч</string>
     <string name="perf_overlay_anchor_bottom_center">Знизу по центру</string>
     <string name="perf_overlay_anchor_bottom_right">Знизу праворуч</string>
+    <string name="game_menu_perf_gestures">Жести</string>
+    <string name="game_menu_perf_gestures_full">Усі</string>
+    <string name="game_menu_perf_gestures_long_only">Лише утримання</string>
+    <string name="game_menu_perf_gestures_custom">Поточні жести налаштовано вручну</string>
+    <string name="game_menu_perf_moon">Фаза місяця</string>
 </resources>

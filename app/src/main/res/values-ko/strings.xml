@@ -381,4 +381,9 @@
     <string name="perf_overlay_anchor_bottom_left">왼쪽 아래</string>
     <string name="perf_overlay_anchor_bottom_center">하단 중앙</string>
     <string name="perf_overlay_anchor_bottom_right">오른쪽 아래</string>
+    <string name="game_menu_perf_gestures">제스처</string>
+    <string name="game_menu_perf_gestures_full">전체</string>
+    <string name="game_menu_perf_gestures_long_only">길게 누르기만</string>
+    <string name="game_menu_perf_gestures_custom">현재 제스처는 사용자 설정입니다</string>
+    <string name="game_menu_perf_moon">달의 위상</string>
 </resources>

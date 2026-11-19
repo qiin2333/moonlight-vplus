@@ -313,4 +313,9 @@
     <string name="perf_overlay_anchor_bottom_left">Dưới trái</string>
     <string name="perf_overlay_anchor_bottom_center">Dưới giữa</string>
     <string name="perf_overlay_anchor_bottom_right">Dưới phải</string>
+    <string name="game_menu_perf_gestures">Cử chỉ</string>
+    <string name="game_menu_perf_gestures_full">Đầy đủ</string>
+    <string name="game_menu_perf_gestures_long_only">Chỉ nhấn giữ</string>
+    <string name="game_menu_perf_gestures_custom">Cử chỉ hiện tại được tùy chỉnh</string>
+    <string name="game_menu_perf_moon">Pha mặt trăng</string>
 </resources>

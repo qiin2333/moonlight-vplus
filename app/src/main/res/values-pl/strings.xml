@@ -364,4 +364,9 @@
     <string name="perf_overlay_anchor_bottom_left">Lewy dolny</string>
     <string name="perf_overlay_anchor_bottom_center">Dół środek</string>
     <string name="perf_overlay_anchor_bottom_right">Prawy dolny</string>
+    <string name="game_menu_perf_gestures">Gesty</string>
+    <string name="game_menu_perf_gestures_full">Wszystkie</string>
+    <string name="game_menu_perf_gestures_long_only">Tylko przytrzymanie</string>
+    <string name="game_menu_perf_gestures_custom">Bieżące gesty są niestandardowe</string>
+    <string name="game_menu_perf_moon">Faza księżyca</string>
 </resources>

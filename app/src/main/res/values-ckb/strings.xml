@@ -91,4 +91,9 @@
     <string name="perf_overlay_anchor_bottom_left">خوارەوە چەپ</string>
     <string name="perf_overlay_anchor_bottom_center">خوارەوە ناوەڕاست</string>
     <string name="perf_overlay_anchor_bottom_right">خوارەوە ڕاست</string>
+    <string name="game_menu_perf_gestures">ئاماژەکان</string>
+    <string name="game_menu_perf_gestures_full">تەواو</string>
+    <string name="game_menu_perf_gestures_long_only">تەنها فشاری درێژ</string>
+    <string name="game_menu_perf_gestures_custom">ئاماژەکان بە دلخوازن</string>
+    <string name="game_menu_perf_moon">قۆناغی مانگ</string>
 </resources>

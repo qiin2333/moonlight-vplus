@@ -430,6 +430,7 @@
         <item>@string/perf_stats_item_battery</item>
         <item>@string/perf_stats_item_one_percent_low</item>
         <item>@string/perf_stats_item_clock</item>
+        <item>@string/game_menu_perf_moon</item>
     </string-array>
     <string-array name="perf_overlay_display_items_values" translatable="false">
         <item>resolution</item>
@@ -442,6 +443,7 @@
         <item>battery</item>
         <item>one_percent_low</item>
         <item>clock</item>
+        <item>health</item>
     </string-array>
     <string-array name="mic_menu_action_mode_entries">
         <item>@string/mic_menu_action_show_button</item>

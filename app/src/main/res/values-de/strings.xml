@@ -367,4 +367,9 @@
     <string name="perf_overlay_anchor_bottom_left">Unten links</string>
     <string name="perf_overlay_anchor_bottom_center">Unten Mitte</string>
     <string name="perf_overlay_anchor_bottom_right">Unten rechts</string>
+    <string name="game_menu_perf_gestures">Gesten</string>
+    <string name="game_menu_perf_gestures_full">Alle</string>
+    <string name="game_menu_perf_gestures_long_only">Nur Halten</string>
+    <string name="game_menu_perf_gestures_custom">Aktuelle Gesten sind benutzerdefiniert</string>
+    <string name="game_menu_perf_moon">Mondphase</string>
 </resources>

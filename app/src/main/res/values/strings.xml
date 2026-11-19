@@ -1192,6 +1192,11 @@
     <string name="game_menu_perf_overlay_style">Overlay style</string>
     <string name="game_menu_perf_metrics">Display metrics</string>
     <string name="game_menu_perf_health">Health status</string>
+    <string name="game_menu_perf_gestures">Gestures</string>
+    <string name="game_menu_perf_gestures_full">Full</string>
+    <string name="game_menu_perf_gestures_long_only">Long press</string>
+    <string name="game_menu_perf_gestures_custom">Current gesture settings are custom</string>
+    <string name="game_menu_perf_moon">Moon phase</string>
     <string name="game_menu_perf_health_summary">Show overall status</string>
     <string name="game_menu_perf_position">Quick placement</string>
     <string name="game_menu_perf_position_reset">Reset position</string>

@@ -295,4 +295,9 @@
     <string name="perf_overlay_anchor_bottom_left">Κάτω αριστερά</string>
     <string name="perf_overlay_anchor_bottom_center">Κάτω κέντρο</string>
     <string name="perf_overlay_anchor_bottom_right">Κάτω δεξιά</string>
+    <string name="game_menu_perf_gestures">Χειρονομίες</string>
+    <string name="game_menu_perf_gestures_full">Όλες</string>
+    <string name="game_menu_perf_gestures_long_only">Μόνο παρατεταμένο</string>
+    <string name="game_menu_perf_gestures_custom">Οι τρέχουσες χειρονομίες είναι προσαρμοσμένες</string>
+    <string name="game_menu_perf_moon">Φάση σελήνης</string>
 </resources>

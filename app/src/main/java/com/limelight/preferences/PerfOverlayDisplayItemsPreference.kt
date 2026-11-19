@@ -47,6 +47,7 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
     }
 
     override fun onAttachedToHierarchy(preferenceManager: PreferenceManager) {
+        ensureHealthMigrated(context)
         super.onAttachedToHierarchy(preferenceManager)
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -64,7 +65,24 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
 
     companion object {
         private const val BATTERY_ITEM = "battery"
-        private const val DEFAULT_ITEMS = "resolution,decoder,render_fps,network_latency,decode_latency,host_latency,packet_loss,battery"
+        private const val HEALTH_ITEM = "health"
+        private const val ITEMS_KEY = "perf_overlay_display_items"
+        private const val HEALTH_MIGRATED = "perf_overlay_health_migrated"
+        private const val DEFAULT_ITEMS = "resolution,decoder,render_fps,network_latency,decode_latency,host_latency,packet_loss,battery,health"
+
+        private fun ensureHealthMigrated(context: Context) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            if (prefs.getBoolean(HEALTH_MIGRATED, false)) return
+            val oldOverlay = context.getSharedPreferences("performance_overlay", Context.MODE_PRIVATE)
+            val selected = migrateHealthSelection(
+                prefs.getStringSet(ITEMS_KEY, null) ?: getDefaultDisplayItems(context),
+                oldOverlay.getBoolean("hud_health_enabled", true)
+            )
+            prefs.edit().putStringSet(ITEMS_KEY, selected).putBoolean(HEALTH_MIGRATED, true).apply()
+        }
+
+        internal fun migrateHealthSelection(items: Set<String>, enabled: Boolean): Set<String> =
+            if (enabled) items + HEALTH_ITEM else items - HEALTH_ITEM
 
         fun getDefaultDisplayItems(context: Context): Set<String> {
             val defaultItems = DEFAULT_ITEMS.split(",").toMutableSet()
@@ -79,19 +97,20 @@ class PerfOverlayDisplayItemsPreference : MultiSelectListPreference {
                 return false
             }
 
-            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val selectedItems = prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems(context))
+            val selectedItems = getSelectedItems(context)
             return selectedItems?.contains(itemKey) == true
         }
 
         fun getSelectedItems(context: Context): Set<String>? {
+            ensureHealthMigrated(context)
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            return prefs.getStringSet("perf_overlay_display_items", getDefaultDisplayItems(context))
+            return prefs.getStringSet(ITEMS_KEY, getDefaultDisplayItems(context))
         }
 
         fun setDisplayItems(context: Context, items: Set<String>) {
+            ensureHealthMigrated(context)
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            prefs.edit().putStringSet("perf_overlay_display_items", items).apply()
+            prefs.edit().putStringSet(ITEMS_KEY, items).apply()
         }
     }
 }

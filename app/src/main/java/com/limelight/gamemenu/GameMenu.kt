@@ -44,7 +44,6 @@ import com.limelight.CustomKeyData
 import com.limelight.CustomKeyRepository
 import com.limelight.Game
 import com.limelight.LimeLog
-import com.limelight.PerfOverlayAnchor
 import com.limelight.QuickActionRegistry
 import com.limelight.R
 import com.limelight.StreamActionExecutor
@@ -84,35 +83,19 @@ internal const val PERF_ENTRY_FOCUS_KEY = "perf_entry"
 internal const val PERF_STYLE_FOCUS_KEY = "perf_style"
 internal const val PERF_MODE_FOCUS_KEY = "perf_mode"
 internal const val PERF_METRICS_FOCUS_KEY = "perf_metrics"
-internal const val PERF_POSITION_FOCUS_KEY = "perf_position"
 internal const val PERF_POSITION_RESET_FOCUS_KEY = "perf_position_reset"
 
 internal fun GameMenuPageLayout.isPerformancePage(): Boolean =
     this == GameMenuPageLayout.PERF_OVERLAY ||
-        this == GameMenuPageLayout.PERF_METRICS ||
-        this == GameMenuPageLayout.PERF_POSITION
+    this == GameMenuPageLayout.PERF_METRICS
 
 internal fun performancePageFocusKey(from: GameMenuPageLayout, to: GameMenuPageLayout): String? =
     when {
         from == GameMenuPageLayout.PERF_METRICS && to == GameMenuPageLayout.PERF_OVERLAY -> PERF_METRICS_FOCUS_KEY
-        from == GameMenuPageLayout.PERF_POSITION && to == GameMenuPageLayout.PERF_OVERLAY -> PERF_POSITION_FOCUS_KEY
         from == GameMenuPageLayout.PERF_OVERLAY && to == GameMenuPageLayout.STANDARD -> PERF_ENTRY_FOCUS_KEY
         to == GameMenuPageLayout.PERF_OVERLAY -> PERF_STYLE_FOCUS_KEY
-        to == GameMenuPageLayout.PERF_POSITION -> PERF_POSITION_FOCUS_KEY
         else -> null
     }
-
-internal fun performanceAnchorLabel(anchor: PerfOverlayAnchor): Int = when (anchor) {
-    PerfOverlayAnchor.TOP_LEFT -> R.string.perf_overlay_anchor_top_left
-    PerfOverlayAnchor.TOP_CENTER -> R.string.perf_overlay_anchor_top_center
-    PerfOverlayAnchor.TOP_RIGHT -> R.string.perf_overlay_anchor_top_right
-    PerfOverlayAnchor.CENTER_LEFT -> R.string.perf_overlay_anchor_center_left
-    PerfOverlayAnchor.CENTER -> R.string.perf_overlay_anchor_center
-    PerfOverlayAnchor.CENTER_RIGHT -> R.string.perf_overlay_anchor_center_right
-    PerfOverlayAnchor.BOTTOM_LEFT -> R.string.perf_overlay_anchor_bottom_left
-    PerfOverlayAnchor.BOTTOM_CENTER -> R.string.perf_overlay_anchor_bottom_center
-    PerfOverlayAnchor.BOTTOM_RIGHT -> R.string.perf_overlay_anchor_bottom_right
-}
 
 internal fun performanceStyleLabel(style: PerfHudDensity): Int = when (style) {
     PerfHudDensity.MINI -> R.string.perf_overlay_style_mini
@@ -1063,7 +1046,6 @@ class GameMenu(
             GameMenuPageLayout.TOUCH_MODE -> showTouchModeMenu()
             GameMenuPageLayout.PERF_OVERLAY -> refreshPerformancePage()
             GameMenuPageLayout.PERF_METRICS -> refreshPerformanceMetricsPage()
-            GameMenuPageLayout.PERF_POSITION -> refreshPerformancePositionPage()
             else -> rebuildAndReplaceMenu()
         }
     }
@@ -2120,9 +2102,6 @@ class GameMenu(
             currentLayout == GameMenuPageLayout.PERF_METRICS &&
                 page.layout == GameMenuPageLayout.PERF_OVERLAY ->
                 page.copy(options = buildPerformancePageOptions())
-            currentLayout == GameMenuPageLayout.PERF_POSITION &&
-                page.layout == GameMenuPageLayout.PERF_OVERLAY ->
-                page.copy(options = buildPerformancePageOptions())
             currentLayout == GameMenuPageLayout.PERF_OVERLAY &&
                 page.layout == GameMenuPageLayout.STANDARD ->
                 page.copy(options = mutableListOf<MenuOption>().also(::buildNormalMenuOptions))
@@ -2678,14 +2657,6 @@ class GameMenu(
         )
     }
 
-    internal fun showPerformancePositionPage() {
-        showSubMenu(
-            getString(R.string.game_menu_perf_position),
-            buildPerformancePositionOptions().toTypedArray(),
-            GameMenuPageLayout.PERF_POSITION
-        )
-    }
-
     private fun refreshPerformancePage() {
         composeUiState?.let { state ->
             state.value = state.value.copy(options = buildPerformancePageOptions())
@@ -2698,29 +2669,15 @@ class GameMenu(
         }
     }
 
-    private fun refreshPerformancePositionPage() {
-        composeUiState?.let { state ->
-            state.value = state.value.copy(options = buildPerformancePositionOptions())
-        }
-    }
-
     private fun buildPerformancePageOptions(): List<MenuOption> {
-        val style = game.perfOverlayStyle
-        val orientation = game.prefConfig.perfOverlayOrientation
-        val portrait = game.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-        val orientationSummary = when {
-            game.isPerfOverlayDocked -> R.string.game_menu_perf_orientation_docked
-            style == PerfHudDensity.CLASSIC && portrait -> R.string.game_menu_perf_orientation_portrait
-            style == PerfHudDensity.MINI || style == PerfHudDensity.DETAILED -> R.string.game_menu_perf_orientation_fixed
-            else -> null
-        }
+        val gestureMode = game.perfOverlayGestureMode
         return listOfNotNull(
             MenuOption(
                 label = getString(R.string.game_menu_toggle_performance_overlay).trim(),
                 isWithGameFocus = false,
                 runnable = null,
-                iconKey = null,
-                isShowIcon = false,
+                iconKey = "game_menu_toggle_performance_overlay",
+                isShowIcon = true,
                 isKeepDialog = true,
                 inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments()),
                 focusKey = PERF_MODE_FOCUS_KEY
@@ -2729,129 +2686,83 @@ class GameMenu(
                 label = getString(R.string.game_menu_perf_overlay_style),
                 isWithGameFocus = false,
                 runnable = null,
-                iconKey = null,
-                isShowIcon = false,
+                iconKey = "game_menu_perf_overlay_style",
+                isShowIcon = true,
                 isKeepDialog = true,
                 inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments()),
                 focusKey = PERF_STYLE_FOCUS_KEY
             ),
             MenuOption(
-                label = getString(R.string.title_perf_overlay_orientation),
+                label = getString(R.string.game_menu_perf_gestures),
                 isWithGameFocus = false,
                 runnable = null,
-                iconKey = null,
-                isShowIcon = false,
+                iconKey = "game_menu_perf_gestures",
+                isShowIcon = true,
                 isKeepDialog = true,
-                subtitle = orientationSummary?.let(::getString),
+                subtitle = if (gestureMode == com.limelight.perfhud.PerfOverlayGestures.CUSTOM)
+                    getString(R.string.game_menu_perf_gestures_custom) else null,
                 inlineControl = InlineControl.Segmented(
                     listOf(
-                        PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL to R.string.orientation_horizontal,
-                        PreferenceConfiguration.PerfOverlayOrientation.VERTICAL to R.string.orientation_vertical
+                        com.limelight.perfhud.PerfOverlayGestures.FULL to R.string.game_menu_perf_gestures_full,
+                        com.limelight.perfhud.PerfOverlayGestures.LONG_ONLY to R.string.game_menu_perf_gestures_long_only
                     ).map { (value, label) ->
-                        SegmentOption(getString(label), value == orientation,
-                            Runnable { game.setPerfOverlayOrientation(value) })
+                        SegmentOption(getString(label), value == gestureMode,
+                            Runnable { game.setPerfOverlayGestureMode(value) })
                     }
                 )
             ),
-            if (game.isPerfOverlayMovable) MenuOption(
-                label = getString(R.string.game_menu_perf_position),
-                isWithGameFocus = false,
-                runnable = Runnable { showPerformancePositionPage() },
-                iconKey = null,
-                isShowIcon = false,
-                isKeepDialog = true,
-                showChevron = true,
-                focusKey = PERF_POSITION_FOCUS_KEY
-            ) else null,
             MenuOption(
                 label = getString(R.string.game_menu_perf_metrics),
                 isWithGameFocus = false,
                 runnable = Runnable { showPerformanceMetricsPage() },
-                iconKey = null,
-                isShowIcon = false,
+                iconKey = "game_menu_perf_metrics",
+                isShowIcon = true,
                 isKeepDialog = true,
                 subtitle = getString(R.string.game_menu_perf_metric_summary),
                 showChevron = true,
                 focusKey = PERF_METRICS_FOCUS_KEY
             ),
-            performanceToggle(R.string.game_menu_perf_health, game.perfOverlayHealthVisible,
-                R.string.game_menu_perf_health_summary) {
-                game.setPerfOverlayHealthVisible(!game.perfOverlayHealthVisible)
-            },
-            performanceToggle(R.string.game_menu_perf_single_tap, game.perfOverlaySingleTapEnabled) {
-                game.setPerfOverlaySingleTapEnabled(!game.perfOverlaySingleTapEnabled)
-            },
-            performanceToggle(R.string.game_menu_perf_double_tap, game.perfOverlayDoubleTapEnabled) {
-                game.setPerfOverlayDoubleTapEnabled(!game.perfOverlayDoubleTapEnabled)
-            },
-            performanceToggle(R.string.game_menu_perf_long_press, game.perfOverlayLongPressEnabled) {
-                game.setPerfOverlayLongPressEnabled(!game.perfOverlayLongPressEnabled)
-            }
+            if (game.isPerfOverlayMovable && game.hasCustomPerfOverlayPosition) MenuOption(
+                label = getString(R.string.game_menu_perf_position_reset),
+                isWithGameFocus = false,
+                runnable = Runnable {
+                    game.resetPerfOverlayPosition()
+                    composeUiState?.let { state ->
+                        state.value = state.value.copy(
+                            options = buildPerformancePageOptions(),
+                            initialFocusOptionKey = PERF_METRICS_FOCUS_KEY,
+                            pageFocusRequest = state.value.pageFocusRequest + 1
+                        )
+                    }
+                },
+                iconKey = "game_menu_perf_reset",
+                isShowIcon = true,
+                isKeepDialog = true,
+                focusKey = PERF_POSITION_RESET_FOCUS_KEY
+            ) else null
         )
     }
-
-    private fun performanceToggle(
-        label: Int,
-        checked: Boolean,
-        summary: Int? = null,
-        action: () -> Unit
-    ): MenuOption = MenuOption(
-        label = getString(label),
-        isWithGameFocus = false,
-        runnable = Runnable(action),
-        iconKey = null,
-        isShowIcon = false,
-        isKeepDialog = true,
-        subtitle = summary?.let(::getString),
-        inlineControl = InlineControl.Toggle(checked)
-    )
-
-    private fun buildPerformancePositionOptions(): List<MenuOption> = PerfOverlayAnchor.entries.map { anchor ->
-        MenuOption(
-            label = getString(performanceAnchorLabel(anchor)),
-            isWithGameFocus = false,
-            runnable = Runnable {
-                game.setPerfOverlayAnchor(anchor)
-                refreshPerformancePositionPage()
-            },
-            iconKey = null,
-            isShowIcon = false,
-            isKeepDialog = true,
-            selected = game.perfOverlayAnchor == anchor,
-            focusKey = anchor.name
-        )
-    } + listOf(
-        MenuOption(
-            label = getString(R.string.game_menu_perf_position_reset),
-            isWithGameFocus = false,
-            runnable = Runnable {
-                game.resetPerfOverlayPosition()
-                refreshPerformancePositionPage()
-            },
-            iconKey = null,
-            isShowIcon = false,
-            isKeepDialog = true,
-            focusKey = PERF_POSITION_RESET_FOCUS_KEY
-        )
-    )
 
     private fun buildPerformanceMetricsOptions(): List<MenuOption> {
         val selected = PerfOverlayDisplayItemsPreference.getSelectedItems(game)?.toSet()
             ?: PerfOverlayDisplayItemsPreference.getDefaultDisplayItems(game)
         val names = game.resources.getTextArray(R.array.perf_overlay_display_items_names)
         val values = game.resources.getTextArray(R.array.perf_overlay_display_items_values)
+        val metricOrder = listOf("resolution", "decoder", "render_fps", "one_percent_low",
+            "network_latency", "packet_loss", "decode_latency", "host_latency", "battery", "clock", "health")
         return performanceMetricEntries(names.toList(), values.toList(), UiHelper.hasDisplayableBattery(game))
+            .sortedBy { (_, value) -> metricOrder.indexOf(value).let { if (it < 0) Int.MAX_VALUE else it } }
             .map { (name, value) ->
                 MenuOption(
-                    label = name.toString(),
+                    label = com.limelight.perfhud.PerfHudSheetText.splitIcon(name.toString()).second,
                     isWithGameFocus = false,
                     runnable = Runnable {
                         val current = PerfOverlayDisplayItemsPreference.getSelectedItems(game)?.toSet()
                             ?: PerfOverlayDisplayItemsPreference.getDefaultDisplayItems(game)
                         game.setPerfOverlayDisplayItems(togglePerformanceMetric(current, value))
                     },
-                    iconKey = null,
-                    isShowIcon = false,
+                    iconKey = "perf_metric_$value",
+                    isShowIcon = true,
                     isKeepDialog = true,
                     inlineControl = InlineControl.Toggle(value in selected),
                     focusKey = value
@@ -2889,6 +2800,20 @@ class GameMenu(
         private const val HAPTIC_FEEDBACK_SETTING = "haptic_feedback_enabled"
 
         private val ICON_MAP = mapOf(
+            "game_menu_perf_gestures" to R.drawable.phc_perf_gauge,
+            "game_menu_perf_metrics" to R.drawable.phc_perf_monitor,
+            "game_menu_perf_reset" to R.drawable.phc_action_reset,
+            "perf_metric_resolution" to R.drawable.phc_perf_resolution,
+            "perf_metric_decoder" to R.drawable.phc_perf_monitor,
+            "perf_metric_render_fps" to R.drawable.phc_perf_gauge,
+            "perf_metric_packet_loss" to R.drawable.phc_perf_signal,
+            "perf_metric_network_latency" to R.drawable.phc_perf_wifi,
+            "perf_metric_decode_latency" to R.drawable.phc_perf_timer,
+            "perf_metric_host_latency" to R.drawable.phc_perf_timer,
+            "perf_metric_battery" to R.drawable.phc_perf_battery,
+            "perf_metric_one_percent_low" to R.drawable.phc_perf_gauge,
+            "perf_metric_clock" to R.drawable.phc_perf_timer,
+            "perf_metric_health" to R.drawable.phc_perf_monitor,
             "microphone_input" to R.drawable.ic_mic_gm,
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,

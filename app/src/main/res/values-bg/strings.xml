@@ -247,4 +247,9 @@
     <string name="perf_overlay_anchor_bottom_left">Долу вляво</string>
     <string name="perf_overlay_anchor_bottom_center">Долу в средата</string>
     <string name="perf_overlay_anchor_bottom_right">Долу вдясно</string>
+    <string name="game_menu_perf_gestures">Жестове</string>
+    <string name="game_menu_perf_gestures_full">Всички</string>
+    <string name="game_menu_perf_gestures_long_only">Само задържане</string>
+    <string name="game_menu_perf_gestures_custom">Текущите жестове са персонализирани</string>
+    <string name="game_menu_perf_moon">Фаза на луната</string>
 </resources>

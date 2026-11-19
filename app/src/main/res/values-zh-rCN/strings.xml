@@ -960,6 +960,11 @@
     <string name="game_menu_perf_overlay_style">覆盖层样式</string>
     <string name="game_menu_perf_metrics">显示指标</string>
     <string name="game_menu_perf_health">健康状态提示</string>
+    <string name="game_menu_perf_gestures">手势</string>
+    <string name="game_menu_perf_gestures_full">完整</string>
+    <string name="game_menu_perf_gestures_long_only">仅长按</string>
+    <string name="game_menu_perf_gestures_custom">当前为自定义手势设置</string>
+    <string name="game_menu_perf_moon">月相状态</string>
     <string name="game_menu_perf_health_summary">显示整体状态</string>
     <string name="game_menu_perf_position">快速定位</string>
     <string name="game_menu_perf_position_reset">恢复默认位置</string>
