@@ -91,11 +91,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text="@string/page_config_section_profile"
-                    android:textColor="?attr/appAccent"
-                    android:textSize="9.5sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.13" />
+                    style="@style/CrownSectionLabel" />
 
                 <LinearLayout
                     android:id="@+id/crown_config_profile_section"
@@ -185,11 +181,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_touch"
-                android:textColor="?attr/appAccent"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                android:letterSpacing="0.12" />
+                style="@style/CrownSectionLabel" />
 
             <LinearLayout
                 android:id="@+id/crown_config_touch_section"
@@ -313,11 +305,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_feedback"
-                android:textColor="?attr/appAccent"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                android:letterSpacing="0.12" />
+                style="@style/CrownSectionLabel" />
 
             <LinearLayout
                 android:id="@+id/crown_config_feedback_section"

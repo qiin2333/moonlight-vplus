@@ -101,7 +101,16 @@
         <item name="android:src">@drawable/ic_arrow_right</item>
         <item name="android:tint">@color/crown_text_secondary</item>
     </style>
-    
+
+    <!-- Design L1-L4: 9.5sp uppercase accent section label above every crown group card. -->
+    <style name="CrownSectionLabel">
+        <item name="android:textSize">9.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.13</item>
+        <item name="android:textColor">@color/crown_section_label</item>
+    </style>
+
     <!-- 虚拟键盘基础样式 -->
     <style name="VirtualKeyboardStyle">
         <item name="android:background">@drawable/keyboard_refined_bg</item>

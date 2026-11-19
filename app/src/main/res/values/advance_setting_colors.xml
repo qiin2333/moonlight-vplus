@@ -108,6 +108,7 @@
     <color name="crown_button_focused">@color/ui_shell_accent_focus</color>
     <color name="crown_on_accent">#FF1F2026</color>
     <color name="crown_surface_raised">#FFFFFFFF</color>
+    <color name="crown_section_label">#FFB8406C</color>
 
     <!-- EasyTier 控制面板：跟随系统深浅色（暗色值与 crown 系一致） -->
     <color name="easytier_panel_background">@color/ui_shell_surface_elevated</color>

@@ -50,9 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_group_settings"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <!-- 隐藏开关 -->
@@ -125,9 +123,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_child_settings"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <!-- 子元素可见 -->
@@ -189,9 +185,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_position_size"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -258,9 +252,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_appearance"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -305,9 +297,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_child_management"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <!-- 选择子元素按钮 -->
@@ -345,9 +335,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_color_config"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <!-- 边框颜色行 -->
@@ -441,9 +429,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_text_settings"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -523,9 +509,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_delete_operation"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <LinearLayout

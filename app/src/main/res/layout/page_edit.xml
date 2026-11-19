@@ -37,11 +37,7 @@
                     android:layout_marginStart="2dp"
                     android:layout_marginBottom="5dp"
                     android:text="@string/crown_edit_section_canvas"
-                    android:textColor="?attr/appAccent"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.12" />
+                    style="@style/CrownSectionLabel" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -146,11 +142,7 @@
                     android:layout_marginStart="2dp"
                     android:layout_marginBottom="5dp"
                     android:text="@string/crown_edit_section_buttons"
-                    android:textColor="?attr/appAccent"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.12" />
+                    style="@style/CrownSectionLabel" />
 
                 <LinearLayout
                     android:id="@+id/page_edit_add_digital_common_button"
@@ -191,11 +183,7 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="5dp"
                     android:text="@string/crown_edit_section_sticks"
-                    android:textColor="?attr/appAccent"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.12" />
+                    style="@style/CrownSectionLabel" />
 
                 <LinearLayout
                     android:id="@+id/page_edit_add_analog_stick"
@@ -244,11 +232,7 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="5dp"
                     android:text="@string/crown_edit_section_containers"
-                    android:textColor="?attr/appAccent"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.12" />
+                    style="@style/CrownSectionLabel" />
 
                 <LinearLayout
                     android:id="@+id/page_edit_add_digital_combine_button"

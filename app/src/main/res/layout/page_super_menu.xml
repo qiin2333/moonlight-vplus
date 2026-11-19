@@ -99,9 +99,7 @@
                 android:layout_marginStart="2dp"
                 android:layout_marginBottom="5dp"
                 android:text="@string/crown_menu_quick_controls"
-                android:textColor="?attr/appAccent"
-                android:textSize="10sp"
-                android:textStyle="bold" />
+                style="@style/CrownSectionLabel" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -212,9 +210,7 @@
                 android:layout_marginStart="2dp"
                 android:layout_marginBottom="5dp"
                 android:text="@string/crown_menu_current_plan"
-                android:textColor="?attr/appAccent"
-                android:textSize="10sp"
-                android:textStyle="bold" />
+                style="@style/CrownSectionLabel" />
 
             <LinearLayout
                 android:id="@+id/page_super_menu_config_page"

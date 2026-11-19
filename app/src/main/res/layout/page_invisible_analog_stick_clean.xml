@@ -45,8 +45,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_basic_info"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
+                    style="@style/CrownSectionLabel"
                     android:paddingBottom="8dp"/>
                 
                 <LinearLayout
@@ -109,8 +108,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_position_size"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
+                    style="@style/CrownSectionLabel"
                     android:paddingBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -180,8 +178,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_style_settings"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
+                    style="@style/CrownSectionLabel"
                     android:paddingBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -285,8 +282,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_operations"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
+                    style="@style/CrownSectionLabel"
                     android:paddingBottom="8dp"/>
                 
                 <LinearLayout

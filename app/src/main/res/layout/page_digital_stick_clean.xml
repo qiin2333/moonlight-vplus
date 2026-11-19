@@ -50,9 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_stick_config"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <TextView
@@ -159,9 +157,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_position_size"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -197,9 +193,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_appearance"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
@@ -254,9 +248,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_color_config"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"
+                    style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
                 <!-- 边框颜色行 -->
