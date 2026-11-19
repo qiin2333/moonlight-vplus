@@ -478,11 +478,8 @@ public class WheelPad extends Element {
 
         paintCenterText.setColor(this.centerTextColor);
         float triggerTextSize = (triggerRadius * 2f) * (this.triggerTextSizePercent / 100.0f);
-        paintCenterText.setTextSize(triggerTextSize);
         paintCenterText.setShadowLayer(Math.max(2f, thick * 0.35f), 0, 1.5f, 0x99000000);
-
-        float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2f);
-        canvas.drawText(centerText, centerX, textY, paintCenterText);
+        drawFittedCenterText(canvas, centerText, centerX, centerY, triggerRadius, triggerTextSize, paintCenterText);
     }
 
     private void drawFullWheel(Canvas canvas) {
@@ -619,7 +616,7 @@ public class WheelPad extends Element {
             drawCenterDirectionPointer(canvas, centerX, centerY, innerDiscR, lastPointerAngleDeg);
         }
 
-        // 4. 分区文字（自动缩字号 + 防消失兜底）
+        // 4. 分区文字（1~2 行智能自适应）
         float ringThickness = fillOuterRadius - fillInnerRadius;
         float baseSegmentTextSize = ringThickness * (this.textSizePercent / 100.0f);
         paintText.setShadowLayer(3f, 0, 1.5f, 0xAA000000);
@@ -641,20 +638,16 @@ public class WheelPad extends Element {
             paintText.setColor(i == activeIndex ? this.pressedTextColor : this.normalTextColor);
             paintText.setFakeBoldText(i == activeIndex);
 
-            float textRadius = fillInnerRadius + ringThickness * 0.52f + pop * (popOutMax * 0.35f);
-            // 取偏内侧一点的安全弦长，防止字宽时左右顶到分割线
-            float chordRadius = fillInnerRadius + ringThickness * 0.42f + pop * (popOutMax * 0.35f);
-            float maxChordWidth = (float) (2.0 * chordRadius * Math.sin(Math.toRadians(effectiveSweepDeg / 2.0))) * 0.86f;
+            float textRadius = fillInnerRadius + ringThickness * 0.54f + pop * (popOutMax * 0.35f);
             float targetSize = baseSegmentTextSize + pop * 2.0f;
-
-            displayName = fitSegmentText(displayName, targetSize, maxChordWidth, ringThickness);
+            float maxHeight = Math.max(20f, ringThickness * 0.82f);
 
             double textRad = Math.toRadians(textAngle);
             float textCenterX = centerX + (float) (textRadius * Math.cos(textRad));
             float textCenterY = centerY + (float) (textRadius * Math.sin(textRad));
-            Paint.FontMetrics fm = paintText.getFontMetrics();
-            float baselineY = textCenterY - (fm.ascent + fm.descent) / 2.0f;
-            canvas.drawText(displayName, textCenterX, baselineY, paintText);
+
+            drawAdaptiveSectorText(canvas, displayName, textCenterX, textCenterY,
+                    fillInnerRadius, textRadius, effectiveSweepDeg, targetSize, maxHeight, ringThickness);
         }
 
         // 5. 中心预览文字
@@ -673,11 +666,8 @@ public class WheelPad extends Element {
 
             paintCenterText.setColor(this.centerTextColor);
             float centerTextSize = fillInnerRadius * 2f * (this.centerTextSizePercent / 100.0f);
-            paintCenterText.setTextSize(centerTextSize);
             paintCenterText.setShadowLayer(Math.max(2f, centerTextSize * 0.06f), 0, Math.max(1f, centerTextSize * 0.04f), 0x99000000);
-
-            float textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2f);
-            canvas.drawText(displayName, centerX, textY, paintCenterText);
+            drawFittedCenterText(canvas, displayName, centerX, centerY, innerDiscR, centerTextSize, paintCenterText);
         }
 
         canvas.restore();
@@ -687,50 +677,225 @@ public class WheelPad extends Element {
         }
     }
 
-    private String fitSegmentText(String text, float targetSize, float maxWidth, float ringThickness) {
-        if (text == null || text.isEmpty()) {
-            return "";
-        }
-        paintText.setTextSize(targetSize);
-        if (maxWidth <= 4f) {
-            return text;
-        }
+    private float computeSectorChordWidth(float innerR, float textRadius, float effectiveSweepDeg, float blockHeight) {
+        // 文本块上下各有半高，下边缘更靠近内圈（更窄），按偏下边缘算弦长可防撞线
+        float chordRadius = Math.max(innerR + 4f, textRadius - blockHeight * 0.32f);
+        return (float) (2.0 * chordRadius * Math.sin(Math.toRadians(effectiveSweepDeg / 2.0))) * 0.90f;
+    }
 
-        float measured = paintText.measureText(text);
-        if (measured <= maxWidth) {
-            return text;
-        }
+    private float computeCircleChordWidth(float safeRadius, float blockHeight) {
+        float halfH = Math.min(safeRadius * 0.76f, blockHeight * 0.44f);
+        return (float) (2.0 * Math.sqrt(Math.max(1f, safeRadius * safeRadius - halfH * halfH)));
+    }
 
-        // 先按比例缩放到刚好放得下（留 6% 余量对抗字体微调与加粗误差）
-        float minTextSize = Math.min(targetSize, Math.max(12f, ringThickness * 0.16f));
-        float scaledSize = Math.max(minTextSize, targetSize * ((maxWidth * 0.94f) / measured));
-        paintText.setTextSize(scaledSize);
-        measured = paintText.measureText(text);
+    private void drawAdaptiveSectorText(Canvas canvas, String text, float cx, float cy,
+                                        float innerR, float textRadius, float effectiveSweepDeg,
+                                        float targetSize, float maxHeight, float ringThickness) {
+        if (text == null || text.isEmpty()) return;
 
-        // 若因非等比缩放仍略微超出，再收敛一次字号
-        if (measured > maxWidth && scaledSize > minTextSize) {
-            scaledSize = Math.max(minTextSize, scaledSize * ((maxWidth * 0.94f) / measured));
-            paintText.setTextSize(scaledSize);
-            measured = paintText.measureText(text);
-        }
+        float minSize = Math.min(targetSize, Math.max(14f, Math.min(20f, ringThickness * 0.08f)));
+        float size1 = Math.min(targetSize, maxHeight);
+        float maxW1 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size1);
 
-        // 只有缩到 minTextSize 依然放不下（例如很长的组合键）才做省略号截断
-        if (measured > maxWidth) {
-            textMeasurePaint.set(paintText);
-            String result = TextUtils.ellipsize(
-                    text, textMeasurePaint, maxWidth, TextUtils.TruncateAt.END).toString();
-            // 兜底：如果省略号本身比 maxWidth 还宽导致返回空串，强制保留首字符并缩到能放下
-            if (result.isEmpty()) {
-                String firstChar = text.substring(0, 1);
-                float singleW = paintText.measureText(firstChar);
-                if (singleW > maxWidth && singleW > 0f) {
-                    paintText.setTextSize(Math.max(8f, scaledSize * ((maxWidth * 0.92f) / singleW)));
-                }
-                return firstChar;
+        paintText.setTextSize(size1);
+        float measured1 = paintText.measureText(text);
+        if (measured1 > maxW1 && maxW1 > 4f) {
+            size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1));
+            paintText.setTextSize(size1);
+            maxW1 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size1);
+            measured1 = paintText.measureText(text);
+            if (measured1 > maxW1 && size1 > minSize) {
+                size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1));
+                paintText.setTextSize(size1);
+                maxW1 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size1);
+                measured1 = paintText.measureText(text);
             }
-            return result;
         }
-        return text;
+
+        // 短词或单行已经足够大时，直接单行绘制
+        boolean canTryTwoLines = text.length() >= 4 && maxHeight >= minSize * 2.25f;
+        boolean preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f;
+        if (!canTryTwoLines || preferOneLine) {
+            String finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1);
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paintText);
+            return;
+        }
+
+        // 尝试拆成居中 2 行，看看字号能不能明显变大
+        String[] lines = splitBalancedTwoLines(text);
+        if (lines[1].isEmpty()) {
+            String finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1);
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paintText);
+            return;
+        }
+
+        float size2 = Math.min(targetSize * 0.85f, maxHeight / 2.25f);
+        paintText.setTextSize(size2);
+        float maxLineW2 = Math.max(paintText.measureText(lines[0]), paintText.measureText(lines[1]));
+        float maxW2 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size2 * 2.15f);
+
+        if (maxLineW2 > maxW2 && maxW2 > 4f) {
+            size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2));
+            paintText.setTextSize(size2);
+            maxW2 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size2 * 2.15f);
+            maxLineW2 = Math.max(paintText.measureText(lines[0]), paintText.measureText(lines[1]));
+            if (maxLineW2 > maxW2 && size2 > minSize) {
+                size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2));
+                paintText.setTextSize(size2);
+                maxW2 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size2 * 2.15f);
+            }
+        }
+
+        // 2 行能比单行大 15% 以上，或者单行原本放不下时，采用 2 行
+        if (size2 > size1 * 1.15f || measured1 > maxW1) {
+            String l1 = ellipsizeWithFallback(lines[0], paintText, maxW2, size2);
+            String l2 = ellipsizeWithFallback(lines[1], paintText, maxW2, size2);
+            drawTwoLinesCentered(canvas, l1, l2, cx, cy, paintText);
+        } else {
+            paintText.setTextSize(size1);
+            String finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1);
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paintText);
+        }
+    }
+
+    private void drawFittedCenterText(Canvas canvas, String text, float cx, float cy,
+                                      float discRadius, float targetSize, Paint paint) {
+        if (text == null || text.isEmpty() || discRadius <= 4f) return;
+
+        float safeRadius = discRadius * 0.86f;
+        float maxHeight = safeRadius * 1.50f;
+        float minSize = Math.min(targetSize, Math.max(12f, Math.min(18f, discRadius * 0.16f)));
+
+        float size1 = Math.min(targetSize, maxHeight);
+        float maxW1 = computeCircleChordWidth(safeRadius, size1);
+        paint.setTextSize(size1);
+        float measured1 = paint.measureText(text);
+
+        if (measured1 > maxW1 && maxW1 > 4f) {
+            size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1));
+            paint.setTextSize(size1);
+            maxW1 = computeCircleChordWidth(safeRadius, size1);
+            measured1 = paint.measureText(text);
+            if (measured1 > maxW1 && size1 > minSize) {
+                size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1));
+                paint.setTextSize(size1);
+                maxW1 = computeCircleChordWidth(safeRadius, size1);
+                measured1 = paint.measureText(text);
+            }
+        }
+
+        boolean canTryTwoLines = text.length() >= 4 && maxHeight >= minSize * 2.25f;
+        boolean preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f;
+        if (!canTryTwoLines || preferOneLine) {
+            String finalOne = ellipsizeWithFallback(text, paint, maxW1, size1);
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paint);
+            return;
+        }
+
+        String[] lines = splitBalancedTwoLines(text);
+        if (lines[1].isEmpty()) {
+            String finalOne = ellipsizeWithFallback(text, paint, maxW1, size1);
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paint);
+            return;
+        }
+
+        float size2 = Math.min(targetSize * 0.85f, maxHeight / 2.25f);
+        paint.setTextSize(size2);
+        float maxLineW2 = Math.max(paint.measureText(lines[0]), paint.measureText(lines[1]));
+        float maxW2 = computeCircleChordWidth(safeRadius, size2 * 2.15f);
+
+        if (maxLineW2 > maxW2 && maxW2 > 4f) {
+            size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2));
+            paint.setTextSize(size2);
+            maxW2 = computeCircleChordWidth(safeRadius, size2 * 2.15f);
+            maxLineW2 = Math.max(paint.measureText(lines[0]), paint.measureText(lines[1]));
+            if (maxLineW2 > maxW2 && size2 > minSize) {
+                size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2));
+                paint.setTextSize(size2);
+                maxW2 = computeCircleChordWidth(safeRadius, size2 * 2.15f);
+            }
+        }
+
+        if (size2 > size1 * 1.15f || measured1 > maxW1) {
+            String l1 = ellipsizeWithFallback(lines[0], paint, maxW2, size2);
+            String l2 = ellipsizeWithFallback(lines[1], paint, maxW2, size2);
+            drawTwoLinesCentered(canvas, l1, l2, cx, cy, paint);
+        } else {
+            paint.setTextSize(size1);
+            String finalOne = ellipsizeWithFallback(text, paint, maxW1, size1);
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paint);
+        }
+    }
+
+    private String[] splitBalancedTwoLines(String text) {
+        int len = text.length();
+        int mid = len / 2;
+        int bestSplit = -1;
+        int bestDist = Integer.MAX_VALUE;
+
+        int minIdx = Math.max(1, len / 4);
+        int maxIdx = Math.min(len - 1, (len * 3) / 4);
+        for (int i = minIdx; i <= maxIdx; i++) {
+            char prev = text.charAt(i - 1);
+            char cur = text.charAt(i);
+            boolean breakAfter = (prev == ' ' || prev == ']' || prev == '+' || prev == '-' || prev == '|' || prev == '/');
+            boolean breakBefore = (cur == ' ' || cur == '[');
+            if (breakAfter || breakBefore) {
+                int dist = Math.abs(i - mid);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestSplit = i;
+                }
+            }
+        }
+
+        if (bestSplit == -1) {
+            bestSplit = mid;
+        }
+        if (bestSplit > 0 && bestSplit < len && Character.isLowSurrogate(text.charAt(bestSplit))) {
+            bestSplit++;
+        }
+        if (bestSplit <= 0 || bestSplit >= len) {
+            return new String[]{text, ""};
+        }
+
+        String l1 = text.substring(0, bestSplit).trim();
+        String l2 = text.substring(bestSplit).trim();
+        if (l1.isEmpty() || l2.isEmpty()) {
+            return new String[]{text, ""};
+        }
+        return new String[]{l1, l2};
+    }
+
+    private String ellipsizeWithFallback(String text, Paint paint, float maxWidth, float currentSize) {
+        if (maxWidth <= 4f) return text;
+        if (paint.measureText(text) <= maxWidth) return text;
+
+        textMeasurePaint.set(paint);
+        String result = TextUtils.ellipsize(text, textMeasurePaint, maxWidth, TextUtils.TruncateAt.END).toString();
+        if (result.isEmpty()) {
+            String firstChar = text.substring(0, 1);
+            float singleW = paint.measureText(firstChar);
+            if (singleW > maxWidth && singleW > 0f) {
+                paint.setTextSize(Math.max(8f, currentSize * ((maxWidth * 0.92f) / singleW)));
+            }
+            return firstChar;
+        }
+        return result;
+    }
+
+    private void drawSingleLineCentered(Canvas canvas, String text, float cx, float cy, Paint paint) {
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        float baselineY = cy - (fm.ascent + fm.descent) / 2.0f;
+        canvas.drawText(text, cx, baselineY, paint);
+    }
+
+    private void drawTwoLinesCentered(Canvas canvas, String l1, String l2, float cx, float cy, Paint paint) {
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        float lineStep = (fm.descent - fm.ascent) * 1.08f;
+        float baseCenter = cy - (fm.ascent + fm.descent) / 2.0f;
+        canvas.drawText(l1, cx, baseCenter - lineStep / 2.0f, paint);
+        canvas.drawText(l2, cx, baseCenter + lineStep / 2.0f, paint);
     }
 
     private void buildAnnularSectorPath(Path path, float cx, float cy,
