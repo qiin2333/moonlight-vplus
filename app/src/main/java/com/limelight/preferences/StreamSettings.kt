@@ -83,6 +83,7 @@ import com.bumptech.glide.signature.ObjectKey
 import com.limelight.services.KeyboardAccessibilityEnabler
 import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.ui.UiDismissKeyHandler
+import com.limelight.ui.showAppInfoSheet
 import rikka.shizuku.Shizuku
 import com.limelight.utils.AppTheme
 import com.limelight.LimeLog
@@ -105,6 +106,7 @@ import com.limelight.nvstream.HostGamepadSelection
 import com.limelight.binding.video.MediaCodecHelper
 import com.limelight.handbook.HandbookLauncher
 import com.limelight.utils.AboutDialogLauncher
+import com.limelight.utils.BrowserOnlyLauncher
 import com.limelight.utils.ConfigurationSyncManager
 import com.limelight.utils.ConfigurationSyncScheduler
 import com.limelight.utils.Dialog
@@ -177,6 +179,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     private var drawerLayout: DrawerLayout? = null // 竖屏时使用，横屏时为 null
     private var categoryList: RecyclerView? = null
     private var categoryAdapter: CategoryAdapter? = null
+    private var crownInfoDialog: android.app.Dialog? = null
     private val categories: MutableList<CategoryItem> = ArrayList()
     private var selectedCategoryIndex = 0
 
@@ -742,6 +745,19 @@ class StreamSettings : ThemedAppCompatActivity() {
      */
     class CategoryItem(var key: String, var title: String, var iconRes: Int)
 
+    private fun showCrownInfo() {
+        crownInfoDialog?.dismiss()
+        crownInfoDialog = showAppInfoSheet(
+            context = this,
+            title = getString(R.string.settings_crown_info_content_description),
+            text = getString(R.string.settings_crown_info_tooltip),
+            actionLabel = getString(R.string.settings_crown_author_github),
+            onAction = { BrowserOnlyLauncher.open(this, "https://github.com/WACrown") }
+        ).apply {
+            setOnDismissListener { crownInfoDialog = null }
+        }
+    }
+
     /**
      * 分类菜单适配器
      */
@@ -767,7 +783,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             // Phosphor 矢量图标 + 文本（图标颜色随选中态在 updateItemAppearance 中切换）
             holder.icon.setImageResource(item.iconRes)
             holder.title.text = item.title
-
             // 高亮选中项
             val isSelected = position == selectedCategoryIndex
             updateItemAppearance(holder, isSelected, false)
@@ -966,6 +981,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        crownInfoDialog?.dismiss()
 
         val isUsingPortraitDrawerLayout = findViewById<View>(R.id.drawer_layout) is DrawerLayout
         val shouldUsePortraitDrawerLayout = newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE
@@ -1118,6 +1134,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     }
 
     override fun onDestroy() {
+        crownInfoDialog?.dismiss()
         PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(backgroundPrefsListener)
         if (backgroundReceiverRegistered) {
             unregisterReceiver(backgroundReceiver)
@@ -1818,6 +1835,9 @@ class StreamSettings : ThemedAppCompatActivity() {
 
                 val replacement = SearchablePreferenceCategory(requireContext())
                 replacement.key = category.key
+                if (category.key == "category_crown_features") {
+                    replacement.infoClickHandler = { (activity as? StreamSettings)?.showCrownInfo() }
+                }
                 replacement.title = category.title
                 replacement.summary = category.summary
                 replacement.layoutResource = category.layoutResource

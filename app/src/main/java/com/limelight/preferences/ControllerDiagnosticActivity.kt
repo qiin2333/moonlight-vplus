@@ -127,7 +127,7 @@ import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.binding.input.driver.UsbDriverService
 import com.limelight.gamemenu.GameMenuCardShape
 import com.limelight.gamemenu.GameMenuDimens
-import com.limelight.gamemenu.gamepadFocusOutline
+import com.limelight.ui.gamepadFocusOutline
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.UiHelper

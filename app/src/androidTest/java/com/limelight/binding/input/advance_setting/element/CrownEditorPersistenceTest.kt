@@ -2,14 +2,18 @@ package com.limelight.binding.input.advance_setting.element
 
 import android.content.ContentValues
 import android.content.Intent
+import android.graphics.Rect
 import android.view.KeyEvent
 import android.widget.CompoundButton
 import android.widget.FrameLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import androidx.activity.ComponentActivity
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -70,10 +74,27 @@ class CrownEditorPersistenceTest {
                 page.endAnimator()
             }
             instrumentation.waitForIdleSync()
-            instrumentation.setInTouchMode(false)
+            val switchId = id("page_group_button_child_visible")
+            activity.scenario.onActivity {
+                val toggle = page.findViewById<CompoundButton>(switchId)
+                var parent = toggle.parent
+                while (parent !is ScrollView) parent = requireNotNull(parent.parent)
+                val bounds = Rect()
+                toggle.getDrawingRect(bounds)
+                parent.offsetDescendantRectToMyCoords(toggle, bounds)
+                // API 22's rectangle reveal can leave the target under the padding.
+                val viewport = parent.height - parent.paddingTop - parent.paddingBottom
+                parent.scrollTo(parent.scrollX, bounds.centerY() - parent.paddingTop - viewport / 2)
+            }
+            // Inject through the window: performClick() also toggles non-clickable switches.
+            onView(withId(switchId)).perform(click()).check(matches(isNotChecked()))
+            // Use window input so API 22 also leaves touch mode before requesting focus.
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+            instrumentation.waitForIdleSync()
             activity.scenario.onActivity { host ->
                 fun id(name: String) = host.resources.getIdentifier(name, "id", host.packageName)
-                page.findViewById<CompoundButton>(id("page_group_button_child_visible")).performClick()
+                assertTrue("Crown switch must accept controller focus",
+                    page.findViewById<CompoundButton>(switchId).requestFocus())
                 val width = page.findViewById<NumberSeekbar>(id("page_group_button_width"))
                 before = width.value
                 val slider = width.findViewById<SeekBar>(id("number_seekbar_seekbar"))

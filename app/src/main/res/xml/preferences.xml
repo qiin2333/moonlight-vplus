@@ -741,7 +741,7 @@
             android:key="checkbox_touch_keyboard_auto_invoke"
             android:title="@string/title_checkbox_touch_keyboard_auto_invoke"
             android:summary="@string/summary_checkbox_touch_keyboard_auto_invoke"
-            android:defaultValue="true" />
+            android:defaultValue="false" />
         <CheckBoxPreference
             android:key="checkbox_remote_ime_auto_show"
             android:title="@string/title_checkbox_remote_ime_auto_show"

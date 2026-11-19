@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="settings_crown_info_content_description">瞭解王冠的由來</string>
+    <string name="settings_crown_info_tooltip">先別掏錢包，「王冠」可不是 VIP 皇冠！這個名字來自首創這套功能的作者「王冠」。它的本事是強大又靈活的自訂按鍵：怎麼順手，就怎麼配。</string>
     <string name="settings_page_frame_generation_title">插幀調整</string>
     <string name="settings_page_frame_generation_summary">調整插幀渲染比例、回退門檻與影格呈現順序。</string>
     <string name="settings_page_hdr_title">HDR 設定</string>

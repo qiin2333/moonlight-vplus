@@ -46,6 +46,15 @@ class PerfHudModelTest {
     }
 
     @Test
+    fun `health defaults on and is independent from metric visibility`() {
+        val defaults = PerfHudVisibility()
+        assertTrue(defaults.health)
+        assertEquals(defaults, defaults.copy(health = false).copy(health = true))
+        assertTrue(defaults.copy(health = false).fps)
+        assertTrue(defaults.copy(fps = false).health)
+    }
+
+    @Test
     fun `thresholds match legacy hot decode and loss colors`() {
         assertEquals(PerfSeverity.BAD, PerfHudThresholds.decode(15f, 60))
         assertEquals(PerfSeverity.WARN, PerfHudThresholds.decode(9f, 120))

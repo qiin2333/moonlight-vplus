@@ -22,6 +22,12 @@ class ConnectionCallbackHandler(private val game: Game) {
 
     fun stageStarting(stage: String) {
         game.runOnUiThread {
+            // NvConnection 在 app 协商前会把应用名当 stage 名发过来；月相只认协议阶段，
+            // 这里按字符串等于应用名直接跳过推进（stageIndexFor 的关键词匹配只是兜底，
+            // 应用名若恰好含 "stream establishment" 之类字样不能靠猜）。
+            if (stage != game.appName) {
+                game.progressOverlay?.setStageName(stage)
+            }
             game.progressOverlay?.setMessage(
                 game.resources.getString(R.string.conn_starting) + " " + stage
             )
@@ -180,6 +186,8 @@ class ConnectionCallbackHandler(private val game: Game) {
             // 这里只做 5 秒 fallback，防止首帧因异常迟迟不来导致 loading 卡死。
             val overlay = game.progressOverlay
             if (overlay != null) {
+                // 满月 = 链路已通，视频首帧马上到。
+                overlay.markReady()
                 Handler(Looper.getMainLooper()).postDelayed({
                     if (game.progressOverlay === overlay) {
                         overlay.dismiss()

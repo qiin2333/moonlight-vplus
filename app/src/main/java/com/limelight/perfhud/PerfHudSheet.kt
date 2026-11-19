@@ -12,6 +12,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
+import android.graphics.PorterDuff
 import android.os.Build
 import android.util.TypedValue
 import android.view.Gravity
@@ -22,11 +23,14 @@ import android.view.Window
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Space
 import android.widget.TextView
+import com.limelight.R
 import com.limelight.utils.AppDialogStyler
+import androidx.core.content.ContextCompat
 import com.limelight.perfhud.PerfHudPalette as P
 
 /**
@@ -50,6 +54,9 @@ class PerfHudSheet(private val activity: Activity) {
         val subtitle: String? = null,
         val blocks: List<SheetBlock> = emptyList(),
         val header: List<View> = emptyList(),
+        val previousAction: Action? = null,
+        val nextAction: Action? = null,
+        val settingsAction: Action? = null,
         val actions: List<Action> = emptyList()
     )
 
@@ -68,10 +75,37 @@ class PerfHudSheet(private val activity: Activity) {
 
         val card = buildCard(spec, dialog)
         val shadowPad = dp(12f)
-        val root = FrameLayout(activity).apply {
+        val hasNavigation = spec.previousAction != null || spec.nextAction != null
+        card.layoutParams = FrameLayout.LayoutParams(
+            cardWidth(hasNavigation),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        val root = LinearLayout(activity).apply {
             clipToPadding = false
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setPadding(shadowPad, shadowPad, shadowPad, shadowPad)
-            addView(card)
+        }
+        if (hasNavigation) {
+            spec.previousAction?.let {
+                root.addView(
+                    navigationButton(it, activity.getString(R.string.perf_sheet_previous_page)),
+                    navigationLayoutParams()
+                )
+            }
+            root.addView(card)
+            spec.nextAction?.let {
+                root.addView(
+                    navigationButton(
+                        it,
+                        activity.getString(R.string.perf_sheet_next_page),
+                        rotateForLeft = false
+                    ),
+                    navigationLayoutParams(leadingGap = false)
+                )
+            }
+        } else {
+            root.addView(card)
         }
         dialog.setContentView(root)
         dialog.setCancelable(true)
@@ -90,74 +124,62 @@ class PerfHudSheet(private val activity: Activity) {
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = activity.window.decorView.systemUiVisibility
 
-        val fromAbove = place(window, card, shadowPad, anchor)
+        // Info cards are a transient stream overlay; centered placement avoids
+        // portrait/dock layouts clipping or crowding nearby controls.
+        val fromAbove = place(window, root, card, shadowPad, hasNavigation)
 
         dialog.setOnDismissListener { if (current === dialog) current = null }
         current = dialog
         dialog.show()
-        animateIn(card, fromAbove)
+        animateIn(root, fromAbove)
     }
 
-    /** 尽量贴着 HUD 放：上下哪边空间大放哪边，都不够就放侧边，没有锚点则居中。返回卡片是否从上方滑入。 */
-    private fun place(window: Window, card: CardLayout, pad: Int, anchor: View?): Boolean {
-        val decor = activity.window.decorView
-        val screenW = decor.width.takeIf { it > 0 } ?: activity.resources.displayMetrics.widthPixels
-        val screenH = decor.height.takeIf { it > 0 } ?: activity.resources.displayMetrics.heightPixels
+    /** 说明卡片是临时覆盖层，统一居中；左右箭头和卡片在同一个横向容器内保持相对位置。 */
+    private fun place(
+        window: Window,
+        content: View,
+        card: CardLayout,
+        pad: Int,
+        hasNavigation: Boolean
+    ): Boolean {
+        val screenH = activity.window.decorView.height
+            .takeIf { it > 0 }
+            ?: activity.resources.displayMetrics.heightPixels
         val margin = dp(12f)
-        val gap = dp(8f)
-        val cardW = minOf(dp(MAX_WIDTH_DP), screenW - 2 * margin)
+        val cardW = cardWidth(hasNavigation)
 
         val lp = window.attributes
-        lp.width = cardW + 2 * pad
+        val navigationWidth = if (hasNavigation) {
+            2 * (dp(NAVIGATION_GAP_DP) + dp(NAVIGATION_BUTTON_DP))
+        } else {
+            0
+        }
+        val windowWidth = cardW + 2 * pad + navigationWidth
+        lp.width = windowWidth
         lp.height = WindowManager.LayoutParams.WRAP_CONTENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
-        val visible = anchor != null && anchor.isShown && anchor.width > 0
-        if (!visible) {
-            card.maxHeight = screenH - 2 * margin
-            lp.gravity = Gravity.CENTER
-            window.attributes = lp
-            return true
-        }
-
-        val loc = IntArray(2)
-        anchor!!.getLocationOnScreen(loc)
-        val aLeft = loc[0]
-        val aTop = loc[1]
-        val aRight = aLeft + anchor.width
-        val aBottom = aTop + anchor.height
-
-        val below = screenH - aBottom - gap - margin
-        val above = aTop - gap - margin
-        val minUseful = dp(MIN_USEFUL_HEIGHT_DP)
-        var x: Int
-        var y: Int
-        val fromAbove: Boolean
-        if (maxOf(below, above) >= minUseful) {
-            val placeBelow = below >= above
-            card.maxHeight = if (placeBelow) below else above
-            val h = measure(card, cardW)
-            x = (aLeft + aRight) / 2 - cardW / 2
-            y = if (placeBelow) aBottom + gap else aTop - gap - h
-            fromAbove = placeBelow
-        } else {
-            card.maxHeight = screenH - 2 * margin
-            val h = measure(card, cardW)
-            val right = screenW - aRight - gap - margin
-            x = if (right >= cardW) aRight + gap else aLeft - gap - cardW
-            y = (aTop + aBottom) / 2 - h / 2
-            fromAbove = true
-        }
-        x = x.coerceIn(margin, maxOf(margin, screenW - margin - cardW))
-        y = y.coerceIn(margin, maxOf(margin, screenH - margin - card.measuredHeight))
-
-        lp.gravity = Gravity.TOP or Gravity.START
-        lp.x = x - pad
-        lp.y = y - pad
+        card.maxHeight = screenH - 2 * margin
+        measure(content, windowWidth)
+        lp.gravity = Gravity.CENTER
         window.attributes = lp
-        return fromAbove
+        return true
+    }
+
+    private fun cardWidth(hasNavigation: Boolean): Int {
+        val decor = activity.window.decorView
+        val screenW = decor.width.takeIf { it > 0 } ?: activity.resources.displayMetrics.widthPixels
+        val navigationWidth = if (hasNavigation) {
+            2 * (dp(NAVIGATION_GAP_DP) + dp(NAVIGATION_BUTTON_DP))
+        } else {
+            0
+        }
+        return minOf(
+            dp(MAX_WIDTH_DP),
+            maxOf(0, screenW - 2 * dp(12f) - navigationWidth)
+        )
     }
 
     private fun measure(card: View, width: Int): Int {
@@ -225,6 +247,29 @@ class PerfHudSheet(private val activity: Activity) {
         return card
     }
 
+    private fun navigationLayoutParams(leadingGap: Boolean = true) = LinearLayout.LayoutParams(
+        dp(NAVIGATION_BUTTON_DP),
+        dp(NAVIGATION_BUTTON_DP)
+    ).apply {
+        if (leadingGap) {
+            marginEnd = dp(NAVIGATION_GAP_DP)
+        } else {
+            marginStart = dp(NAVIGATION_GAP_DP)
+        }
+    }
+
+    private fun navigationButton(
+        action: Action,
+        contentDescription: String,
+        rotateForLeft: Boolean = true
+    ): View = actionIcon(
+        iconRes = R.drawable.ic_arrow_right,
+        contentDescription = contentDescription,
+        accent = P.TXT,
+        rotateForLeft = rotateForLeft,
+        onClick = action.onClick
+    )
+
     private fun buildHeader(spec: Spec): View = LinearLayout(activity).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -268,10 +313,54 @@ class PerfHudSheet(private val activity: Activity) {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(14f), dp(6f), dp(14f), dp(14f))
+        spec.settingsAction?.let {
+            addView(
+                actionIcon(
+                    iconRes = R.drawable.ic_settings,
+                    contentDescription = it.label,
+                    accent = P.TXT,
+                    onClick = {
+                        dialog.dismiss()
+                        it.onClick?.invoke()
+                    }
+                ),
+                actionIconParams()
+            )
+        }
         val (primary, secondary) = spec.actions.partition { it.primary }
         secondary.forEach { addView(pill(it, dialog, spec.accent), pillParams()) }
         addView(Space(activity), LinearLayout.LayoutParams(0, 1, 1f))
         primary.forEach { addView(pill(it, dialog, spec.accent), pillParams()) }
+    }
+
+    private fun actionIconParams() = LinearLayout.LayoutParams(dp(36f), dp(36f)).apply {
+        leftMargin = dp(4f); rightMargin = dp(8f)
+    }
+
+    private fun actionIcon(
+        iconRes: Int,
+        contentDescription: String,
+        accent: Int,
+        rotateForLeft: Boolean = false,
+        onClick: (() -> Unit)?
+    ): View = ImageView(activity).apply {
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        this.contentDescription = contentDescription
+        ContextCompat.getDrawable(context, iconRes)?.mutate()?.let { drawable ->
+            drawable.setTint(P.TXT)
+            drawable.setTintMode(PorterDuff.Mode.SRC_ATOP)
+            setImageDrawable(drawable)
+        }
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        rotation = if (rotateForLeft) 180f else 0f
+        background = ripple(GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(P.withAlpha(P.SHEET_RGB, 0xF2))
+            setStroke(dp(1.5f), P.withAlpha(Color.WHITE, 0x66))
+        })
+        isClickable = true
+        isFocusable = true
+        setOnClickListener { onClick?.invoke() }
     }
 
     private fun pillParams() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40f)).apply {
@@ -447,7 +536,10 @@ class PerfHudSheet(private val activity: Activity) {
 
     private companion object {
         const val MAX_WIDTH_DP = 360f
+        const val MIN_WIDTH_DP = 280f
         const val MIN_USEFUL_HEIGHT_DP = 220f
         const val DIM_AMOUNT = 0.32f
+        const val NAVIGATION_BUTTON_DP = 36f
+        const val NAVIGATION_GAP_DP = 10f
     }
 }

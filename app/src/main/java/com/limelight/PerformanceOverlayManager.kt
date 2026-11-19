@@ -3,8 +3,12 @@ package com.limelight
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.SharedPreferences
+import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
@@ -24,6 +28,7 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
@@ -33,6 +38,7 @@ import android.widget.Toast
 
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.preference.PreferenceManager
 
 import com.limelight.utils.AppSwitchStyle
 import com.limelight.utils.AppSwitchView
@@ -66,13 +72,27 @@ import java.util.EnumMap
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.abs
-import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
+
+/** Anchor positions shown as a 3x3 quick-placement grid. */
+enum class PerfOverlayAnchor {
+    TOP_LEFT,
+    TOP_CENTER,
+    TOP_RIGHT,
+    CENTER_LEFT,
+    CENTER,
+    CENTER_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_CENTER,
+    BOTTOM_RIGHT
+}
 
 class PerformanceOverlayManager(
     private val activity: Activity,
     private val prefConfig: PreferenceConfiguration,
-    private val onJitterMonitorChanged: (Boolean) -> Unit = {}
+    private val onJitterMonitorChanged: (Boolean) -> Unit = {},
+    private val onOpenSettings: () -> Unit = {}
 ) {
 
     private var performanceOverlayView: LinearLayout? = null
@@ -86,6 +106,9 @@ class PerformanceOverlayManager(
             snapshot = { lastHudSnapshot },
             isHudStyle = ::isHudStyle,
             anchor = { performanceOverlayView },
+            showFallback = ::showManagerTargetInfo,
+            hasDisplayableBattery = { hasDisplayableBattery },
+            onOpenSettings = onOpenSettings,
             moodText = { buildHudStrings().mood(it) },
             fpsHeader = ::createJitterMonitorSwitchRow
         )
@@ -129,20 +152,24 @@ class PerformanceOverlayManager(
     private var perfOverlayStartY = 0f
     private var perfOverlayDeltaX = 0f
     private var perfOverlayDeltaY = 0f
+    private var perfOverlayOriginalLayout: FrameLayout.LayoutParams? = null
+    private var perfOverlayDragWidth = 0
+    private var perfOverlayDragHeight = 0
+    private var perfOverlayMoved = false
+    private var dragGuideX: SnapGuide? = null
+    private var dragGuideY: SnapGuide? = null
+    private var dragRelativeX: Float? = null
+    private var dragRelativeY: Float? = null
+    private var dragMaxLeft = 0
+    private var dragMaxTop = 0
+    private var snapGuidesView: PerfOverlaySnapGuides? = null
 
-    // 点击检测相关
-    private var clickStartTime = 0L
-    private var clickStartX = 0f
-    private var clickStartY = 0f
-    private var lastClickTime = 0L
-    private var isDoubleClickHandled = false
+    private var classicAnchorOnly = false
+    private var overlayTemporarilyHidden = false
+    private var destroyed = false
 
-    // 8个吸附位置的枚举
-    private enum class SnapPosition {
-        TOP_LEFT, TOP_CENTER, TOP_RIGHT,
-        CENTER_LEFT, CENTER_RIGHT,
-        BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
-    }
+    private enum class SnapGuide { START, CENTER, END }
+    private data class GuidedPosition(val margin: Int, val guide: SnapGuide?)
 
     private val bandwidthMeter = BandwidthMeter()
 
@@ -170,19 +197,186 @@ class PerformanceOverlayManager(
     private var classicOverlayPadding: IntArray? = null
     private var currentHudLayout: PerfHudLayout? = null
     private var currentDockTop = -1
+    private var overlayStyleGeneration = 0
     private var hudBatteryLevel = -1
     private var hudCharging = false
-    private var hudLongPressFired = false
+    private var overlayTouchActive = false
     private var hudTouchX = 0f
     private var hudTouchY = 0f
-    private val hudLongPressRunnable = Runnable { onHudLongPress() }
-    /** 按住片刻后高亮手指下的指标，提示继续按住就能看说明。 */
-    private val hudPressRunnable = Runnable {
-        val hud = hudView ?: return@Runnable
-        hud.setPressedAt(hudTouchX - hud.left, hudTouchY - hud.top)
+    private val gestures = PerfOverlayGestureController(
+        postDelayed = { task, delay -> uiHandler.postDelayed(task, delay) },
+        removeCallbacks = { task -> uiHandler.removeCallbacks(task) },
+        onSingleTap = { x, y ->
+            if (isHudStyle()) {
+                cycleHudDensity()
+            } else {
+                cancelOverlayInteraction()
+                showClickedItemInfo(x, y)
+            }
+        },
+        onDoubleTap = ::toggleLayoutOrientation,
+        onLongPress = ::onHudLongPress,
+        onPressHighlight = {
+            hudView?.let { it.setPressedAt(hudTouchX - it.left, hudTouchY - it.top) }
+        },
+        longPressTimeoutMs = ViewConfiguration.getLongPressTimeout().toLong()
+    )
+
+    val isPerfOverlayDocked: Boolean get() = currentHudLayout == PerfHudLayout.DOCK
+    val perfOverlayHealthVisible: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_HEALTH, true)
+    val perfOverlaySingleTapEnabled: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_SINGLE_TAP, false)
+    val perfOverlayDoubleTapEnabled: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_DOUBLE_TAP, false)
+    val perfOverlayLongPressEnabled: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_LONG_PRESS, true)
+
+    fun setPerfOverlayHealthVisible(enabled: Boolean) {
+        overlayPrefs.edit { putBoolean(KEY_HUD_HEALTH, enabled) }
+        refreshPerformanceOverlayConfig()
+    }
+
+    fun setPerfOverlaySingleTapEnabled(enabled: Boolean) = setGestureEnabled(KEY_HUD_SINGLE_TAP, enabled)
+    fun setPerfOverlayDoubleTapEnabled(enabled: Boolean) = setGestureEnabled(KEY_HUD_DOUBLE_TAP, enabled)
+    fun setPerfOverlayLongPressEnabled(enabled: Boolean) = setGestureEnabled(KEY_HUD_LONG_PRESS, enabled)
+
+    private fun setGestureEnabled(key: String, enabled: Boolean) {
+        cancelOverlayInteraction()
+        overlayPrefs.edit { putBoolean(key, enabled) }
+    }
+
+    fun setPerfOverlayDisplayItems(items: Set<String>) {
+        PerfOverlayDisplayItemsPreference.setDisplayItems(activity, items.toSet())
+        refreshPerformanceOverlayConfig()
+    }
+
+    val isPerfOverlayMovable: Boolean
+        get() = performanceOverlayView != null && currentHudLayout != PerfHudLayout.DOCK
+
+    val perfOverlayAnchor: PerfOverlayAnchor?
+        get() {
+            if (hasRelativePosition()) {
+                val guideX = savedGuide(KEY_GUIDE_X)
+                val guideY = savedGuide(KEY_GUIDE_Y)
+                return PerfOverlayAnchor.entries.firstOrNull {
+                    it.horizontalGuide() == guideX && it.verticalGuide() == guideY
+                }
+            }
+            if (isPortrait()) return PerfOverlayAnchor.TOP_RIGHT
+            return when (prefConfig.perfOverlayPosition) {
+                PreferenceConfiguration.PerfOverlayPosition.TOP -> PerfOverlayAnchor.TOP_CENTER
+                PreferenceConfiguration.PerfOverlayPosition.BOTTOM -> PerfOverlayAnchor.BOTTOM_CENTER
+                PreferenceConfiguration.PerfOverlayPosition.TOP_LEFT -> PerfOverlayAnchor.TOP_LEFT
+                PreferenceConfiguration.PerfOverlayPosition.TOP_RIGHT -> PerfOverlayAnchor.TOP_RIGHT
+                PreferenceConfiguration.PerfOverlayPosition.BOTTOM_LEFT -> PerfOverlayAnchor.BOTTOM_LEFT
+                PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT -> PerfOverlayAnchor.BOTTOM_RIGHT
+            }
+        }
+
+    fun setPerfOverlayAnchor(anchor: PerfOverlayAnchor) {
+        val overlay = performanceOverlayView ?: return
+        if (!isPerfOverlayMovable || isDraggingPerfOverlay) return
+
+        val parent = overlay.parent as? View ?: return
+        val lp = overlay.layoutParams as? FrameLayout.LayoutParams ?: return
+        if (parent.width <= 0 || parent.height <= 0) return
+        if (lp.gravity != Gravity.NO_GRAVITY) convertGravityToMargins(overlay, lp)
+
+        val (availableWidth, availableHeight) = measureOverlayInParent(overlay, parent, lp)
+        val maxLeft = maxOf(0, availableWidth - overlay.width)
+        val maxTop = maxOf(0, availableHeight - overlay.height)
+        val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+        val topInset = if (isStickyBar()) 0 else sideInset
+        val guideX = anchor.horizontalGuide()
+        val guideY = anchor.verticalGuide()
+
+        val left = restoredMargin(
+            anchor.horizontalRelative(),
+            guideX,
+            maxLeft,
+            sideInset,
+            sideInset
+        )
+        val top = restoredMargin(
+            anchor.verticalRelative(),
+            guideY,
+            maxTop,
+            topInset,
+            sideInset
+        )
+
+        lp.leftMargin = left
+        lp.topMargin = top
+        dragGuideX = guideX
+        dragGuideY = guideY
+        dragRelativeX = anchor.horizontalRelative()
+        dragRelativeY = anchor.verticalRelative()
+        dragMaxLeft = maxLeft
+        dragMaxTop = maxTop
+        saveDragPosition(overlay)
+    }
+
+    fun resetPerfOverlayPosition() {
+        if (!isPerfOverlayMovable) return
+        cancelOverlayInteraction()
+        ++overlayStyleGeneration
+        dragRelativeX = 0.5f
+        dragRelativeY = 0.5f
+        dragGuideX = null
+        dragGuideY = null
+        dragMaxLeft = 0
+        dragMaxTop = 0
+        overlayPrefs.edit {
+            remove("has_custom_position")
+            remove("left_margin")
+            remove("top_margin")
+            remove(KEY_RELATIVE_X)
+            remove(KEY_RELATIVE_Y)
+            remove(KEY_GUIDE_X)
+            remove(KEY_GUIDE_Y)
+        }
+        refreshOverlayNow()
+    }
+
+    private fun PerfOverlayAnchor.horizontalGuide(): SnapGuide = when (this) {
+        PerfOverlayAnchor.TOP_LEFT,
+        PerfOverlayAnchor.CENTER_LEFT,
+        PerfOverlayAnchor.BOTTOM_LEFT -> SnapGuide.START
+        PerfOverlayAnchor.TOP_CENTER,
+        PerfOverlayAnchor.CENTER,
+        PerfOverlayAnchor.BOTTOM_CENTER -> SnapGuide.CENTER
+        PerfOverlayAnchor.TOP_RIGHT,
+        PerfOverlayAnchor.CENTER_RIGHT,
+        PerfOverlayAnchor.BOTTOM_RIGHT -> SnapGuide.END
+    }
+
+    private fun PerfOverlayAnchor.verticalGuide(): SnapGuide = when (this) {
+        PerfOverlayAnchor.TOP_LEFT,
+        PerfOverlayAnchor.TOP_CENTER,
+        PerfOverlayAnchor.TOP_RIGHT -> SnapGuide.START
+        PerfOverlayAnchor.CENTER_LEFT,
+        PerfOverlayAnchor.CENTER,
+        PerfOverlayAnchor.CENTER_RIGHT -> SnapGuide.CENTER
+        PerfOverlayAnchor.BOTTOM_LEFT,
+        PerfOverlayAnchor.BOTTOM_CENTER,
+        PerfOverlayAnchor.BOTTOM_RIGHT -> SnapGuide.END
+    }
+
+    private fun PerfOverlayAnchor.horizontalRelative(): Float = when (horizontalGuide()) {
+        SnapGuide.START -> 0f
+        SnapGuide.CENTER -> 0.5f
+        SnapGuide.END -> 1f
+    }
+
+    private fun PerfOverlayAnchor.verticalRelative(): Float = when (verticalGuide()) {
+        SnapGuide.START -> 0f
+        SnapGuide.CENTER -> 0.5f
+        SnapGuide.END -> 1f
     }
     private val hudAnchorListener = View.OnLayoutChangeListener     { v, l, t, r, b, oL, oT, oR, oB ->
             onHudOverlayResized(v, l, t, r, b, oL, oT, oR, oB)
+    }
+    private val overlayParentListener = View.OnLayoutChangeListener { _, l, t, r, b, oldL, oldT, oldR, oldB ->
+        if ((r - l != oldR - oldL || b - t != oldB - oldT) && hasRelativePosition()) {
+            performanceOverlayView?.let { restoreFloatingPosition(it) }
+        }
     }
 
     /**
@@ -232,6 +426,7 @@ class PerformanceOverlayManager(
         streamView = activity.findViewById(R.id.surfaceView)
         hudView = activity.findViewById<PerfHudView>(R.id.perfHud)?.also { it.setStrings(buildHudStrings()) }
         performanceOverlayView?.addOnLayoutChangeListener(hudAnchorListener)
+        (performanceOverlayView?.parent as? View)?.addOnLayoutChangeListener(overlayParentListener)
 
         initializePerformanceItems()
         loadLayoutOrientation()
@@ -277,14 +472,26 @@ class PerformanceOverlayManager(
     }
 
     fun hideOverlayImmediate() {
+        overlayTemporarilyHidden = true
+        ++overlayStyleGeneration
         cancelDelayedShow()
         stopClockUpdates()
         infoSheets.dismiss()
+        cancelOverlayInteraction()
+        performanceOverlayView?.clearAnimation()
         performanceOverlayView?.visibility = View.GONE
     }
 
     fun applyRequestedVisibility() {
+        overlayTemporarilyHidden = false
         val overlay = performanceOverlayView ?: return
+        if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
+            refreshOverlayNow()
+            overlay.clearAnimation()
+            overlay.alpha = 1f
+            hasShownPerfOverlay = true
+            setupPerformanceOverlayDragging()
+        }
         overlay.visibility = requestedPerformanceOverlayVisibility
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
             startClockUpdates()
@@ -297,6 +504,7 @@ class PerformanceOverlayManager(
         return requestedPerformanceOverlayVisibility == View.VISIBLE
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     fun togglePerformanceOverlay() {
         val overlay = performanceOverlayView ?: return
 
@@ -305,13 +513,19 @@ class PerformanceOverlayManager(
         if (requestedPerformanceOverlayVisibility == View.VISIBLE) {
             requestedPerformanceOverlayVisibility = View.GONE
             hasShownPerfOverlay = false
+            ++overlayStyleGeneration
+            overlay.setOnTouchListener(null)
             stopClockUpdates()
             fadeOutAndHide(overlay)
         } else {
             requestedPerformanceOverlayVisibility = View.VISIBLE
             hasShownPerfOverlay = true
+            refreshOverlayNow()
+            if (overlayTemporarilyHidden) return
+            overlay.clearAnimation()
             overlay.visibility = View.VISIBLE
             overlay.alpha = 1.0f
+            setupPerformanceOverlayDragging()
             startClockUpdates()
         }
     }
@@ -325,9 +539,29 @@ class PerformanceOverlayManager(
     }
 
     fun cancelPendingTasks() {
+        destroyed = true
+        ++overlayStyleGeneration
         cancelDelayedShow()
         stopClockUpdates()
         infoSheets.dismiss()
+        cancelOverlayInteraction()
+        performanceOverlayView?.clearAnimation()
+        performanceOverlayView?.setOnTouchListener(null)
+        performanceOverlayView?.removeOnLayoutChangeListener(hudAnchorListener)
+        (performanceOverlayView?.parent as? View)?.removeOnLayoutChangeListener(overlayParentListener)
+    }
+
+    fun cancelOverlayInteraction() {
+        gestures.cancel()
+        overlayTouchActive = false
+        hudView?.clearPressed()
+        val overlay = performanceOverlayView
+        if (isDraggingPerfOverlay && currentHudLayout != PerfHudLayout.DOCK && overlay != null) {
+            cancelOverlayDrag(overlay)
+        } else {
+            isDraggingPerfOverlay = false
+            hideSnapGuides()
+        }
     }
 
     private fun cancelDelayedShow() {
@@ -351,6 +585,7 @@ class PerformanceOverlayManager(
         val clock = performanceClockView ?: return
         val format = clockFormat()
         clock.text = SimpleDateFormat(format.pattern, Locale.getDefault()).format(Date())
+        performanceOverlayView?.let { if (it.isLayoutRequested && hasRelativePosition()) restoreFloatingPosition(it) }
     }
 
     private fun clockFormat(): ClockFormat {
@@ -379,19 +614,27 @@ class PerformanceOverlayManager(
         return (CLOCK_MINUTE_MS - remainder).coerceAtLeast(1L)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     fun applyOverlayState() {
         cancelDelayedShow()
         val overlay = performanceOverlayView ?: return
+        cancelOverlayInteraction()
 
         if (!prefConfig.enablePerfOverlay) {
             requestedPerformanceOverlayVisibility = View.GONE
             hasShownPerfOverlay = false
+            ++overlayStyleGeneration
+            overlay.setOnTouchListener(null)
             stopClockUpdates()
             fadeOutAndHide(overlay)
             return
         }
 
         requestedPerformanceOverlayVisibility = View.VISIBLE
+
+        refreshOverlayNow()
+        if (overlayTemporarilyHidden) return
+        overlay.clearAnimation()
 
         if (overlay.visibility != View.VISIBLE || overlay.alpha < 1.0f) {
             overlay.visibility = View.VISIBLE
@@ -405,37 +648,46 @@ class PerformanceOverlayManager(
 
     private fun fadeOutAndHide(overlay: View) {
         stopClockUpdates()
+        cancelOverlayInteraction()
+        overlay.clearAnimation()
+        if (overlayTemporarilyHidden) {
+            overlay.visibility = View.GONE
+            overlay.alpha = 0f
+            return
+        }
         val anim = AnimationUtils.loadAnimation(activity, R.anim.perf_overlay_fadeout)
         overlay.startAnimation(anim)
         anim.setAnimationListener(object : Animation.AnimationListener {
             override fun onAnimationStart(animation: Animation) {}
             override fun onAnimationEnd(animation: Animation) {
-                overlay.visibility = View.GONE
-                overlay.alpha = 0.0f
+                if (requestedPerformanceOverlayVisibility != View.VISIBLE || overlayTemporarilyHidden) {
+                    overlay.visibility = View.GONE
+                    overlay.alpha = 0.0f
+                }
             }
             override fun onAnimationRepeat(animation: Animation) {}
         })
     }
 
     fun refreshPerformanceOverlayConfig() {
-        if (performanceOverlayView != null && requestedPerformanceOverlayVisibility == View.VISIBLE) {
-            configureDisplayItems()
-            configureTextAlignment()
-        }
+        if (requestedPerformanceOverlayVisibility == View.VISIBLE && !overlayTemporarilyHidden) refreshOverlayNow()
     }
 
     fun onConfigurationChanged() {
+        cancelOverlayInteraction()
         if (performanceOverlayView != null) {
-            configurePerformanceOverlay()
+            refreshOverlayNow()
         }
     }
 
     fun updatePerformanceInfo(performanceInfo: PerformanceInfo) {
-        currentPerformanceInfo = performanceInfo
         updateBandwidthInfo(performanceInfo)
 
         activity.runOnUiThread {
+            if (destroyed) return@runOnUiThread
+            currentPerformanceInfo = performanceInfo
             showOverlayIfNeeded()
+            if (requestedPerformanceOverlayVisibility != View.VISIBLE || overlayTemporarilyHidden) return@runOnUiThread
             updateBatteryDisplayIfNeeded()
             if (isHudStyle()) {
                 updateHud(performanceInfo)
@@ -460,7 +712,11 @@ class PerformanceOverlayManager(
         streamStartTime = System.currentTimeMillis()
         lastBatteryUpdateTime = streamStartTime
         activity.runOnUiThread {
+            if (destroyed) return@runOnUiThread
+            currentPerformanceInfo = null
+            lastHudSnapshot = null
             hudView?.clearHistory()
+            configureDisplayItems()
             updateBatteryViewIfVisible()
         }
     }
@@ -512,7 +768,8 @@ class PerformanceOverlayManager(
     }
 
     private fun showOverlayIfNeeded() {
-        if (prefConfig.enablePerfOverlay && !hasShownPerfOverlay && performanceOverlayView != null) {
+        if (prefConfig.enablePerfOverlay && !overlayTemporarilyHidden && !hasShownPerfOverlay && performanceOverlayView != null) {
+            configurePerformanceOverlay()
             performanceOverlayView?.visibility = View.VISIBLE
             performanceOverlayView?.alpha = 1.0f
             hasShownPerfOverlay = true
@@ -589,10 +846,11 @@ class PerformanceOverlayManager(
     private fun updatePerformanceViewsWithStyledText(performanceInfo: PerformanceInfo) {
         for (itemInfo in performanceItems) {
             if (itemInfo.isVisible) {
-                updatePerformanceItemText(itemInfo, performanceInfo)
+                if (classicAnchorOnly) updateClassicAnchor() else updatePerformanceItemText(itemInfo, performanceInfo)
             }
         }
         configureTextAlignment()
+        performanceOverlayView?.let { if (it.isLayoutRequested && hasRelativePosition()) restoreFloatingPosition(it) }
     }
 
     private fun updatePerformanceItemText(itemInfo: PerformanceItemInfo, performanceInfo: PerformanceInfo) {
@@ -846,17 +1104,23 @@ class PerformanceOverlayManager(
         overlay.layoutParams = layoutParams
         overlay.post { configureTextAlignment() }
         setupPerformanceOverlayDragging()
+        restoreFloatingPosition(overlay)
     }
 
     @SuppressLint("RtlHardcoded")
     private fun applyFloatingPosition(layoutParams: FrameLayout.LayoutParams, isPortrait: Boolean) {
         val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
+        val hasRelativePosition = hasRelativePosition()
 
         // HUD 自带圆角背景，贴着屏幕边缘时圆角会被切掉，留一点安全边距；横屏顶栏则直接吸顶
         val inset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
         val topInset = if (isStickyBar()) 0 else inset
-        if (isPortrait) {
+        if (hasRelativePosition) {
+            layoutParams.gravity = Gravity.NO_GRAVITY
+            layoutParams.leftMargin = prefs.getInt("left_margin", 0)
+            layoutParams.topMargin = prefs.getInt("top_margin", 0)
+        } else if (isPortrait) {
             layoutParams.gravity = Gravity.RIGHT or Gravity.TOP
             layoutParams.leftMargin = inset
             layoutParams.topMargin = inset
@@ -884,8 +1148,8 @@ class PerformanceOverlayManager(
             layoutParams.leftMargin = inset
             layoutParams.topMargin = topInset
         }
-        layoutParams.rightMargin = inset
-        layoutParams.bottomMargin = inset
+        layoutParams.rightMargin = if (hasRelativePosition) 0 else inset
+        layoutParams.bottomMargin = if (hasRelativePosition) 0 else inset
     }
 
     /** 横屏 HUD 顶栏（标准档、横排）贴屏幕上沿显示。 */
@@ -904,13 +1168,28 @@ class PerformanceOverlayManager(
         val hud = isHudStyle()
         for (itemInfo in performanceItems) {
             if (itemInfo.view != null) {
-                val isEnabled = !hud && PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey)
+                val isEnabled = !hud && (itemInfo.item != PerformanceItem.BATTERY || hasDisplayableBattery) &&
+                    PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey)
                 itemInfo.view.visibility = if (isEnabled) View.VISIBLE else View.GONE
             }
+        }
+        classicAnchorOnly = !hud && performanceItems.none { it.isVisible }
+        if (classicAnchorOnly) {
+            getPerformanceItemView(PerformanceItem.RESOLUTION)?.visibility = View.VISIBLE
+            updateClassicAnchor()
+        } else {
+            getPerformanceItemView(PerformanceItem.RESOLUTION)?.contentDescription = null
         }
         hudView?.let {
             it.visibility = if (hud) View.VISIBLE else View.GONE
             if (hud) it.setItemVisibility(readHudVisibility())
+        }
+    }
+
+    private fun updateClassicAnchor() {
+        getPerformanceItemView(PerformanceItem.RESOLUTION)?.apply {
+            text = getCurrentMoonPhaseIcon()
+            contentDescription = MoonPhaseUtils.getCurrentMoonPhaseInfo(activity).name
         }
     }
 
@@ -922,9 +1201,7 @@ class PerformanceOverlayManager(
     private fun configureTextAlignment() {
 
         val isVertical = isEffectiveVerticalLayout()
-        val isRightSide = determineRightSidePosition(isVertical)
-
-        val gravity = if (isVertical && isRightSide)
+        val gravity = if (isVertical && determineRightSidePosition())
             Gravity.CENTER_VERTICAL or Gravity.END
         else
             Gravity.CENTER_VERTICAL or Gravity.START
@@ -936,15 +1213,17 @@ class PerformanceOverlayManager(
         }
     }
 
-    private fun determineRightSidePosition(isVertical: Boolean): Boolean {
+    private fun determineRightSidePosition(): Boolean {
         val prefs = overlayPrefs
         val hasCustomPosition = prefs.getBoolean("has_custom_position", false)
 
-        return if (hasCustomPosition) {
-            val viewDimensions = getViewDimensions(performanceOverlayView!!)
-            val viewWidth = viewDimensions[0]
-            val leftMargin = prefs.getInt("left_margin", 0)
-            (leftMargin + viewWidth) > (streamView.width * 2 / 3)
+        return if (hasCustomPosition || isDraggingPerfOverlay) {
+            val overlay = performanceOverlayView ?: return false
+            val parent = overlay.parent as? View
+            val lp = overlay.layoutParams as? FrameLayout.LayoutParams
+            val left = if (lp?.gravity == Gravity.NO_GRAVITY) lp.leftMargin + (parent?.paddingLeft ?: 0) else overlay.left
+            val parentWidth = parent?.width?.takeIf { it > 0 } ?: streamView.width
+            (left + getViewDimensions(overlay)[0]) > (parentWidth * 2 / 3)
         } else {
             prefConfig.perfOverlayPosition == PreferenceConfiguration.PerfOverlayPosition.TOP_RIGHT ||
                 prefConfig.perfOverlayPosition == PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT
@@ -1007,6 +1286,7 @@ class PerformanceOverlayManager(
         val overlay = performanceOverlayView ?: return
 
         if (prefConfig.perfOverlayLocked) {
+            cancelOverlayInteraction()
             overlay.setOnTouchListener(null)
             overlay.isClickable = false
             overlay.isFocusable = false
@@ -1017,31 +1297,45 @@ class PerformanceOverlayManager(
             overlay.isLongClickable = true
 
             overlay.setOnTouchListener { v, event ->
-                if (isHudStyle()) return@setOnTouchListener handleHudTouch(v, event)
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> handleActionDown(v, event)
-                    MotionEvent.ACTION_MOVE -> handleActionMove(v, event)
-                    MotionEvent.ACTION_UP -> handleActionUp(v, event)
-                    else -> false
-                }
+                handleOverlayTouch(v, event)
             }
         }
     }
 
     private fun handleActionDown(v: View, event: MotionEvent): Boolean {
+        ++overlayStyleGeneration
+        hideSnapGuides()
+        perfOverlayMoved = false
         isDraggingPerfOverlay = true
         perfOverlayStartX = event.rawX
         perfOverlayStartY = event.rawY
-        clickStartTime = System.currentTimeMillis()
-        clickStartX = event.x
-        clickStartY = event.y
-        isDoubleClickHandled = false
 
         val layoutParams = v.layoutParams as FrameLayout.LayoutParams
+        perfOverlayOriginalLayout = FrameLayout.LayoutParams(layoutParams)
+        val hasRelativePosition = hasRelativePosition()
+        dragGuideX = if (hasRelativePosition) savedGuide(KEY_GUIDE_X) else when (layoutParams.gravity and Gravity.HORIZONTAL_GRAVITY_MASK) {
+            Gravity.LEFT -> SnapGuide.START
+            Gravity.CENTER_HORIZONTAL -> SnapGuide.CENTER
+            Gravity.RIGHT -> SnapGuide.END
+            else -> null
+        }
+        dragGuideY = if (hasRelativePosition) savedGuide(KEY_GUIDE_Y) else when (layoutParams.gravity and Gravity.VERTICAL_GRAVITY_MASK) {
+            Gravity.TOP -> SnapGuide.START
+            Gravity.CENTER_VERTICAL -> SnapGuide.CENTER
+            Gravity.BOTTOM -> SnapGuide.END
+            else -> null
+        }
+        dragRelativeX = if (hasRelativePosition) overlayPrefs.getFloat(KEY_RELATIVE_X, 0.5f) else null
+        dragRelativeY = if (hasRelativePosition) overlayPrefs.getFloat(KEY_RELATIVE_Y, 0.5f) else null
 
         if (layoutParams.gravity != Gravity.NO_GRAVITY) {
             convertGravityToMargins(v, layoutParams)
         }
+        layoutParams.rightMargin = 0
+        layoutParams.bottomMargin = 0
+        v.layoutParams = layoutParams
+        perfOverlayDragWidth = v.width
+        perfOverlayDragHeight = v.height
 
         perfOverlayDeltaX = perfOverlayStartX - layoutParams.leftMargin
         perfOverlayDeltaY = perfOverlayStartY - layoutParams.topMargin
@@ -1053,19 +1347,43 @@ class PerformanceOverlayManager(
     private fun handleActionMove(v: View, event: MotionEvent): Boolean {
         if (!isDraggingPerfOverlay) return false
 
-        val parentDimensions = getParentDimensions(v)
-        val viewDimensions = getViewDimensions(v)
-        val parentWidth = parentDimensions[0]
-        val parentHeight = parentDimensions[1]
-        val viewWidth = viewDimensions[0]
-        val viewHeight = viewDimensions[1]
+        val parent = v.parent as View
+        val viewWidth = maxOf(if (v.width == 0) 300 else v.width, perfOverlayDragWidth)
+        val viewHeight = maxOf(if (v.height == 0) 50 else v.height, perfOverlayDragHeight)
 
         val layoutParams = v.layoutParams as FrameLayout.LayoutParams
         var newLeftMargin = (event.rawX - perfOverlayDeltaX).toInt()
         var newTopMargin = (event.rawY - perfOverlayDeltaY).toInt()
 
-        newLeftMargin = newLeftMargin.coerceIn(0, parentWidth - viewWidth)
-        newTopMargin = newTopMargin.coerceIn(0, parentHeight - viewHeight)
+        val maxLeft = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - viewWidth)
+        val maxTop = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - viewHeight)
+        dragMaxLeft = maxLeft
+        dragMaxTop = maxTop
+        newLeftMargin = newLeftMargin.coerceIn(0, maxLeft)
+        newTopMargin = newTopMargin.coerceIn(0, maxTop)
+        val slop = ViewConfiguration.get(activity).scaledTouchSlop
+        if (abs(event.rawX - perfOverlayStartX) > slop || abs(event.rawY - perfOverlayStartY) > slop) {
+            perfOverlayMoved = true
+        }
+        if (perfOverlayMoved) {
+            val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+            val topInset = if (isStickyBar()) 0 else sideInset
+            val x = guidedPosition(newLeftMargin, maxLeft, sideInset, sideInset)
+            val y = guidedPosition(newTopMargin, maxTop, topInset, sideInset)
+            newLeftMargin = x.margin
+            newTopMargin = y.margin
+            if (maxLeft > 0) {
+                dragGuideX = x.guide
+                dragRelativeX = newLeftMargin.toFloat() / maxLeft
+            }
+            if (maxTop > 0) {
+                dragGuideY = y.guide
+                dragRelativeY = newTopMargin.toFloat() / maxTop
+            }
+            updateSnapGuides(parent as? ViewGroup, newLeftMargin, newTopMargin, viewWidth, viewHeight, x.guide, y.guide)
+        } else {
+            return true
+        }
 
         layoutParams.leftMargin = newLeftMargin
         layoutParams.topMargin = newTopMargin
@@ -1080,26 +1398,42 @@ class PerformanceOverlayManager(
     private fun handleActionUp(v: View, event: MotionEvent): Boolean {
         if (!isDraggingPerfOverlay) return false
 
+        handleActionMove(v, event)
         isDraggingPerfOverlay = false
         applyDraggingVisualFeedback(v, false)
+        hideSnapGuides()
 
-        if (isClick(event)) {
-            handleClickEvent()
+        if (!perfOverlayMoved) {
+            restoreOverlayLayout(v)
         } else {
-            snapToNearestPosition(v)
+            saveDragPosition(v)
         }
 
         return true
+    }
+
+    private fun cancelOverlayDrag(v: View): Boolean {
+        if (!isDraggingPerfOverlay) return false
+        isDraggingPerfOverlay = false
+        applyDraggingVisualFeedback(v, false)
+        hideSnapGuides()
+        restoreOverlayLayout(v)
+        refreshHudStick()
+        return true
+    }
+
+    private fun restoreOverlayLayout(v: View) {
+        perfOverlayOriginalLayout?.let { v.layoutParams = it }
     }
 
     private fun convertGravityToMargins(v: View, layoutParams: FrameLayout.LayoutParams) {
         val viewLocation = IntArray(2)
         val parentLocation = IntArray(2)
         v.getLocationInWindow(viewLocation)
-        (v.parent as View).getLocationInWindow(parentLocation)
-
-        layoutParams.leftMargin = viewLocation[0] - parentLocation[0]
-        layoutParams.topMargin = viewLocation[1] - parentLocation[1]
+        val parent = v.parent as View
+        parent.getLocationInWindow(parentLocation)
+        layoutParams.leftMargin = viewLocation[0] - parentLocation[0] - parent.paddingLeft
+        layoutParams.topMargin = viewLocation[1] - parentLocation[1] - parent.paddingTop
         layoutParams.gravity = Gravity.NO_GRAVITY
         v.layoutParams = layoutParams
     }
@@ -1112,35 +1446,19 @@ class PerformanceOverlayManager(
         v.scaleY = targetScale
     }
 
-    private fun handleClickEvent() {
-        val currentTime = System.currentTimeMillis()
-        val timeSinceLastClick = currentTime - lastClickTime
-
-        if (timeSinceLastClick < DOUBLE_CLICK_TIMEOUT && lastClickTime > 0L) {
-            toggleLayoutOrientation()
-            lastClickTime = 0
-            isDoubleClickHandled = true
-        } else {
-            lastClickTime = currentTime
-            isDoubleClickHandled = false
-            performanceOverlayView?.postDelayed({
-                if (!isDoubleClickHandled && lastClickTime > 0L) {
-                    lastClickTime = 0
-                    if (isHudStyle()) cycleHudDensity() else showClickedItemInfo()
-                }
-            }, DOUBLE_CLICK_TIMEOUT.toLong())
+    private fun showClickedItemInfo(x: Float, y: Float) {
+        if (classicAnchorOnly) {
+            infoSheets.showMoonPhase()
+            return
         }
-    }
-
-    private fun showClickedItemInfo() {
         if (isEffectiveVerticalLayout()) {
-            showClickedItemInfoVertical()
+            showClickedItemInfoVertical(y)
         } else {
-            showClickedItemInfoHorizontal()
+            showClickedItemInfoHorizontal(x)
         }
     }
 
-    private fun showClickedItemInfoVertical() {
+    private fun showClickedItemInfoVertical(y: Float) {
         val overlayHeight = performanceOverlayView?.height ?: return
         if (overlayHeight == 0) return
 
@@ -1150,13 +1468,13 @@ class PerformanceOverlayManager(
             return
         }
 
-        val itemHeight = overlayHeight / visibleItemCount
-        val clickedItemIndex = (clickStartY / itemHeight).toInt()
+        val itemHeight = (overlayHeight / visibleItemCount).coerceAtLeast(1)
+        val clickedItemIndex = (y / itemHeight).toInt()
 
         showInfoByIndex(clickedItemIndex)
     }
 
-    private fun showClickedItemInfoHorizontal() {
+    private fun showClickedItemInfoHorizontal(x: Float) {
         val overlayWidth = performanceOverlayView?.width ?: return
         if (overlayWidth == 0) return
 
@@ -1166,11 +1484,11 @@ class PerformanceOverlayManager(
             return
         }
 
-        val clickedItemIndex = findClickedItemByBoundaries()
+        val clickedItemIndex = findClickedItemByBoundaries(x)
         showInfoByIndex(clickedItemIndex)
     }
 
-    private fun findClickedItemByBoundaries(): Int {
+    private fun findClickedItemByBoundaries(x: Float): Int {
         var currentIndex = 0
         for (itemInfo in performanceItems) {
             if (itemInfo.isVisible) {
@@ -1183,7 +1501,7 @@ class PerformanceOverlayManager(
                 val viewLeft = viewLocation[0] - overlayLocation[0]
                 val viewRight = viewLeft + (itemInfo.view?.width ?: 0)
 
-                if (clickStartX >= viewLeft && clickStartX <= viewRight) {
+                if (x >= viewLeft && x <= viewRight) {
                     return currentIndex
                 }
                 currentIndex++
@@ -1344,138 +1662,204 @@ class PerformanceOverlayManager(
     }
 
     private fun toggleLayoutOrientation() {
-        if (isHudStyle() && currentHudLayout == PerfHudLayout.DOCK) {
-            // 停靠卡片没有横竖之分，别偷偷改偏好，告诉用户什么时候生效
-            showHudToast(activity.getString(R.string.perf_hud_dock_orientation_hint))
-            return
-        }
-        prefConfig.perfOverlayOrientation = if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL) {
+        val orientation = if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL) {
             PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL
         } else {
             PreferenceConfiguration.PerfOverlayOrientation.VERTICAL
         }
-        saveLayoutOrientation()
-        if (isHudStyle()) {
-            // 双击总要有可见变化：迷你/详细下横竖排不生效，所以顺带回到标准档
-            val styleForced = prefConfig.perfOverlayStyle != PerfHudDensity.STANDARD
-            if (styleForced) {
-                prefConfig.perfOverlayStyle = PerfHudDensity.STANDARD
-                prefConfig.writePreferences(activity)
-            }
-            val orientationName = activity.getString(
-                if (prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL)
-                    R.string.orientation_vertical else R.string.orientation_horizontal
-            )
-            val label = if (styleForced) "${styleName(PerfHudDensity.STANDARD)} / $orientationName" else orientationName
-            refreshOverlayNow()
-            showHudToast(activity.getString(R.string.perf_hud_style_changed, label))
-            return
-        }
-        configurePerformanceOverlay()
+        setPerfOverlayOrientation(orientation)
     }
 
-    private fun saveLayoutOrientation() {
-        val prefs = overlayPrefs
-        prefs.edit {
-            putString("layout_orientation", prefConfig.perfOverlayOrientation.name)
+    fun setPerfOverlayOrientation(orientation: PreferenceConfiguration.PerfOverlayOrientation) {
+        if (prefConfig.perfOverlayOrientation == orientation) return
+        cancelOverlayInteraction()
+        prefConfig.perfOverlayOrientation = orientation
+        if (overlayPrefs.contains(KEY_LEGACY_ORIENTATION)) {
+            if (saveLayoutOrientation(synchronous = true)) {
+                overlayPrefs.edit { remove(KEY_LEGACY_ORIENTATION) }
+            }
+        } else {
+            saveLayoutOrientation()
+        }
+        if (requestedPerformanceOverlayVisibility == View.VISIBLE && !overlayTemporarilyHidden) refreshOverlayNow()
+        when {
+            currentHudLayout == PerfHudLayout.DOCK ->
+                showHudToast(activity.getString(R.string.game_menu_perf_orientation_docked))
+            isHudStyle() && prefConfig.perfOverlayStyle != PerfHudDensity.STANDARD ->
+                showHudToast(activity.getString(R.string.game_menu_perf_orientation_fixed))
+            !isHudStyle() && isPortrait() ->
+                showHudToast(activity.getString(R.string.game_menu_perf_orientation_portrait))
+            else -> {
+                val label = activity.getString(
+                    if (orientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL)
+                        R.string.orientation_vertical else R.string.orientation_horizontal
+                )
+                showHudToast(activity.getString(R.string.perf_hud_style_changed, label))
+            }
+        }
+    }
+
+    @SuppressLint("ApplySharedPref")
+    private fun saveLayoutOrientation(synchronous: Boolean = false): Boolean {
+        val value = when (prefConfig.perfOverlayOrientation) {
+            PreferenceConfiguration.PerfOverlayOrientation.VERTICAL -> "vertical"
+            PreferenceConfiguration.PerfOverlayOrientation.HORIZONTAL -> "horizontal"
+        }
+        val editor = PreferenceManager.getDefaultSharedPreferences(activity).edit()
+            .putString(KEY_DEFAULT_ORIENTATION, value)
+        return if (synchronous) editor.commit() else {
+            editor.apply()
+            true
         }
     }
 
     private fun loadLayoutOrientation() {
-        val prefs = overlayPrefs
-        val savedOrientation = prefs.getString("layout_orientation", null)
-
+        val savedOrientation = overlayPrefs.getString(KEY_LEGACY_ORIENTATION, null)
         if (savedOrientation != null) {
             try {
                 prefConfig.perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.valueOf(savedOrientation)
             } catch (_: IllegalArgumentException) {
                 prefConfig.perfOverlayOrientation = PreferenceConfiguration.PerfOverlayOrientation.VERTICAL
             }
+            // Commit the canonical value before removing the only copy of a legacy selection.
+            if (saveLayoutOrientation(synchronous = true)) {
+                overlayPrefs.edit { remove(KEY_LEGACY_ORIENTATION) }
+            }
         }
     }
 
-    private fun isClick(event: MotionEvent): Boolean {
-        val deltaX = abs(event.rawX - perfOverlayStartX)
-        val deltaY = abs(event.rawY - perfOverlayStartY)
-        val deltaTime = System.currentTimeMillis() - clickStartTime
-        return deltaX < CLICK_THRESHOLD && deltaY < CLICK_THRESHOLD && deltaTime < 500
+    private fun guidedPosition(position: Int, max: Int, startInset: Int, endInset: Int): GuidedPosition {
+        // A full-size overlay cannot select an anchor on this axis.
+        if (max == 0) return GuidedPosition(0, null)
+        var margin = startInset.coerceIn(0, max)
+        var guide = SnapGuide.START
+        val center = max / 2
+        val end = (max - endInset).coerceIn(0, max)
+        if (abs(position - center) < abs(position - margin)) {
+            margin = center
+            guide = SnapGuide.CENTER
+        }
+        if (abs(position - end) < abs(position - margin)) {
+            margin = end
+            guide = SnapGuide.END
+        }
+        return if (abs(position - margin) <= dp(SNAP_GUIDE_DISTANCE_DP)) {
+            GuidedPosition(margin, guide)
+        } else {
+            GuidedPosition(position, null)
+        }
     }
 
-    private fun snapToNearestPosition(view: View) {
-        val parentDimensions = getParentDimensions(view)
-        val viewDimensions = getViewDimensions(view)
-        val screenWidth = parentDimensions[0]
-        val screenHeight = parentDimensions[1]
-        val viewWidth = viewDimensions[0]
-        val viewHeight = viewDimensions[1]
+    private fun updateSnapGuides(
+        parent: ViewGroup?, left: Int, top: Int, width: Int, height: Int, guideX: SnapGuide?, guideY: SnapGuide?
+    ) {
+        if (parent == null) {
+            hideSnapGuides()
+            return
+        }
+        if (guideX == null && guideY == null) {
+            snapGuidesView?.visibility = View.INVISIBLE
+            return
+        }
+        val guides = snapGuidesView ?: PerfOverlaySnapGuides(activity, UiHelper.accentColor(activity)).also {
+            it.tag = SNAP_GUIDES_TAG
+            val index = parent.indexOfChild(performanceOverlayView).coerceAtLeast(0)
+            parent.addView(it, index, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            snapGuidesView = it
+        }
+        guides.visibility = View.VISIBLE
+        val x = when (guideX) {
+            SnapGuide.START -> left
+            SnapGuide.CENTER -> left + width / 2
+            SnapGuide.END -> left + width
+            null -> null
+        }
+        val y = when (guideY) {
+            SnapGuide.START -> top
+            SnapGuide.CENTER -> top + height / 2
+            SnapGuide.END -> top + height
+            null -> null
+        }
+        val overlay = performanceOverlayView
+        val extraX = (width * ((overlay?.scaleX ?: 1f) - 1f) / 2).roundToInt().coerceAtLeast(0)
+        val extraY = (height * ((overlay?.scaleY ?: 1f) - 1f) / 2).roundToInt().coerceAtLeast(0)
+        guides.update(x, y, left - extraX, top - extraY, width + extraX * 2, height + extraY * 2)
+    }
 
-        val layoutParams = view.layoutParams as FrameLayout.LayoutParams
-        val currentX = layoutParams.leftMargin + viewWidth / 2
-        val currentY = layoutParams.topMargin + viewHeight / 2
+    private fun hideSnapGuides() {
+        snapGuidesView?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        snapGuidesView = null
+    }
 
-        val snapPositions = arrayOf(
-            intArrayOf(viewWidth / 2, viewHeight / 2),
-            intArrayOf(screenWidth / 2, viewHeight / 2),
-            intArrayOf(screenWidth - viewWidth / 2, viewHeight / 2),
-            intArrayOf(viewWidth / 2, screenHeight / 2),
-            intArrayOf(screenWidth - viewWidth / 2, screenHeight / 2),
-            intArrayOf(viewWidth / 2, screenHeight - viewHeight / 2),
-            intArrayOf(screenWidth / 2, screenHeight - viewHeight / 2),
-            intArrayOf(screenWidth - viewWidth / 2, screenHeight - viewHeight / 2)
+    private fun hasRelativePosition(): Boolean = overlayPrefs.getBoolean("has_custom_position", false) &&
+        overlayPrefs.contains(KEY_RELATIVE_X) && overlayPrefs.contains(KEY_RELATIVE_Y)
+
+    private fun measureOverlayInParent(view: View, parent: View, lp: FrameLayout.LayoutParams): Pair<Int, Int> {
+        val width = maxOf(0, parent.width - parent.paddingLeft - parent.paddingRight - lp.rightMargin)
+        val height = maxOf(0, parent.height - parent.paddingTop - parent.paddingBottom - lp.bottomMargin)
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.AT_MOST)
         )
-
-        val positions = SnapPosition.entries.toTypedArray()
-        var nearestPosition = SnapPosition.TOP_CENTER
-        var minDistance = Double.MAX_VALUE
-
-        for (i in snapPositions.indices) {
-            val distance = sqrt(
-                (currentX - snapPositions[i][0]).toDouble().pow(2.0) +
-                        (currentY - snapPositions[i][1]).toDouble().pow(2.0)
-            )
-            if (distance < minDistance) {
-                minDistance = distance
-                nearestPosition = positions[i]
-            }
-        }
-
-        animateToSnapPosition(view, nearestPosition, screenWidth, screenHeight)
+        return width to height
     }
 
-    private fun animateToSnapPosition(view: View, position: SnapPosition, screenWidth: Int, screenHeight: Int) {
-        val layoutParams = view.layoutParams as FrameLayout.LayoutParams
-        val viewDimensions = getViewDimensions(view)
-        val viewWidth = viewDimensions[0]
-        val viewHeight = viewDimensions[1]
-
-        val i = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
-        val t = if (isStickyBar()) 0 else i
-        val (targetX, targetY) = when (position) {
-            SnapPosition.TOP_LEFT -> i to t
-            SnapPosition.TOP_CENTER -> (screenWidth - viewWidth) / 2 to t
-            SnapPosition.TOP_RIGHT -> screenWidth - viewWidth - i to t
-            SnapPosition.CENTER_LEFT -> i to (screenHeight - viewHeight) / 2
-            SnapPosition.CENTER_RIGHT -> screenWidth - viewWidth - i to (screenHeight - viewHeight) / 2
-            SnapPosition.BOTTOM_LEFT -> i to screenHeight - viewHeight - i
-            SnapPosition.BOTTOM_CENTER -> (screenWidth - viewWidth) / 2 to screenHeight - viewHeight - i
-            SnapPosition.BOTTOM_RIGHT -> screenWidth - viewWidth - i to screenHeight - viewHeight - i
+    private fun saveDragPosition(view: View) {
+        val parent = view.parent as? View ?: return
+        val lp = view.layoutParams as? FrameLayout.LayoutParams ?: return
+        val (availableWidth, availableHeight) = measureOverlayInParent(view, parent, lp)
+        val maxLeft = maxOf(0, availableWidth - view.measuredWidth)
+        val maxTop = maxOf(0, availableHeight - view.measuredHeight)
+        val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+        val topInset = if (isStickyBar()) 0 else sideInset
+        val left = if (dragMaxLeft == 0 || dragGuideX != null) {
+            restoredMargin(dragRelativeX ?: 0.5f, dragGuideX, maxLeft, sideInset, sideInset)
+        } else {
+            lp.leftMargin.coerceIn(0, maxLeft)
         }
+        val top = if (dragMaxTop == 0 || dragGuideY != null) {
+            restoredMargin(dragRelativeY ?: 0.5f, dragGuideY, maxTop, topInset, sideInset)
+        } else {
+            lp.topMargin.coerceIn(0, maxTop)
+        }
+        lp.leftMargin = left
+        lp.topMargin = top
+        view.layoutParams = lp
+        overlayPrefs.edit {
+            putBoolean("has_custom_position", true)
+            putInt("left_margin", left)
+            putInt("top_margin", top)
+            // Keep the last meaningful ratio when the new size fills the parent.
+            putFloat(KEY_RELATIVE_X, if (maxLeft > 0) left.toFloat() / maxLeft else dragRelativeX ?: 0.5f)
+            putFloat(KEY_RELATIVE_Y, if (maxTop > 0) top.toFloat() / maxTop else dragRelativeY ?: 0.5f)
+            if (dragGuideX != null) putString(KEY_GUIDE_X, dragGuideX!!.name) else remove(KEY_GUIDE_X)
+            if (dragGuideY != null) putString(KEY_GUIDE_Y, dragGuideY!!.name) else remove(KEY_GUIDE_Y)
+        }
+        configureTextAlignment()
+        refreshHudStick()
+    }
 
-        view.animate()
-            .translationX((targetX - layoutParams.leftMargin).toFloat())
-            .translationY((targetY - layoutParams.topMargin).toFloat())
-            .setDuration(200)
-            .withEndAction {
-                layoutParams.leftMargin = targetX
-                layoutParams.topMargin = targetY
-                view.translationX = 0f
-                view.translationY = 0f
-                view.layoutParams = layoutParams
-                savePerformanceOverlayPosition(targetX, targetY)
-                configureTextAlignment()
-                refreshHudStick()
-            }
-            .start()
+    private fun restoreFloatingPosition(overlay: View) {
+        val relativePosition = hasRelativePosition()
+        if (isDraggingPerfOverlay || !overlayPrefs.getBoolean("has_custom_position", false) ||
+            (isPortrait() && !relativePosition) || currentHudLayout == PerfHudLayout.DOCK
+        ) return
+        repositionFloatingOverlay(overlay, Rect(overlay.left, overlay.top, overlay.right, overlay.bottom),
+            ++overlayStyleGeneration, relativePosition)
+    }
+
+    private fun savedGuide(key: String): SnapGuide? {
+        val name = overlayPrefs.getString(key, null)
+        return SnapGuide.entries.firstOrNull { it.name == name }
+    }
+
+    private fun restoredMargin(relative: Float, guide: SnapGuide?, max: Int, startInset: Int, endInset: Int): Int {
+        return when (guide) {
+            SnapGuide.START -> startInset.coerceIn(0, max)
+            SnapGuide.CENTER -> max / 2
+            SnapGuide.END -> (max - endInset).coerceIn(0, max)
+            null -> (relative.coerceIn(0f, 1f) * max).roundToInt().coerceIn(0, max)
+        }
     }
 
     private fun savePerformanceOverlayPosition(x: Int, y: Int) {
@@ -1495,11 +1879,6 @@ class PerformanceOverlayManager(
         return intArrayOf(width, height)
     }
 
-    private fun getParentDimensions(view: View): IntArray {
-        val parent = view.parent as View
-        return intArrayOf(parent.width, parent.height)
-    }
-
     // ================================================================ 新版 HUD
 
     private fun isHudStyle(): Boolean = prefConfig.perfOverlayStyle.isHud
@@ -1514,15 +1893,13 @@ class PerformanceOverlayManager(
 
     private fun applyStyleChange(style: PerfHudDensity, announce: Boolean) {
         if (prefConfig.perfOverlayStyle == style) return
+        cancelOverlayInteraction()
+        ++overlayStyleGeneration
         prefConfig.perfOverlayStyle = style
         prefConfig.writePreferences(activity)
         refreshOverlayNow()
         if (announce) {
-            var text = activity.getString(R.string.perf_hud_style_changed, styleName(style))
-            if (!overlayPrefs.getBoolean(KEY_HUD_LONG_PRESS_USED, false)) {
-                text += "\n" + activity.getString(R.string.perf_hud_long_press_hint)
-            }
-            showHudToast(text)
+            showHudToast(activity.getString(R.string.perf_hud_style_changed, styleName(style)))
         }
     }
 
@@ -1541,12 +1918,72 @@ class PerformanceOverlayManager(
         configurePerformanceOverlay()
         val info = currentPerformanceInfo
         if (isHudStyle()) {
-            if (info != null) updateHud(info)
+            if (info != null) updateHud(info, recordHistory = false) else hudView?.invalidate()
         } else {
             if (info != null) updatePerformanceViewsWithStyledText(info)
             updateBatteryViewIfVisible()
             if (requestedPerformanceOverlayVisibility == View.VISIBLE) startClockUpdates()
         }
+    }
+
+    /** Measure without the old margins so a larger style is not clipped before it can be repositioned. */
+    private fun repositionFloatingOverlay(overlay: View, oldBounds: Rect, generation: Int, relativePosition: Boolean) {
+        overlay.post {
+            if (generation != overlayStyleGeneration || isDraggingPerfOverlay ||
+                currentHudLayout == PerfHudLayout.DOCK
+            ) return@post
+            val parent = overlay.parent as? View ?: return@post
+            val lp = overlay.layoutParams as? FrameLayout.LayoutParams ?: return@post
+            if (lp.gravity != Gravity.NO_GRAVITY || parent.width <= 0 || parent.height <= 0) return@post
+
+            val (availableWidth, availableHeight) = measureOverlayInParent(overlay, parent, lp)
+            val maxLeft = maxOf(0, availableWidth - overlay.measuredWidth)
+            val maxTop = maxOf(0, availableHeight - overlay.measuredHeight)
+            val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
+            val topInset = if (isStickyBar()) 0 else sideInset
+            val left = if (relativePosition) {
+                restoredMargin(overlayPrefs.getFloat(KEY_RELATIVE_X, 0f), savedGuide(KEY_GUIDE_X),
+                    maxLeft, sideInset, sideInset)
+            } else {
+                anchoredMargin(oldBounds.left, oldBounds.right, parent.width, parent.paddingLeft, parent.paddingRight,
+                    availableWidth, overlay.measuredWidth, lp.leftMargin)
+            }
+            val top = if (relativePosition) {
+                restoredMargin(overlayPrefs.getFloat(KEY_RELATIVE_Y, 0f), savedGuide(KEY_GUIDE_Y),
+                    maxTop, topInset, sideInset)
+            } else {
+                anchoredMargin(oldBounds.top, oldBounds.bottom, parent.height, parent.paddingTop, parent.paddingBottom,
+                    availableHeight, overlay.measuredHeight, lp.topMargin)
+            }
+            if (left != lp.leftMargin || top != lp.topMargin) {
+                lp.leftMargin = left
+                lp.topMargin = top
+                overlay.layoutParams = lp
+                if (!relativePosition) savePerformanceOverlayPosition(left, top)
+                refreshHudStick()
+            } else {
+                // The explicit measurement must be followed by a normal parent layout.
+                overlay.requestLayout()
+            }
+            if (!isHudStyle()) configureTextAlignment()
+        }
+    }
+
+    /** Keep a centered or end-anchored edge stable as the overlay changes size. */
+    private fun anchoredMargin(
+        oldStart: Int, oldEnd: Int, parentSize: Int, paddingStart: Int, paddingEnd: Int,
+        availableSize: Int, newSize: Int, currentMargin: Int
+    ): Int {
+        val oldCenterTwice = oldStart + oldEnd
+        val contentCenterTwice = parentSize + paddingStart - paddingEnd
+        val margin = when {
+            oldEnd <= oldStart -> currentMargin
+            abs(oldCenterTwice - contentCenterTwice) <= dp(2f) * 2 ->
+                (parentSize - paddingStart - paddingEnd - newSize) / 2
+            oldCenterTwice > contentCenterTwice -> oldEnd - paddingStart - newSize
+            else -> currentMargin
+        }
+        return margin.coerceIn(0, maxOf(0, availableSize - newSize))
     }
 
     private fun restoreClassicContainer(overlay: LinearLayout) {
@@ -1575,6 +2012,7 @@ class PerformanceOverlayManager(
         }
         applyHudPlacement(overlay, force = true)
         setupPerformanceOverlayDragging()
+        restoreFloatingPosition(overlay)
     }
 
     /**
@@ -1597,6 +2035,7 @@ class PerformanceOverlayManager(
         if (!force && layout == currentHudLayout && (layout != PerfHudLayout.DOCK || dockTop == currentDockTop)) return
 
         val wasDock = currentHudLayout == PerfHudLayout.DOCK
+        if (!wasDock && layout == PerfHudLayout.DOCK && isDraggingPerfOverlay) cancelOverlayDrag(overlay)
         currentHudLayout = layout
         currentDockTop = if (layout == PerfHudLayout.DOCK) dockTop else -1
         hud.setHudLayout(layout, detailed)
@@ -1620,6 +2059,7 @@ class PerformanceOverlayManager(
         hud.layoutParams = hudLp
         overlay.layoutParams = lp
         refreshHudStick()
+        if (wasDock && layout != PerfHudLayout.DOCK) restoreFloatingPosition(overlay)
     }
 
     /** @return 停靠卡片的 topMargin；放不下或被虚拟手柄占用时返回 -1。 */
@@ -1653,12 +2093,21 @@ class PerformanceOverlayManager(
     private fun onHudOverlayResized(
         v: View, l: Int, t: Int, r: Int, b: Int, oldL: Int, oldT: Int, oldR: Int, oldB: Int
     ) {
-        if (!isHudStyle() || currentHudLayout == PerfHudLayout.DOCK || isDraggingPerfOverlay) return
+        if (currentHudLayout == PerfHudLayout.DOCK || isDraggingPerfOverlay) return
         val newW = r - l
         val newH = b - t
         val oldW = oldR - oldL
         val oldH = oldB - oldT
         if (newW == oldW && newH == oldH) return
+        if (hasRelativePosition()) {
+            restoreFloatingPosition(v)
+            return
+        }
+        if (oldW == 0 && oldH == 0 && overlayPrefs.getBoolean("has_custom_position", false)) {
+            restoreFloatingPosition(v)
+            return
+        }
+        if (!isHudStyle()) return
         val lp = v.layoutParams as? FrameLayout.LayoutParams ?: return
         if (lp.gravity != Gravity.NO_GRAVITY) return
         val parent = v.parent as? View ?: return
@@ -1666,14 +2115,22 @@ class PerformanceOverlayManager(
         val ph = parent.height
         if (pw == 0 || ph == 0) return
 
-        var left = lp.leftMargin
-        var top = lp.topMargin
-        if (oldW > 0 && oldL + oldW / 2 > pw / 2) left = oldR - newW
-        if (oldH > 0 && oldT + oldH / 2 > ph / 2) top = oldB - newH
-        left = left.coerceIn(0, maxOf(0, pw - newW))
-        top = top.coerceIn(0, maxOf(0, ph - newH))
+        val availableWidth = maxOf(0, pw - parent.paddingLeft - parent.paddingRight - lp.rightMargin)
+        val availableHeight = maxOf(0, ph - parent.paddingTop - parent.paddingBottom - lp.bottomMargin)
+        // A placement change already chose the new position; don't re-anchor it to the old bounds.
+        val left = if (l != oldL) lp.leftMargin.coerceIn(0, maxOf(0, availableWidth - newW)) else
+            anchoredMargin(oldL, oldR, pw, parent.paddingLeft, parent.paddingRight, availableWidth, newW, lp.leftMargin)
+        val top = if (t != oldT) lp.topMargin.coerceIn(0, maxOf(0, availableHeight - newH)) else
+            anchoredMargin(oldT, oldB, ph, parent.paddingTop, parent.paddingBottom, availableHeight, newH, lp.topMargin)
         if (left != lp.leftMargin || top != lp.topMargin) {
+            val generation = overlayStyleGeneration
+            val previousLeft = lp.leftMargin
+            val previousTop = lp.topMargin
             v.post {
+                if (generation != overlayStyleGeneration || !isHudStyle() || isDraggingPerfOverlay ||
+                    currentHudLayout == PerfHudLayout.DOCK || lp.gravity != Gravity.NO_GRAVITY ||
+                    lp.leftMargin != previousLeft || lp.topMargin != previousTop
+                ) return@post
                 lp.leftMargin = left
                 lp.topMargin = top
                 v.layoutParams = lp
@@ -1697,11 +2154,11 @@ class PerformanceOverlayManager(
             decode = enabled(PerformanceItem.DECODE_LATENCY.preferenceKey),
             host = enabled(PerformanceItem.HOST_LATENCY.preferenceKey),
             battery = enabled(PerformanceItem.BATTERY.preferenceKey),
-            clock = enabled(PerformanceItem.CLOCK.preferenceKey)
-        ).also { hudVisibility = it }
+            clock = enabled(PerformanceItem.CLOCK.preferenceKey),
+            health = perfOverlayHealthVisible
+        )
     }
 
-    private var hudVisibility = PerfHudVisibility()
     private var lastHudSnapshot: PerfHudSnapshot? = null
     private var hudHintChecked = false
 
@@ -1768,7 +2225,7 @@ class PerformanceOverlayManager(
         } else {
             null
         }
-        val clock = if (hudVisibility.clock) hudClockFormatter().format(Date()) else null
+        val clock = hudClockFormatter().format(Date())
         val moonIcon = getCurrentMoonPhaseIcon()
         return PerfHudSnapshot(
             width = info.initialWidth,
@@ -1795,13 +2252,14 @@ class PerformanceOverlayManager(
         )
     }
 
-    private fun updateHud(info: PerformanceInfo) {
+    private fun updateHud(info: PerformanceInfo, recordHistory: Boolean = true) {
         val overlay = performanceOverlayView ?: return
         val hud = hudView ?: return
         val snapshot = buildHudSnapshot(info)
         lastHudSnapshot = snapshot
-        hud.setSnapshot(snapshot)
+        hud.setSnapshot(snapshot, recordHistory)
         applyHudPlacement(overlay, force = false)
+        if (hud.isLayoutRequested && hasRelativePosition()) restoreFloatingPosition(overlay)
         maybeShowHudHint()
     }
 
@@ -1819,87 +2277,99 @@ class PerformanceOverlayManager(
         Toast.makeText(activity, text, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
     }
 
-    /**
-     * HUD 触摸：单击切换信息密度、双击切换横竖排、长按查看指标说明、拖动挪位置（停靠时不可拖）。
-     * 单击/双击复用经典样式的 [handleClickEvent]，拖动和吸附复用原有逻辑。
-     */
-    private fun handleHudTouch(v: View, event: MotionEvent): Boolean {
-        val docked = currentHudLayout == PerfHudLayout.DOCK
+    private fun handleOverlayTouch(v: View, event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && isHudStyle()) {
+            gestures.resolvePendingBeforeDown(
+                event.eventTime, event.rawX, event.rawY,
+                ViewConfiguration.get(activity).scaledDoubleTapSlop, perfOverlayDoubleTapEnabled
+            )
+        }
+        val hud = isHudStyle()
+        val docked = hud && currentHudLayout == PerfHudLayout.DOCK
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                hudLongPressFired = false
+                overlayTouchActive = true
                 hudTouchX = event.x
                 hudTouchY = event.y
                 if (docked) {
                     isDraggingPerfOverlay = true
                     perfOverlayStartX = event.rawX
                     perfOverlayStartY = event.rawY
-                    clickStartTime = System.currentTimeMillis()
                 } else {
                     handleActionDown(v, event)
                 }
-                val longPress = ViewConfiguration.getLongPressTimeout().toLong()
-                uiHandler.postDelayed(hudPressRunnable, longPress / 3)
-                uiHandler.postDelayed(hudLongPressRunnable, longPress)
+                val configuration = ViewConfiguration.get(activity)
+                gestures.down(
+                    event.eventTime, event.rawX, event.rawY, event.x, event.y, configuration.scaledDoubleTapSlop,
+                    single = !hud || perfOverlaySingleTapEnabled,
+                    double = perfOverlayDoubleTapEnabled,
+                    longPress = hud && perfOverlayLongPressEnabled
+                )
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                if (hudLongPressFired) return true
-                val slop = ViewConfiguration.get(activity).scaledTouchSlop
-                if (abs(event.rawX - perfOverlayStartX) > slop || abs(event.rawY - perfOverlayStartY) > slop) {
-                    uiHandler.removeCallbacks(hudLongPressRunnable)
-                    clearHudPress()
+                if (!overlayTouchActive) return true
+                if (movedBeyondSlop(event)) {
+                    gestures.moveBeyondSlop()
+                    hudView?.clearPressed()
                 }
-                return if (docked) true else handleActionMove(v, event)
+                if (!docked && isDraggingPerfOverlay) handleActionMove(v, event)
+                return true
             }
             MotionEvent.ACTION_UP -> {
-                uiHandler.removeCallbacks(hudLongPressRunnable)
-                clearHudPress()
-                if (hudLongPressFired) {
-                    isDraggingPerfOverlay = false
-                    return true
+                if (!overlayTouchActive) return true
+                overlayTouchActive = false
+                if (movedBeyondSlop(event)) {
+                    gestures.moveBeyondSlop()
                 }
+                hudView?.clearPressed()
                 if (docked) {
                     isDraggingPerfOverlay = false
-                    if (isClick(event)) handleClickEvent()
-                    return true
+                } else if (isDraggingPerfOverlay) {
+                    handleActionUp(v, event)
                 }
-                return handleActionUp(v, event)
+                gestures.up(event.eventTime)
+                return true
             }
             MotionEvent.ACTION_CANCEL -> {
-                uiHandler.removeCallbacks(hudLongPressRunnable)
-                clearHudPress()
-                val wasDragging = isDraggingPerfOverlay
-                isDraggingPerfOverlay = false
-                applyDraggingVisualFeedback(v, false)
-                if (wasDragging && !docked && !hudLongPressFired) snapToNearestPosition(v)
+                cancelOverlayInteraction()
+                return true
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                cancelOverlayInteraction()
                 return true
             }
         }
         return false
     }
 
-    private fun clearHudPress() {
-        uiHandler.removeCallbacks(hudPressRunnable)
-        hudView?.clearPressed()
+    private fun movedBeyondSlop(event: MotionEvent): Boolean {
+        val slop = ViewConfiguration.get(activity).scaledTouchSlop
+        return abs(event.rawX - perfOverlayStartX) > slop || abs(event.rawY - perfOverlayStartY) > slop
     }
 
     private fun onHudLongPress() {
         val overlay = performanceOverlayView ?: return
         val hud = hudView ?: return
-        hudLongPressFired = true
+        if (currentHudLayout != PerfHudLayout.DOCK && isDraggingPerfOverlay && !perfOverlayMoved) {
+            restoreOverlayLayout(overlay)
+        }
         isDraggingPerfOverlay = false
-        lastClickTime = 0
+        hideSnapGuides()
         applyDraggingVisualFeedback(overlay, false)
         overlay.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         val target = hud.targetAt(hudTouchX - hud.left, hudTouchY - hud.top) ?: PerfHudTarget.DIAGNOSIS
-        clearHudPress()
+        hud.clearPressed()
         overlayPrefs.edit { putBoolean(KEY_HUD_LONG_PRESS_USED, true) }
         showHudTargetInfo(target)
     }
 
     private fun showHudTargetInfo(target: PerfHudTarget) {
         if (infoSheets.showFor(target)) return
+        showManagerTargetInfo(target)
+    }
+
+    private fun showManagerTargetInfo(target: PerfHudTarget) {
         when (target) {
             PerfHudTarget.RESOLUTION -> showResolutionInfo()
             PerfHudTarget.DECODER -> showDecoderInfo()
@@ -1915,8 +2385,6 @@ class PerformanceOverlayManager(
     ).toInt()
 
     companion object {
-        private const val CLICK_THRESHOLD = 10
-        private const val DOUBLE_CLICK_TIMEOUT = 300
         private const val DELAYED_SHOW_MS = 1000L
         private const val CLOCK_SECOND_UPDATE_MS = 1000L
         private const val CLOCK_MINUTE_MS = 60_000L
@@ -1926,9 +2394,21 @@ class PerformanceOverlayManager(
         private const val DOCK_SIDE_MARGIN_DP = 10f
         private const val DOCK_GAP_DP = 10f
         private const val HUD_EDGE_INSET_DP = 8f
+        private const val SNAP_GUIDE_DISTANCE_DP = 16f
+        private const val SNAP_GUIDES_TAG = "performance_overlay_snap_guides"
+        private const val KEY_RELATIVE_X = "relative_x"
+        private const val KEY_RELATIVE_Y = "relative_y"
+        private const val KEY_GUIDE_X = "guide_x"
+        private const val KEY_GUIDE_Y = "guide_y"
         private const val FULL_MOON_TOLERANCE = 1.0 / 29.53
         private const val KEY_HUD_HINT_SHOWN = "hud_hint_shown"
         private const val KEY_HUD_LONG_PRESS_USED = "hud_long_press_used"
+        private const val KEY_HUD_HEALTH = "hud_health_enabled"
+        private const val KEY_HUD_SINGLE_TAP = "hud_single_tap_style_enabled"
+        private const val KEY_HUD_DOUBLE_TAP = "hud_double_tap_layout_enabled"
+        private const val KEY_HUD_LONG_PRESS = "hud_long_press_info_enabled"
+        private const val KEY_LEGACY_ORIENTATION = "layout_orientation"
+        private const val KEY_DEFAULT_ORIENTATION = "list_perf_overlay_orientation"
 
         private val DECODER_TYPE_MAP = mapOf(
             "avc" to DecoderTypeInfo("H.264/AVC", "AVC"),
@@ -1939,5 +2419,36 @@ class PerformanceOverlayManager(
             "vp9" to DecoderTypeInfo("VP9", "VP9"),
             "vp8" to DecoderTypeInfo("VP8", "VP8")
         )
+    }
+}
+
+private class PerfOverlaySnapGuides(context: Context, color: Int) : View(context) {
+    private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = color
+        alpha = 210
+        strokeWidth = resources.displayMetrics.density * 1.5f
+    }
+    private var guideX: Int? = null
+    private var guideY: Int? = null
+    private val overlayBounds = Rect()
+    private val gap = (resources.displayMetrics.density * 4).roundToInt()
+
+    fun update(x: Int?, y: Int?, left: Int, top: Int, width: Int, height: Int) {
+        guideX = x
+        guideY = y
+        overlayBounds.set(left - gap, top - gap, left + width + gap, top + height + gap)
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        guideX?.let {
+            canvas.drawLine(it.toFloat(), 0f, it.toFloat(), overlayBounds.top.toFloat(), guidePaint)
+            canvas.drawLine(it.toFloat(), overlayBounds.bottom.toFloat(), it.toFloat(), height.toFloat(), guidePaint)
+        }
+        guideY?.let {
+            canvas.drawLine(0f, it.toFloat(), overlayBounds.left.toFloat(), it.toFloat(), guidePaint)
+            canvas.drawLine(overlayBounds.right.toFloat(), it.toFloat(), width.toFloat(), it.toFloat(), guidePaint)
+        }
     }
 }

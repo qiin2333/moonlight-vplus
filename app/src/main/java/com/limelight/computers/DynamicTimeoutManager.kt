@@ -78,13 +78,12 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
                 successCount.get(), failureCount.get(), successRate * 100, consecutiveFailures, averageResponseTimeMs)
         }
 
-        fun getCooldownRemainingMs(nowMs: Long): Long {
+        fun getCooldownRemainingMs(nowMs: Long, maxCooldownMs: Long? = null): Long {
             if (consecutiveFailures < PROBE_COOLDOWN_FAILURE_THRESHOLD) {
                 return 0
             }
 
-            val multiplierShift = (consecutiveFailures - PROBE_COOLDOWN_FAILURE_THRESHOLD).coerceAtMost(3)
-            val cooldownMs = (PROBE_COOLDOWN_BASE_MS shl multiplierShift).coerceAtMost(PROBE_COOLDOWN_MAX_MS)
+            val cooldownMs = calculateProbeCooldownMs(consecutiveFailures, maxCooldownMs)
             val elapsedMs = nowMs - lastFailureTime
             return (cooldownMs - elapsedMs).coerceAtLeast(0)
         }
@@ -128,12 +127,19 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
         return addressStats[address]?.isHealthy == true
     }
 
-    fun getProbeCooldownRemainingMs(address: String, isLikelyOnline: Boolean): Long {
+    fun getProbeCooldownRemainingMs(
+        address: String,
+        isLikelyOnline: Boolean,
+        maxCooldownMs: Long? = null
+    ): Long {
         if (isLikelyOnline) {
             return 0
         }
 
-        return addressStats[address]?.getCooldownRemainingMs(System.currentTimeMillis()) ?: 0
+        return addressStats[address]?.getCooldownRemainingMs(
+            System.currentTimeMillis(),
+            maxCooldownMs
+        ) ?: 0
     }
 
     /**
@@ -237,14 +243,31 @@ class DynamicTimeoutManager(private val networkDiagnostics: NetworkDiagnostics) 
     }
 
     companion object {
+        internal fun calculateProbeCooldownMs(
+            consecutiveFailures: Int,
+            maxCooldownMs: Long? = null
+        ): Long {
+            if (consecutiveFailures < PROBE_COOLDOWN_FAILURE_THRESHOLD) {
+                return 0
+            }
+
+            val cooldownMs = if (consecutiveFailures <= PROBE_COOLDOWN_FAST_FAILURE_LIMIT) {
+                PROBE_COOLDOWN_BASE_MS
+            } else {
+                PROBE_COOLDOWN_MAX_MS
+            }
+            return maxCooldownMs?.let { minOf(cooldownMs, it.coerceAtLeast(0)) } ?: cooldownMs
+        }
+
         // 默认超时配置
         private val DEFAULT_LAN_CONFIG = TimeoutConfig(3000, 7000, 2000)
         private val DEFAULT_WAN_CONFIG = TimeoutConfig(8000, 12000, 5000)
         private val DEFAULT_MOBILE_CONFIG = TimeoutConfig(10000, 15000, 8000)
         private val DEFAULT_UNSTABLE_CONFIG = TimeoutConfig(15000, 20000, 10000)
         private const val PROBE_COOLDOWN_FAILURE_THRESHOLD = 3
-        private const val PROBE_COOLDOWN_BASE_MS: Long = 30000
-        private const val PROBE_COOLDOWN_MAX_MS: Long = 300000
+        private const val PROBE_COOLDOWN_FAST_FAILURE_LIMIT = 30
+        private const val PROBE_COOLDOWN_BASE_MS: Long = 10_000L
+        private const val PROBE_COOLDOWN_MAX_MS: Long = 30_000L
         private const val UNSTABLE_RECOVERY_TIME_MS: Long = 30000 // 30秒后恢复
     }
 }

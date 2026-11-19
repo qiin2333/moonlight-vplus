@@ -258,6 +258,9 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">48dp</item>
+        <!-- StreamTheme has no AppCompat switchStyle to supply input defaults. -->
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
         <item name="android:singleLine">false</item>
         <item name="android:background">@null</item>
     </style>

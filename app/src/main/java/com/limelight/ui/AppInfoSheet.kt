@@ -1,4 +1,4 @@
-package com.limelight.gamemenu
+package com.limelight.ui
 
 import android.app.Dialog
 import android.content.Context
@@ -33,14 +33,25 @@ import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppActionSheet
 import kotlinx.coroutines.launch
 
-/** The caller registers this dialog as the input owner, including for USB gamepads. */
-internal fun showGameMenuInfoSheet(context: Context, title: String, text: String): Dialog {
+/**
+ * Shows a scrollable explanation. The optional [onAction] dismisses the sheet when it returns true.
+ * In-stream callers register the returned dialog as the input owner, including for USB gamepads.
+ */
+internal fun showAppInfoSheet(
+    context: Context,
+    title: String,
+    text: String,
+    actionLabel: String? = null,
+    onAction: (() -> Boolean)? = null
+): Dialog {
     lateinit var dialog: Dialog
     dialog = AppActionSheet.showCustom(context) {
         val scrollState = rememberScrollState()
         val scope = rememberCoroutineScope()
         val focusRequester = remember { FocusRequester() }
+        val actionFocusRequester = remember { FocusRequester() }
         val footerFocusRequester = remember { FocusRequester() }
+        val hasAction = actionLabel != null && onAction != null
         val windowFocused = LocalWindowInfo.current.isWindowFocused
         val scrollStep = with(LocalDensity.current) { 48.dp.toPx() }
         LaunchedEffect(windowFocused) {
@@ -71,7 +82,8 @@ internal fun showGameMenuInfoSheet(context: Context, title: String, text: String
                         if (!canScroll) {
                             if (direction > 0) {
                                 if (event.type == KeyEventType.KeyDown) {
-                                    footerFocusRequester.requestFocus()
+                                    if (hasAction) actionFocusRequester.requestFocus()
+                                    else footerFocusRequester.requestFocus()
                                 }
                                 return@onPreviewKeyEvent true
                             }
@@ -95,13 +107,27 @@ internal fun showGameMenuInfoSheet(context: Context, title: String, text: String
                         .padding(horizontal = 8.dp, vertical = 8.dp)
                 )
             }
+            if (actionLabel != null && onAction != null) {
+                AppActionSheet.ActionSheetFooterAction(
+                    label = actionLabel,
+                    onClick = { if (onAction()) dialog.dismiss() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(actionFocusRequester)
+                        .focusProperties {
+                            up = focusRequester
+                            down = footerFocusRequester
+                        }
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
             AppActionSheet.ActionSheetFooterAction(
                 label = context.getString(android.R.string.ok),
                 onClick = { dialog.dismiss() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(footerFocusRequester)
-                    .focusProperties { up = focusRequester }
+                    .focusProperties { up = if (hasAction) actionFocusRequester else focusRequester }
                     .padding(horizontal = 12.dp, vertical = 4.dp)
             )
         }
