@@ -90,7 +90,7 @@ object CrownColorPickerBinder {
 
         override fun draw(canvas: Canvas) {
             val bounds: Rect = bounds
-            rect.set(bounds.left, bounds.top, bounds.right, bounds.bottom)
+            rect.set(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat())
             val radius = 5 * density
             if (Color.alpha(color) < 0xFF) {
                 paint.color = 0xFFE1E4EA.toInt()

@@ -4,6 +4,7 @@ import android.content.res.Resources
 import android.view.View
 import android.view.ViewGroup
 
+import com.limelight.binding.input.advance_setting.superpage.ElementEditText
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
 
 object CrownAutoColorApplier {
@@ -147,11 +148,10 @@ object CrownAutoColorApplier {
             return
         }
         if (view is ElementEditText && view.id != View.NO_ID) {
-            val idName: String
-            try {
-                idName = view.resources.getResourceEntryName(view.id)
+            val idName = try {
+                view.resources.getResourceEntryName(view.id)
             } catch (e: Resources.NotFoundException) {
-                idName = ""
+                ""
             }
 
             var color = 0
@@ -173,7 +173,7 @@ object CrownAutoColorApplier {
             }
 
             if (matched) {
-                updateColorDisplay(view, color)
+                CrownColorPickerBinder.updateColorDisplay(view, color)
             }
         }
 

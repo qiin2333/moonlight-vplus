@@ -146,7 +146,8 @@ object CrownScreenColorSampler {
             var cursor = random.nextDouble() * totalDistance
             var selectedIndex = sampleCount - 1
             for (sampleIndex in 0 until sampleCount) {
-                cursor -= distances[sampleIndex]                if (cursor <= 0) {
+                cursor -= distances[sampleIndex]
+                if (cursor <= 0) {
                     selectedIndex = sampleIndex
                     break
                 }
