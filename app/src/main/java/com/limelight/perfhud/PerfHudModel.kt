@@ -250,7 +250,8 @@ data class PerfHudVisibility(
     val decode: Boolean = true,
     val host: Boolean = true,
     val battery: Boolean = true,
-    val clock: Boolean = false
+    val clock: Boolean = false,
+    val health: Boolean = true
 ) {
     val stream get() = resolution || decoder
     val latency get() = network || decode || host

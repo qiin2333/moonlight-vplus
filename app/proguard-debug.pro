@@ -22,6 +22,18 @@
 -keep class com.limelight.gamemenu.TouchPointerSensitivity** { *; }
 -keep class com.limelight.gamemenu.TouchPointerPreset** { *; }
 -keep class com.limelight.gamemenu.GameMenuCardsKt { *; }
+# Performance-overlay tests invoke menu composables and HUD models across APKs.
+-keep class com.limelight.gamemenu.GameMenuOptionsKt { *; }
+-keep class com.limelight.PerfOverlayAnchor { *; }
+-keep class com.limelight.gamemenu.GameMenuKt {
+    public static int performanceAnchorLabel(com.limelight.PerfOverlayAnchor);
+}
+-keep class com.limelight.gamemenu.SegmentedFocusTargets { *; }
+-keep class com.limelight.gamemenu.GameMenu$MenuOption { *; }
+-keep class com.limelight.gamemenu.GameMenu$SegmentOption { *; }
+-keep class com.limelight.gamemenu.GameMenu$InlineControl** { *; }
+-keep class com.limelight.PerformanceOverlayManager { *; }
+-keep class com.limelight.perfhud.** { *; }
 # USB panel instrumentation renders state and exercises controller navigation.
 -keep class com.limelight.UsbDevicePanelKt { *; }
 -keep class com.limelight.UsbPanelDevice { *; }
@@ -121,11 +133,16 @@
     public void setResolutionScale(int);
     public boolean getShowAudioHapticsCard();
     public int getPerfOverlayBgOpacity();
+    public com.limelight.preferences.PreferenceConfiguration$PerfOverlayOrientation getPerfOverlayOrientation();
+    public void setPerfOverlayOrientation(com.limelight.preferences.PreferenceConfiguration$PerfOverlayOrientation);
+    public boolean writePreferences(...);
 }
 -keepclassmembers class com.limelight.preferences.PreferenceConfiguration$Companion {
     public int getDefaultBitrate(java.lang.String, java.lang.String);
     public com.limelight.preferences.PreferenceConfiguration readPreferences(android.content.Context, android.view.Display);
+    public com.limelight.preferences.PreferenceConfiguration readPreferences(android.content.Context);
 }
+-keep class com.limelight.preferences.PreferenceConfiguration$PerfOverlayOrientation { *; }
 
 # Feature-page navigation is exercised by instrumentation after R8.
 -keep class com.limelight.preferences.StreamSettings$SettingsFragment {

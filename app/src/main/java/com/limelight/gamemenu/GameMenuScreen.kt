@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +103,7 @@ import androidx.compose.ui.semantics.testTag as semanticsTestTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -207,6 +209,7 @@ internal fun GameMenuScreen(
         mutableStateOf(false)
     }
     var handledRestoreFocusRequestToken by remember { mutableIntStateOf(0) }
+    var handledPageFocusRequest by remember { mutableIntStateOf(0) }
     LaunchedEffect(appContext) {
         val (store, shouldShow) = withContext(Dispatchers.IO) {
             val loadedStore = FeatureGuideStore(appContext)
@@ -359,7 +362,8 @@ internal fun GameMenuScreen(
                 handledHardwareFocusRequestToken = handledHardwareFocusRequestToken,
                 guideActive = guideActive,
                 hasFocusTarget = state.options.isNotEmpty() ||
-                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE,
+                    state.pageLayout == GameMenuPageLayout.TOUCH_MODE ||
+                    state.pageLayout == GameMenuPageLayout.PERF_POSITION,
                 menuContentLaidOut = menuContentLaidOut,
                 menuHasFocus = menuHasFocus
             )
@@ -389,6 +393,16 @@ internal fun GameMenuScreen(
 
     LaunchedEffect(state.restoreMicrophoneEntry, menuContentLaidOut) {
         if (state.restoreMicrophoneEntry && menuContentLaidOut) {
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            initialFocusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(state.pageFocusRequest, menuContentLaidOut, guideActive) {
+        if (state.pageFocusRequest > handledPageFocusRequest && menuContentLaidOut && !guideActive &&
+            state.controllerNavigationActive
+        ) {
+            handledPageFocusRequest = state.pageFocusRequest
             inputModeManager.requestInputMode(InputMode.Keyboard)
             initialFocusRequester.requestFocus()
         }
@@ -578,11 +592,19 @@ private fun GameMenuContent(
     val menuScrollState = rememberScrollState()
     val wideTouchMode = wideLayout && state.pageLayout == GameMenuPageLayout.TOUCH_MODE
     val microphonePage = state.pageLayout == GameMenuPageLayout.MICROPHONE
+    val performancePositionPage = state.pageLayout == GameMenuPageLayout.PERF_POSITION
+    val performancePage = state.pageLayout.isPerformancePage() && !performancePositionPage
     val touchModeBackFocusRequester = remember { FocusRequester() }
 
-    DisposableEffect(microphonePage, menuScrollState) {
-        if (microphonePage) callbacks.onMicrophoneScrollReady { menuScrollState.dispatchRawDelta(it) }
-        onDispose { if (microphonePage) callbacks.onMicrophoneScrollReady(null) }
+        DisposableEffect(microphonePage, performancePage, performancePositionPage, menuScrollState) {
+            if (microphonePage || performancePage || performancePositionPage) {
+            callbacks.onMicrophoneScrollReady { menuScrollState.dispatchRawDelta(it) }
+        }
+            onDispose {
+                if (microphonePage || performancePage || performancePositionPage) {
+                    callbacks.onMicrophoneScrollReady(null)
+                }
+            }
     }
 
     LaunchedEffect(state.title, state.isSubmenu) {
@@ -607,8 +629,12 @@ private fun GameMenuContent(
             state = state,
             callbacks = callbacks,
             crownGuideModifier = crownGuideModifier,
-            backFocusRequester = touchModeBackFocusRequester.takeIf { wideTouchMode || microphonePage },
-            backDownFocusRequester = initialFocusRequester.takeIf { wideTouchMode || microphonePage }
+            backFocusRequester = touchModeBackFocusRequester.takeIf {
+                wideTouchMode || microphonePage || performancePage || performancePositionPage
+            },
+            backDownFocusRequester = initialFocusRequester.takeIf {
+                wideTouchMode || microphonePage || performancePage || performancePositionPage
+            }
         )
 
         if (!state.isSubmenu) {
@@ -627,7 +653,16 @@ private fun GameMenuContent(
             )
         }
 
-        if (microphonePage) {
+        if (performancePositionPage) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                PerformancePositionGrid(
+                    options = state.options,
+                    onOptionClick = callbacks.onOptionClick,
+                    initialFocusRequester = initialFocusRequester,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else if (microphonePage) {
             MicrophoneDeviceList(state.microphone, callbacks.onMicrophoneInput,
                 initialFocusRequester, touchModeBackFocusRequester)
         } else if (wideTouchMode) {
@@ -658,6 +693,7 @@ private fun GameMenuContent(
                     modifier = Modifier.weight(1f),
                     initialFocusRequester = initialFocusRequester,
                     initialFocusIconKey = "microphone_input".takeIf { state.restoreMicrophoneEntry },
+                    initialFocusOptionKey = state.initialFocusOptionKey,
                     optionFocusModifier = initialFocusModifier
                 )
                 GameMenuCards(
@@ -677,6 +713,10 @@ private fun GameMenuContent(
                     callbacks.onSegmentClick,
                     initialFocusRequester = initialFocusRequester,
                     initialFocusIconKey = "microphone_input".takeIf { state.restoreMicrophoneEntry },
+                    initialFocusOptionKey = state.initialFocusOptionKey,
+                    inlineControlsFocusable = !performancePage,
+                    linearNavigation = performancePage,
+                    topFocusRequester = touchModeBackFocusRequester.takeIf { performancePage },
                     optionFocusModifier = initialFocusModifier
                 )
                 if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {
