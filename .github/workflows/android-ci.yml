@@ -213,6 +213,19 @@ jobs:
           keytool -list -keystore "$dir/debug.keystore" -storepass android -alias androiddebugkey > /dev/null
           echo "installed=true" >> "$GITHUB_OUTPUT"
 
+      # Thor fork: master builds get versionName <base>.<run number> (e.g. 12.15.17.42)
+      # so the in-app updater can tell builds apart. Only this runner's copy changes.
+      - name: Stamp Thor build version
+        id: thor_version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          set -euo pipefail
+          IFS=$'\t' read -r base code < <(bash .github/release/gradle-version.sh read app/build.gradle)
+          version="${base}.${GITHUB_RUN_NUMBER}"
+          bash .github/release/gradle-version.sh write app/build.gradle "$version" "$code"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Build NonRoot Debug APK
         run: ./gradlew :app:assembleNonRootDebug --stacktrace
 
@@ -254,6 +267,45 @@ jobs:
             grep -Fx "lib/$abi/libmoonlight_usbip.so" "$RUNNER_TEMP/apk-native-files.txt"
             grep -Fx "lib/$abi/libc++_shared.so" "$RUNNER_TEMP/apk-native-files.txt"
           done
+
+      # Thor fork: publish each master build as the repo's latest release. The app's
+      # update check reads releases/latest, so the Thor offers it on next launch.
+      # Requires the fixed debug key, otherwise the update could not install.
+      - name: Publish Thor build release
+        if: steps.thor_version.outputs.version != '' && steps.debug_keystore.outputs.installed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.thor_version.outputs.version }}
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          COMPARE_URL: ${{ github.event.compare }}
+        run: |
+          set -euo pipefail
+          src=$(find app/build/outputs/apk/nonRoot/debug -maxdepth 1 -type f -name '*.apk' -print -quit)
+          apk="$RUNNER_TEMP/moonlight-thor-${VERSION}.apk"
+          cp "$src" "$apk"
+          sha=$(sha256sum "$apk" | awk '{print $1}')
+          {
+            echo "## Changes"
+            echo
+            printf '%s' "$COMMITS_JSON" | jq -r '.[] | "- " + (.message | split("\n")[0]) + " (" + .id[0:7] + ")"'
+            echo
+            echo "[Full diff]($COMPARE_URL)"
+            echo
+            echo "SHA-256: \`$sha\`"
+          } > "$RUNNER_TEMP/notes.md"
+          gh release create "thor-${VERSION}" "$apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Moonlight Thor ${VERSION}" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest
+          # Keep the 10 newest Thor builds; older releases and their tags are removed.
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("thor-"))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' |
+            while read -r old; do
+              gh release delete "$old" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+            done
 
       - name: Upload APK artifact
         if: ${{ always() }}
