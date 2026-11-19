@@ -270,7 +270,7 @@
                 android:id="@+id/page_super_menu_disconnect"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:background="@drawable/crown_config_action_button_bg"
+                android:background="@drawable/crown_danger_button_bg"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingHorizontal="12dp">

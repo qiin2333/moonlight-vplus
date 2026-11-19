@@ -88,11 +88,17 @@
                         <RadioButton
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:textColor="@color/crown_text_primary"
+                            android:textSize="13sp"
+                            app:buttonTint="?attr/appAccent"
                             android:tag="LS"
                             android:text="@string/layout_page_analog_stick_text_4e6d6" />
                         <RadioButton
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:textColor="@color/crown_text_primary"
+                            android:textSize="13sp"
+                            app:buttonTint="?attr/appAccent"
                             android:tag="RS"
                             android:text="@string/layout_page_analog_stick_text_faf56"/>
                     </RadioGroup>

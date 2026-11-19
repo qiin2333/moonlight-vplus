@@ -86,6 +86,8 @@
     <color name="app_dialog_accent_soft">#1AFF6B9D</color>
     <color name="app_dialog_accent_focus">#33FF6B9D</color>
     <color name="app_action_sheet_danger">#FFB04A5A</color>
+    <color name="app_action_sheet_danger_soft">#12B04A5A</color>
+    <color name="app_action_sheet_danger_border">#40B04A5A</color>
     <color name="app_action_sheet_divider">#141D1B20</color>
     <color name="iperf_output_surface">#FFF8F6FA</color>
     <color name="iperf_output_text">#FF242830</color>
