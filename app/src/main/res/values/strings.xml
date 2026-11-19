@@ -913,6 +913,7 @@
     <string name="summary_merge_super_config">Merge new configuration buttons into existing configuration</string>
     <string name="title_crown_config_management">Manage Crown profiles</string>
     <string name="summary_crown_config_management">Create, select, import, export, or merge on-screen control and touch profiles.</string>
+    <string name="summary_crown_config_management_with_count">%1$d profiles ready to switch</string>
     <string name="title_crown_edit_current">Edit current layout</string>
     <string name="summary_crown_edit_current">Open My Crowns to manage the active layout.</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d controls · ready for the current stream</string>

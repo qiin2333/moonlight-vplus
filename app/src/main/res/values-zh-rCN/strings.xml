@@ -823,6 +823,7 @@
     <string name="summary_merge_super_config">将新的配置的按键合并到现有配置中。</string>
     <string name="title_crown_config_management">管理 Crown 配置</string>
     <string name="summary_crown_config_management">创建、选择、导入、导出或合并屏幕控制与触控配置。</string>
+    <string name="summary_crown_config_management_with_count">%1$d 套配置可切换</string>
     <string name="title_crown_edit_current">编辑当前布局</string>
     <string name="summary_crown_edit_current">打开「我的王冠」管理当前布局。</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d 个控件 · 已适配当前串流</string>

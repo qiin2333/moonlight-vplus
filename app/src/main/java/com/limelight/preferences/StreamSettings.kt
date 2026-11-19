@@ -2880,6 +2880,20 @@ class StreamSettings : ThemedAppCompatActivity() {
                     getString(R.string.summary_crown_edit_current)
                 }
             }
+
+            // Design P1: the profiles row shows how many setups exist.
+            findPreference<Preference>("crown_config_management")?.apply {
+                val profileCount = runCatching {
+                    SuperConfigDatabaseHelper(requireContext()).use { helper ->
+                        helper.queryAllConfigIds().size
+                    }
+                }.getOrElse { 0 }
+                summary = if (profileCount > 0) {
+                    getString(R.string.summary_crown_config_management_with_count, profileCount)
+                } else {
+                    getString(R.string.summary_crown_config_management)
+                }
+            }
         }
 
         override fun onResume() {
