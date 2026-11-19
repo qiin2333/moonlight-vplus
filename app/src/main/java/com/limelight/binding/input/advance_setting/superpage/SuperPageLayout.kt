@@ -108,13 +108,10 @@ open class SuperPageLayout : FrameLayout {
     }
 
     fun startAnimator(startX: Float, endX: Float, animatorListenerAdapter: AnimatorListenerAdapter) {
-        // SuperPagesController positions pages with their absolute x coordinate.
-        // Animating translationX on top of that absolute position makes the final
-        // location become `x + translationX`, which is why panels could finish
-        // partially off screen after a slide. Animate the same property that the
-        // controller uses and keep translationX neutral for callers that inspect
-        // the page bounds.
-        translationX = 0f
+        // Animate x, exactly the property SuperPagesController uses to position pages.
+        // Never "normalize" translationX here: View.x is defined as left + translationX,
+        // so resetting translationX would snap the page back to its layout slot and
+        // undo the final animated position.
         val nextAnimator = ObjectAnimator.ofFloat(this, "x", startX, endX).apply {
             duration = 300
             interpolator = AccelerateDecelerateInterpolator()
@@ -124,7 +121,6 @@ open class SuperPageLayout : FrameLayout {
                     if (animator === animation) {
                         animator = null
                     }
-                    translationX = 0f
                     disableTouch = false
                 }
             })
