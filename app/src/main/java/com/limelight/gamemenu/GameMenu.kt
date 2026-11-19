@@ -2818,7 +2818,7 @@ class GameMenu(
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,
             "game_menu_toggle_performance_overlay" to R.drawable.ic_candy_performance,
-            "game_menu_perf_overlay_style" to R.drawable.ic_candy_performance,
+            "game_menu_perf_overlay_style" to R.drawable.phc_action_auto_color,
             "game_menu_toggle_virtual_controller" to R.drawable.ic_candy_controller,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
             "game_menu_send_keys" to R.drawable.ic_candy_send_keys,
