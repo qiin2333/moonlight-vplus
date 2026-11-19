@@ -18,6 +18,9 @@
     <color name="ui_shell_accent">#FF8FA3</color>
     <color name="ui_shell_accent_soft">#33FF6B9D</color>
     <color name="ui_shell_accent_focus">#66FF6B9D</color>
+    <color name="crown_on_accent">#FF20161B</color>
+    <color name="crown_surface_raised">#FF2A2C34</color>
+    <color name="crown_section_label">#FFFFA9B9</color>
     <color name="settings_page_background">#FF18191F</color>
     <color name="settings_background_overlay">#B31C1D24</color>
     <color name="pc_toolbar_menu_surface_start">#D923242B</color>
@@ -63,6 +66,8 @@
     <color name="app_dialog_accent_soft">#33FF6B9D</color>
     <color name="app_dialog_accent_focus">#66FF6B9D</color>
     <color name="app_action_sheet_danger">#FFFF9AAA</color>
+    <color name="app_action_sheet_danger_soft">#1AFF9AAA</color>
+    <color name="app_action_sheet_danger_border">#4DFF9AAA</color>
     <color name="app_action_sheet_divider">#1FFFFFFF</color>
     <color name="iperf_output_surface">#FF121318</color>
     <color name="iperf_output_text">#FFC9D0D8</color>

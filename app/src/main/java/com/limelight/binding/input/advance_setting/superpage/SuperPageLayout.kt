@@ -108,23 +108,32 @@ open class SuperPageLayout : FrameLayout {
     }
 
     fun startAnimator(startX: Float, endX: Float, animatorListenerAdapter: AnimatorListenerAdapter) {
-        animator = ObjectAnimator.ofFloat(this, "translationX", startX, endX).apply {
+        // Animate x, exactly the property SuperPagesController uses to position pages.
+        // Never "normalize" translationX here: View.x is defined as left + translationX,
+        // so resetting translationX would snap the page back to its layout slot and
+        // undo the final animated position.
+        val nextAnimator = ObjectAnimator.ofFloat(this, "x", startX, endX).apply {
             duration = 300
             interpolator = AccelerateDecelerateInterpolator()
             addListener(animatorListenerAdapter)
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
+                    if (animator === animation) {
+                        animator = null
+                    }
                     disableTouch = false
                 }
             })
         }
+        animator = nextAnimator
         disableTouch = true
-        animator!!.start()
+        nextAnimator.start()
     }
 
     fun endAnimator() {
-        animator?.end()
+        val currentAnimator = animator ?: return
         animator = null
+        currentAnimator.end()
     }
 
     companion object {

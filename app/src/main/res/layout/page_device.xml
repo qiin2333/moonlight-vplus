@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.DevicePickerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="720dp"
+    android:layout_width="664dp"
     android:layout_height="match_parent"
-    android:tag="720">
+    android:tag="664">
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="38dp"
         android:orientation="horizontal"
-        android:background="@drawable/super_content_box_background">
-        <Button
+        android:padding="3dp"
+        android:background="@drawable/crown_config_panel_bg">
+        <TextView
             android:id="@+id/device_nav_actions"
             style="@style/KeyboardKeyRefined.Modifier"
             android:layout_width="0dp"
@@ -16,7 +17,7 @@
             android:layout_weight="1"
             android:background="@drawable/keyboard_picker_tab_selector"
             android:text="@string/crown_device_actions" />
-        <Button
+        <TextView
             android:id="@+id/device_nav_keyboard"
             style="@style/KeyboardKeyRefined.Modifier"
             android:layout_width="0dp"
@@ -24,7 +25,7 @@
             android:layout_weight="1"
             android:background="@drawable/keyboard_picker_tab_selector"
             android:text="@string/crown_device_keyboard" />
-        <Button
+        <TextView
             android:id="@+id/device_nav_mouse"
             style="@style/KeyboardKeyRefined.Modifier"
             android:layout_width="0dp"
@@ -32,7 +33,7 @@
             android:layout_weight="1"
             android:background="@drawable/keyboard_picker_tab_selector"
             android:text="@string/crown_device_mouse" />
-        <Button
+        <TextView
             android:id="@+id/device_nav_gamepad"
             style="@style/KeyboardKeyRefined.Modifier"
             android:layout_width="0dp"
@@ -46,10 +47,10 @@
         android:id="@+id/device_vertical_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="48dp"
+        android:layout_marginTop="38dp"
         android:fillViewport="true"
-        android:padding="5dp"
-        android:background="@drawable/super_content_box_background">
+        android:padding="12dp"
+        android:background="@drawable/crown_config_panel_bg">
         <FrameLayout
             android:id="@+id/device_content"
             android:layout_width="match_parent"
@@ -57,78 +58,78 @@
             <LinearLayout
                 android:id="@+id/device_actions"
                 android:orientation="vertical"
-                android:layout_width="100dp"
+                android:layout_width="360dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:visibility="gone">
                 <Button
                     android:id="@+id/device_cancel"
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:textColor="#B3FFFFFF"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_5f411"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="null"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_d81bb"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="MMS"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_01e77"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="CMS"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_03cbf"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="TPM"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_dd502"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="MTM"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_d4ab3"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="MES"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_1a70f"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="PKS"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_1e243"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="AKS"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_42968"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="CSW"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_34842"/>
@@ -137,42 +138,42 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="DCS"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/crown_direct_config_action" />
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="PZM"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_6c15c"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="OGM"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_104a1"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="EMS"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_item_page_super_menu_text_ce0e8"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="MMO"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_mmo"/>
                 <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginVertical="5dp"
+                    android:layout_height="44dp"
+                    android:layout_marginVertical="3dp"
                     android:tag="DSC"
                     style="@style/KeyboardKeyStyle"
                     android:text="@string/layout_page_device_text_dsc"/>
@@ -181,8 +182,8 @@
             <include
                 android:id="@+id/keyboard_drawing"
                 layout="@layout/crown_keyboard_key_picker"
-                android:layout_width="600dp"
-                android:layout_height="242dp"
+                android:layout_width="640dp"
+                android:layout_height="276dp"
                 android:layout_gravity="center" />
             <FrameLayout
                 android:orientation="vertical"
@@ -275,6 +276,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
+                android:background="@drawable/crown_gamepad_body_bg"
+                android:padding="16dp"
                 android:visibility="gone">
                 <LinearLayout
                     android:orientation="vertical"
@@ -291,33 +294,59 @@
                             android:gravity="center"
                             android:tag="lt"
                             android:text="LT"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g256"
                             android:text="LB"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g512"
                             android:text="RB"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="rt"
                             android:text="RT"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                     </LinearLayout>
                     <LinearLayout
                         android:orientation="horizontal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content">
+                        <LinearLayout
+                            android:orientation="vertical"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="12dp"
+                            android:gravity="center">
+                            <TextView
+                                android:layout_width="56dp"
+                                android:layout_height="56dp"
+                                android:gravity="center"
+                                android:tag="LS"
+                                android:text="LS"
+                                android:textSize="11sp"
+                                android:contentDescription="@string/crown_key_left_stick_description"
+                                android:background="@drawable/crown_gamepad_stick_selector" />
+                            <TextView
+                                android:layout_width="56dp"
+                                android:layout_height="56dp"
+                                android:layout_marginTop="12dp"
+                                android:gravity="center"
+                                android:tag="RS"
+                                android:text="RS"
+                                android:textSize="11sp"
+                                android:contentDescription="@string/crown_key_right_stick_description"
+                                android:background="@drawable/crown_gamepad_stick_selector" />
+                        </LinearLayout>
                         <LinearLayout
                             android:orientation="horizontal"
                             android:layout_width="wrap_content"
@@ -400,7 +429,7 @@
                                     android:gravity="center"
                                     android:tag="g32768"
                                     android:text="Y"
-                                    android:background="@drawable/circle_border"/>
+                                    android:background="@drawable/crown_gamepad_face_selector"/>
                                 <View
                                     android:layout_width="40dp"
                                     android:layout_height="40dp" />
@@ -415,7 +444,7 @@
                                     android:gravity="center"
                                     android:tag="g16384"
                                     android:text="X"
-                                    android:background="@drawable/circle_border"/>
+                                    android:background="@drawable/crown_gamepad_face_selector"/>
                                 <View
                                     android:layout_width="40dp"
                                     android:layout_height="40dp" />
@@ -425,7 +454,7 @@
                                     android:gravity="center"
                                     android:tag="g8192"
                                     android:text="B"
-                                    android:background="@drawable/circle_border"/>
+                                    android:background="@drawable/crown_gamepad_face_selector"/>
                             </LinearLayout>
                             <LinearLayout
                                 android:orientation="horizontal"
@@ -440,7 +469,7 @@
                                     android:gravity="center"
                                     android:tag="g4096"
                                     android:text="A"
-                                    android:background="@drawable/circle_border"/>
+                                    android:background="@drawable/crown_gamepad_face_selector"/>
                                 <View
                                     android:layout_width="40dp"
                                     android:layout_height="40dp" />
@@ -459,14 +488,14 @@
                             android:gravity="center"
                             android:tag="g64"
                             android:text="L3"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="48dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g32"
                             android:text="@string/crown_key_back_short"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="60dp"
                             android:layout_height="40dp"
@@ -474,21 +503,21 @@
                             android:tag="g1024"
                             android:text="@string/crown_key_guide_short"
                             android:contentDescription="@string/crown_key_guide_description"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="48dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g16"
                             android:text="@string/crown_key_start_short"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                         <TextView
                             android:layout_width="42dp"
                             android:layout_height="40dp"
                             android:gravity="center"
                             android:tag="g128"
                             android:text="R3"
-                            android:background="@drawable/circle_border"/>
+                            android:background="@drawable/crown_gamepad_key_selector"/>
                     </LinearLayout>
                 </LinearLayout>
 

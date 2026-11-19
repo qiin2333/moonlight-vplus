@@ -2,8 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/keyboard_picker_tabs"
     android:layout_width="match_parent"
-    android:layout_height="42dp"
-    android:orientation="horizontal">
+    android:layout_height="36dp"
+    android:layout_marginBottom="2dp"
+    android:orientation="horizontal"
+    android:padding="3dp"
+    android:background="@drawable/keyboard_refined_bg">
 
     <TextView
         android:id="@+id/keyboard_picker_tab_main"

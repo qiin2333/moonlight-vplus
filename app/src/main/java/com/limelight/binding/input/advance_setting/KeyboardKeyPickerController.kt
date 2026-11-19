@@ -1,7 +1,6 @@
 package com.limelight.binding.input.advance_setting
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.graphics.Rect
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -9,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.core.content.ContextCompat
 import com.limelight.R
 import com.limelight.ui.UiDismissKeyHandler
 import kotlin.math.abs
@@ -221,7 +221,12 @@ internal class KeyboardKeyPickerController(
     }
 
     private fun updateTabStyle(tab: TextView, active: Boolean) {
-        tab.setTextColor(if (active) Color.WHITE else 0xB3FFFFFF.toInt())
+        tab.setTextColor(
+            ContextCompat.getColor(
+                root.context,
+                if (active) R.color.crown_text_primary else R.color.crown_text_secondary
+            )
+        )
         tab.isSelected = active
     }
 

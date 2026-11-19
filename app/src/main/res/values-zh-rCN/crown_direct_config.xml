@@ -4,5 +4,7 @@
     <string name="crown_direct_config_target">切换到%1$s</string>
     <string name="crown_direct_config_unavailable">配置已失效（已禁用）</string>
     <string name="crown_direct_config_self">当前配置，无需切换</string>
+    <string name="crown_direct_config_current">当前</string>
+    <string name="crown_direct_config_subtitle">选择后立即应用，触控与震动设置一并切换。</string>
     <string name="crown_direct_config_no_other">暂无其他配置</string>
 </resources>

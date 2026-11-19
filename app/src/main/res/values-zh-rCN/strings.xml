@@ -815,7 +815,7 @@
 
     <!-- Crown feature area -->
     <string name="category_crown_features">王冠</string>
-    <string name="title_crown_super_features">启用 Crown 配置</string>
+    <string name="title_crown_super_features">已启用王冠</string>
     <string name="summary_crown_super_features">虚拟屏幕按键解决方案。把屏幕按键、快捷动作、触控模式和振动反馈设置作为命名配置整套切换。</string>
     <string name="summary_export_super_config">导出自定义按钮的和串流内设置的配置文件。</string>
     <string name="title_import_super_config">导入配置</string>
@@ -823,6 +823,15 @@
     <string name="summary_merge_super_config">将新的配置的按键合并到现有配置中。</string>
     <string name="title_crown_config_management">管理 Crown 配置</string>
     <string name="summary_crown_config_management">创建、选择、导入、导出或合并屏幕控制与触控配置。</string>
+    <string name="summary_crown_config_management_with_count">%1$d 套配置可切换</string>
+    <string name="title_crown_edit_current">编辑当前布局</string>
+    <string name="summary_crown_edit_current">打开「我的王冠」管理当前布局。</string>
+    <string name="summary_crown_enabled_state">%1$s · %2$d 个控件 · 已适配当前串流</string>
+    <string name="summary_crown_current_profile">启用王冠输入时使用的配置。</string>
+    <string name="summary_crown_current_profile_empty">还没有选择王冠配置。</string>
+    <string name="summary_crown_store_view">浏览布局预览和社区分享的配置。</string>
+    <string name="title_crown_import_package">导入王冠分享包</string>
+    <string name="summary_crown_import_package">从本机恢复一份分享的王冠配置。</string>
     <string name="crown_config_action_import">导入配置</string>
     <string name="crown_config_action_export">导出配置</string>
     <string name="crown_config_no_profiles">暂无可用的王冠配置档案</string>
@@ -848,6 +857,22 @@
     <string name="toast_back_key_menu_switch_2">已进入王冠配置</string>
     <string name="game_menu_edit_mode">编辑按键布局</string>
     <string name="game_menu_configure_settings">切换配置</string>
+    <string name="crown_menu_current_profile">当前配置</string>
+    <string name="crown_menu_profile_summary">%1$s · %2$d 个控件</string>
+    <string name="crown_menu_profile_hint">横屏 16:9 · 已适配当前串流</string>
+    <string name="crown_menu_change_profile">切换</string>
+    <string name="crown_menu_quick_controls">快速控制</string>
+    <string name="crown_menu_touch_input">触控输入</string>
+    <string name="crown_menu_touch_input_summary">触控板 + 鼠标指针</string>
+    <string name="crown_menu_vibration">震动反馈</string>
+    <string name="crown_menu_vibration_summary">设备震动与按键震动</string>
+    <string name="crown_menu_current_plan">当前方案</string>
+    <string name="crown_config_segment_layout">布局</string>
+    <string name="crown_config_segment_touch">触控</string>
+    <string name="crown_config_segment_feedback">反馈</string>
+    <string name="crown_menu_settings_summary">触控灵敏度、滚轮速度、震动</string>
+    <string name="crown_menu_exit_crown">关闭王冠</string>
+    <string name="crown_menu_edit_layout">编辑布局</string>
 
     <!-- External display -->
     <string name="title_use_external_display">把串流发送到外接显示器</string>
@@ -1453,6 +1478,7 @@
     <string name="page_config_section_profile">档案</string>
     <string name="page_config_section_touch">触控</string>
     <string name="page_config_section_feedback">振动反馈</string>
+    <string name="page_config_profile_hint">为本次串流选择一个配置</string>
     <string name="crown_profile_name_title">档案名称</string>
     <string name="crown_profile_name_error">档案名称需为 1-10 个字符</string>
     <string name="layout_page_config_text_9eba2">当前档案</string>
@@ -1509,6 +1535,15 @@
     <string name="layout_page_edit_text_ed364">新增组合键</string>
     <string name="layout_page_edit_text_1483c">新增轮盘按键</string>
     <string name="layout_page_edit_text_bd823">新增组按键</string>
+    <string name="crown_edit_section_canvas">画布</string>
+    <string name="crown_edit_section_buttons">按钮与方向键</string>
+    <string name="crown_edit_section_sticks">摇杆与辅助控件</string>
+    <string name="crown_edit_section_containers">组合与轮盘</string>
+    <string name="crown_edit_done">完成</string>
+    <string name="crown_edit_drag_summary">直接在串流画布上拖动控件</string>
+    <string name="crown_edit_snap_summary">自动吸附到附近边缘和中心线</string>
+    <string name="crown_edit_canvas_hint">提示：在画布上选择控件即可打开属性面板。</string>
+    <string name="crown_edit_toolbar_hint">拖动移动 · 双指缩放 · 对齐吸附跟随网格</string>
     <string name="layout_page_group_button_text_6db87">类型 : 组按键</string>
     <string name="layout_page_group_button_text_b19b4">隐藏按钮 (轮盘使用下)</string>
     <string name="layout_page_group_button_text_f57fc">按住可移动按键</string>
@@ -1627,6 +1662,8 @@
     <string name="crown_key_guide_short">西瓜键</string>
     <string name="crown_key_back_short">返回</string>
     <string name="crown_key_guide_description">原生手柄 Guide/Home 键（西瓜键）</string>
+    <string name="crown_key_left_stick_description">左摇杆轴</string>
+    <string name="crown_key_right_stick_description">右摇杆轴</string>
     <string name="error_interrupted">操作已中断</string>
     <string name="float_ball_action_lock_screen">锁屏</string>
     <string name="float_ball_action_screenshot">截图</string>
@@ -1833,7 +1870,7 @@
 
     <!-- 王冠配置分享与 Store -->
     <string name="crown_config_action_import_legacy">导入旧版 .mdat</string>
-    <string name="title_crown_store_view">王冠</string>
+    <string name="title_crown_store_view">王冠超市</string>
     <string name="crown_store_tab_store">超市王冠</string>
     <string name="crown_store_tab_mine">我的王冠</string>
     <string name="crown_store_store_summary">来看看大家晒在 GitHub 上的王冠配置，喜欢哪套就带回本地。</string>
@@ -1843,11 +1880,15 @@
     <string name="crown_store_profile_count">%1$d 套</string>
     <string name="crown_store_profile_unit">套配置</string>
     <string name="crown_store_profile_active">当前使用</string>
+    <string name="crown_store_featured">本周精选</string>
     <string name="crown_store_legacy_tool_summary">从旧版 .mdat 文件恢复王冠配置。</string>
     <string name="crown_store_action_open">打开</string>
     <string name="crown_store_action_import_package">导入分享包</string>
     <string name="crown_store_action_refresh">刷新一下</string>
     <string name="crown_store_search_hint">搜索王冠</string>
+    <string name="crown_store_filter_all">全部</string>
+    <string name="crown_store_filter_recent">最近</string>
+    <string name="crown_store_filter_name">名称</string>
     <string name="crown_store_clear_search">清除搜索</string>
     <string name="crown_store_sort_by">排序：%1$s</string>
     <string name="crown_store_sort_store_order">超市原顺序</string>
@@ -1860,7 +1901,7 @@
     <string name="crown_store_card_author">作者：%1$s</string>
     <string name="crown_store_no_search_results">没有匹配的王冠</string>
     <string name="crown_store_try_another_search">换个配置名、游戏、作者或标签试试。</string>
-    <string name="crown_store_action_import_profile">收下这套</string>
+    <string name="crown_store_action_import_profile">导入配置</string>
     <string name="crown_store_action_report_profile">举报</string>
     <string name="crown_store_action_edit_publish">补充信息并投稿</string>
     <string name="crown_store_action_publish_profile">投稿</string>
@@ -1874,6 +1915,7 @@
     <string name="crown_store_my_empty_message">还没有本地配置。导入或创建一套王冠配置后，它会显示在这里。</string>
     <string name="crown_store_local_tools">本地小工具</string>
     <string name="crown_store_local_profile_id">本地 ID：%1$s</string>
+    <string name="crown_store_action_use_profile">使用这套配置</string>
     <string name="crown_store_layout_basis">适配：%1$s</string>
     <string name="crown_store_layout_orientation_landscape">横屏</string>
     <string name="crown_store_layout_orientation_portrait">竖屏</string>
@@ -1884,8 +1926,19 @@
     <string name="message_crown_store_layout_mismatch">适配：这套王冠来自 %1$s。当前屏幕是 %2$s，导入后可能要轻轻挪一下按钮。</string>
     <string name="action_crown_store_continue_import">继续导入</string>
     <string name="crown_store_updated_at">最近更新：%1$s</string>
-    <string name="crown_store_action_publish">投稿到王冠 Store</string>
+    <string name="crown_store_detail_ready">可以导入</string>
+    <string name="crown_store_detail_elements">控件构成</string>
+    <string name="crown_store_detail_element_count">%1$d 个控件</string>
+    <string name="crown_store_detail_loading">正在读取布局预览…</string>
+    <string name="crown_store_detail_compatibility">兼容性</string>
+    <string name="crown_store_detail_compatibility_match">适配当前屏幕</string>
+    <string name="crown_store_detail_compatibility_mismatch">导入后需要微调</string>
+    <string name="crown_store_detail_compatibility_unknown">暂时无法判断适配</string>
+    <string name="crown_store_detail_share_package">分享包</string>
+    <string name="crown_store_detail_share_package_value">Crown 配置包（.crown）</string>
+    <string name="crown_store_action_publish">提交审核</string>
     <string name="crown_store_source_label">王冠 Store：%1$s</string>
+    <string name="label_crown_share_source">来源</string>
     <string name="title_crown_store_publish_metadata">让大家认识这套配置</string>
     <string name="title_crown_store_github_authorization">需要连接 GitHub</string>
     <string name="title_crown_store_publish_success">投稿 PR 已送出</string>

@@ -19,6 +19,7 @@ import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.StartWheelAction
 import com.limelight.binding.input.advance_setting.ControllerManager
+import com.limelight.binding.input.advance_setting.CrownConfigChoice
 import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog
 import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
@@ -3549,10 +3550,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         activeGameMenu?.releaseControllerAxisSource(sourceId)
     }
 
-    fun showCrownConfigPicker(names: List<String>, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
-        if (isFinishing || isDestroyed || names.isEmpty() || crownConfigPicker != null) return
+    fun showCrownConfigPicker(
+        choices: List<CrownConfigChoice>,
+        onSelected: (CrownConfigChoice) -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        if (isFinishing || isDestroyed || choices.isEmpty() || crownConfigPicker != null) return
         val picker = CrownConfigPickerDialog(
-            this, names,
+            this, choices,
             readAxes = { event ->
                 (controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = false)
                     ?: emptyList()) to controllerHandler.getMenuRightStickY(event)

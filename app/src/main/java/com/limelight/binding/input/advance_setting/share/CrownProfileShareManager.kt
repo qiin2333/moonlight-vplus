@@ -1,6 +1,6 @@
 package com.limelight.binding.input.advance_setting.share
 
-import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.input.advance_setting.element.Element
 import com.limelight.utils.MathUtils
 import org.json.JSONArray
 import org.json.JSONException
@@ -76,6 +76,42 @@ object CrownProfileShareManager {
         val updatedAt: String,
         val url: String
     )
+
+    enum class PreviewElementKind {
+        BUTTON,
+        PAD,
+        STICK,
+        GROUP,
+        WHEEL
+    }
+
+    data class PreviewElement(
+        val kind: PreviewElementKind,
+        val centerX: Float,
+        val centerY: Float,
+        val width: Float,
+        val height: Float,
+        val fillColor: Int,
+        val pressedColor: Int,
+        val textColor: Int,
+        val text: String,
+        val alpha: Float,
+        val invisible: Boolean
+    )
+
+    data class ProfilePreview(
+        val widthPx: Int,
+        val heightPx: Int,
+        val elements: List<PreviewElement>
+    ) {
+        val isEmpty: Boolean
+            get() = elements.isEmpty()
+
+        companion object {
+            fun empty(widthPx: Int = DEFAULT_PREVIEW_WIDTH_PX, heightPx: Int = DEFAULT_PREVIEW_HEIGHT_PX) =
+                ProfilePreview(widthPx, heightPx, emptyList())
+        }
+    }
 
     class CrownProfileShareException(message: String) : IllegalArgumentException(message)
 
@@ -203,6 +239,90 @@ object CrownProfileShareManager {
         )
     }
 
+    /**
+     * Extracts a small, display-only representation from the exported profile.
+     * Invalid optional element fields are ignored so thumbnail failures never
+     * affect importing or validating the profile itself.
+     */
+    fun parsePreview(payload: String, layoutBasis: LayoutBasis? = null): ProfilePreview {
+        val payloadRoot = runCatching { JSONObject(payload) }.getOrNull() ?: return ProfilePreview.empty()
+        val elements = runCatching { JSONArray(payloadRoot.optString("elements", "[]")) }.getOrNull()
+            ?: return ProfilePreview.empty(
+                layoutBasis?.widthPx ?: DEFAULT_PREVIEW_WIDTH_PX,
+                layoutBasis?.heightPx ?: DEFAULT_PREVIEW_HEIGHT_PX
+            )
+
+        val parsedElements = buildList {
+            for (index in 0 until elements.length()) {
+                val element = elements.optJSONObject(index) ?: continue
+                val elementType = element.optInt("element_type", -1)
+                if (elementType < 0) continue
+
+                val width = element.optInt("element_width", 0).coerceAtLeast(1).toFloat()
+                val height = element.optInt("element_height", 0).coerceAtLeast(1).toFloat()
+                val centerX = element.optInt("element_central_x", 0).toFloat()
+                val centerY = element.optInt("element_central_y", 0).toFloat()
+                if (centerX <= 0f || centerY <= 0f) continue
+
+                val fillColor = previewColor(
+                    element.optInt("element_color", 0),
+                    element.optInt("element_background_color", 0)
+                )
+                val pressedColor = previewColor(
+                    element.optInt("element_pressed_color", 0),
+                    fillColor
+                )
+                val textColor = previewColor(
+                    element.optInt("normalTextColor", 0),
+                    0xFFFFFFFF.toInt()
+                )
+                val opacity = element.optInt("element_opacity", 255)
+                    .coerceIn(0, 255) / 255f
+                val invisible = elementType == Element.ELEMENT_TYPE_INVISIBLE_ANALOG_STICK ||
+                    elementType == Element.ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK
+
+                add(
+                    PreviewElement(
+                        kind = previewElementKind(elementType),
+                        centerX = centerX,
+                        centerY = centerY,
+                        width = width,
+                        height = height,
+                        fillColor = fillColor,
+                        pressedColor = pressedColor,
+                        textColor = textColor,
+                        text = element.optString("element_text", "").trim(),
+                        alpha = if (invisible) opacity.coerceAtMost(0.28f) else opacity,
+                        invisible = invisible
+                    )
+                )
+            }
+        }
+
+        val inferredWidth = parsedElements.maxOfOrNull { it.centerX + it.width / 2f }
+            ?.coerceAtLeast(1f)
+            ?.toInt()
+            ?: DEFAULT_PREVIEW_WIDTH_PX
+        val inferredHeight = parsedElements.maxOfOrNull { it.centerY + it.height / 2f }
+            ?.coerceAtLeast(1f)
+            ?.toInt()
+            ?: DEFAULT_PREVIEW_HEIGHT_PX
+        val basisWidth = layoutBasis?.widthPx?.takeIf { it > 0 }
+        val basisHeight = layoutBasis?.heightPx?.takeIf { it > 0 }
+        val metadataLooksLikeDeviceFrame = basisWidth != null && basisHeight != null &&
+            inferredWidth > basisWidth * 1.2f && inferredHeight < basisHeight * 0.8f
+        val widthPx = if (metadataLooksLikeDeviceFrame) inferredWidth else basisWidth ?: inferredWidth
+        val heightPx = if (metadataLooksLikeDeviceFrame) inferredHeight else basisHeight ?: inferredHeight
+
+        return ProfilePreview(
+            widthPx = widthPx,
+            heightPx = heightPx,
+            elements = parsedElements
+                .sortedByDescending { it.width * it.height }
+                .take(MAX_PREVIEW_ELEMENTS)
+        )
+    }
+
     fun suggestedFileName(profileName: String): String {
         return suggestedFileStem(profileName) + FILE_EXTENSION
     }
@@ -269,7 +389,7 @@ object CrownProfileShareManager {
             throw CrownProfileShareException("Crown payload settings are invalid")
         }
 
-        settings.put(PageConfigController.COLUMN_STRING_CONFIG_NAME, installName)
+        settings.put(CrownProfileSchema.CONFIG_NAME_KEY, installName)
         val settingsText = settings.toString()
         val version = root.optInt("version", -1)
         val elements = root.optString("elements", "")
@@ -390,6 +510,21 @@ object CrownProfileShareManager {
         return result
     }
 
+    private fun previewElementKind(elementType: Int): PreviewElementKind = when (elementType) {
+        Element.ELEMENT_TYPE_DIGITAL_PAD -> PreviewElementKind.PAD
+        Element.ELEMENT_TYPE_ANALOG_STICK,
+        Element.ELEMENT_TYPE_DIGITAL_STICK,
+        Element.ELEMENT_TYPE_INVISIBLE_ANALOG_STICK,
+        Element.ELEMENT_TYPE_INVISIBLE_DIGITAL_STICK -> PreviewElementKind.STICK
+        Element.ELEMENT_TYPE_GROUP_BUTTON -> PreviewElementKind.GROUP
+        Element.ELEMENT_TYPE_WHEEL_PAD -> PreviewElementKind.WHEEL
+        else -> PreviewElementKind.BUTTON
+    }
+
+    private fun previewColor(value: Int, fallback: Int): Int {
+        return if (value ushr 24 == 0) fallback else value
+    }
+
     private fun suggestedFileStem(profileName: String): String {
         val normalized = profileName
             .lowercase(Locale.US)
@@ -409,4 +544,8 @@ object CrownProfileShareManager {
             .digest(text.toByteArray(Charsets.UTF_8))
         return digest.joinToString(separator = "") { "%02x".format(it) }
     }
+
+    private const val MAX_PREVIEW_ELEMENTS = 96
+    private const val DEFAULT_PREVIEW_WIDTH_PX = 1920
+    private const val DEFAULT_PREVIEW_HEIGHT_PX = 1080
 }

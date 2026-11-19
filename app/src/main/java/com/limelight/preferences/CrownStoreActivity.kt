@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -16,6 +17,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -24,12 +26,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +55,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button as ComposeButton
@@ -73,6 +75,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,9 +85,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -94,6 +102,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
@@ -122,8 +131,6 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.concurrent.thread
 import kotlin.math.abs
-import com.limelight.utils.appAccentFocusColor
-import com.limelight.utils.appAccentColor
 import com.limelight.utils.UiHelper
 
 class CrownStoreActivity : ThemedAppCompatActivity() {
@@ -149,6 +156,12 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val localProfiles: List<LocalCrownProfile> = emptyList()
     )
 
+    private data class ProfilePreviewUiState(
+        val preview: CrownProfileShareManager.ProfilePreview? = null,
+        val loading: Boolean = false,
+        val failed: Boolean = false
+    )
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val helper: SuperConfigDatabaseHelper by lazy { SuperConfigDatabaseHelper(this) }
 
@@ -168,13 +181,26 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private var developerPendingDeviceCode: GitHubStarVerifier.DeviceCode? = null
     private var developerDeviceCodeDialog: AlertDialog? = null
     private val composeUiState = mutableStateOf(CrownStoreUiState())
+    private val profilePreviewStates = mutableStateOf<Map<String, ProfilePreviewUiState>>(emptyMap())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val openImportPackage = intent.getBooleanExtra(EXTRA_OPEN_IMPORT_PACKAGE, false)
+        val openMyCrowns = intent.getBooleanExtra(EXTRA_OPEN_MY_CROWNS, false)
         setContent {
+            val dark = isSystemInDarkTheme()
+            SideEffect {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
             CrownStoreScreen(composeUiState.value)
         }
-        selectTab(CrownTab.STORE)
+        selectTab(if (openMyCrowns) CrownTab.MINE else CrownTab.STORE)
+        if (openImportPackage) {
+            mainHandler.post { openCrownShareDocument() }
+        }
     }
 
     override fun onResume() {
@@ -242,6 +268,59 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 if (selectedTab == CrownTab.STORE) {
                     renderStoreTab()
                 }
+            }
+        }
+    }
+
+    private fun profilePreviewKey(profile: CrownProfileShareManager.StoreProfile): String {
+        return profile.bundleId.ifBlank { profile.url }
+    }
+
+    private fun ensureStoreProfilePreview(profile: CrownProfileShareManager.StoreProfile) {
+        ensureProfilePreview(profilePreviewKey(profile), "CrownProfilePreview") {
+            val profileUrl = CrownProfileShareManager.resolveStoreProfileUrl(
+                CROWN_STORE_INDEX_URL,
+                profile.url
+            )
+            val bundle = downloadRemoteText(profileUrl, CROWN_SHARE_MAX_DOWNLOAD_BYTES)
+            val imported = CrownProfileShareManager.parseImportText(bundle)
+            CrownProfileShareManager.parsePreview(imported.payload, imported.layoutBasis)
+        }
+    }
+
+    private fun localProfilePreviewKey(profile: LocalCrownProfile): String {
+        return "local:${profile.id}"
+    }
+
+    private fun ensureLocalProfilePreview(profile: LocalCrownProfile) {
+        ensureProfilePreview(localProfilePreviewKey(profile), "LocalCrownProfilePreview") {
+            val payload = helper.exportConfig(profile.id.toLong())
+            CrownProfileShareManager.parsePreview(payload, currentLayoutBasis())
+        }
+    }
+
+    private fun ensureProfilePreview(
+        key: String,
+        logTag: String,
+        fetch: () -> CrownProfileShareManager.ProfilePreview
+    ) {
+        if (profilePreviewStates.value.containsKey(key)) return
+
+        profilePreviewStates.value = profilePreviewStates.value +
+            (key to ProfilePreviewUiState(loading = true))
+        thread(name = logTag) {
+            val result = runCatching(fetch)
+            mainHandler.post {
+                result
+                    .onSuccess { preview ->
+                        profilePreviewStates.value = profilePreviewStates.value +
+                            (key to ProfilePreviewUiState(preview = preview))
+                    }
+                    .onFailure { error ->
+                        Log.w("CrownStore", "Failed to load profile thumbnail: $key", error)
+                        profilePreviewStates.value = profilePreviewStates.value +
+                            (key to ProfilePreviewUiState(failed = true))
+                    }
             }
         }
     }
@@ -315,7 +394,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
     @Composable
     private fun CrownStoreScreen(state: CrownStoreUiState) {
-        val background = colorResource(R.color.crown_store_background)
         val selectedProfile = state.selectedStoreProfile
         val storeGridState = rememberLazyStaggeredGridState()
         var storeQuery by rememberSaveable { mutableStateOf("") }
@@ -328,10 +406,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         BackHandler(enabled = selectedProfile != null) {
             closeStoreProfileDetail()
         }
-        MaterialTheme {
+        CrownTheme {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = background
+                color = MaterialTheme.colorScheme.background
             ) {
                 Scaffold(
                     containerColor = Color.Transparent,
@@ -339,6 +417,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     bottomBar = {
                         if (state.selectedStoreProfile == null) {
                             CrownStoreBottomBar(state.selectedTab)
+                        } else {
+                            CrownStoreDetailBottomBar(state.selectedStoreProfile)
                         }
                     }
                 ) { innerPadding ->
@@ -363,7 +443,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                                     .fillMaxSize()
                                     .padding(innerPadding)
                                     .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp)
                             ) {
                                 CrownMineTabContent(state.localProfiles)
                             }
@@ -381,11 +461,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             CrownTab.STORE -> stringResource(R.string.crown_store_tab_store)
             CrownTab.MINE -> stringResource(R.string.crown_store_tab_mine)
         }
-        val textColor = colorResource(R.color.crown_store_text_primary)
+        val textColor = MaterialTheme.colorScheme.onSurface
+        var actionsExpanded by remember(selectedProfile, state.selectedTab) { mutableStateOf(false) }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .height(56.dp)
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = {
@@ -406,21 +488,108 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 text = title,
                 modifier = Modifier.weight(1f),
                 color = textColor,
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(48.dp))
+            Box {
+                IconButton(
+                    onClick = { actionsExpanded = true },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_more_vert),
+                        contentDescription = stringResource(R.string.pcview_menu_more_actions),
+                        tint = textColor
+                    )
+                }
+                DropdownMenu(
+                    expanded = actionsExpanded,
+                    onDismissRequest = { actionsExpanded = false }
+                ) {
+                    if (selectedProfile == null && state.selectedTab == CrownTab.STORE) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_store_action_refresh)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_action_reset), contentDescription = null)
+                            },
+                            onClick = {
+                                actionsExpanded = false
+                                loadStoreProfiles(force = true)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_share_action_import_url)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_plug), contentDescription = null)
+                            },
+                            onClick = {
+                                actionsExpanded = false
+                                showCrownShareUrlImportDialog()
+                            }
+                        )
+                    } else if (selectedProfile != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_store_action_report_profile)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_info), contentDescription = null)
+                            },
+                            onClick = {
+                                actionsExpanded = false
+                                reportStoreProfile(selectedProfile)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownStoreDetailBottomBar(profile: CrownProfileShareManager.StoreProfile) {
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                IconButton(
+                    onClick = { reportStoreProfile(profile) },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest, AppShapes.medium)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.phc_info),
+                        contentDescription = stringResource(R.string.crown_store_action_report_profile),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_import_profile),
+                    iconRes = R.drawable.ic_add,
+                    primary = true,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    importStoreProfile(profile)
+                }
+            }
         }
     }
 
     @Composable
     private fun CrownStoreBottomBar(selectedTab: CrownTab) {
-        val container = colorResource(R.color.crown_store_panel_background)
-        val selected = appAccentColor()
-        val unselected = colorResource(R.color.crown_store_text_secondary)
+        val container = MaterialTheme.colorScheme.surface
+        val selected = MaterialTheme.colorScheme.primary
+        val unselected = MaterialTheme.colorScheme.onSurfaceVariant
         NavigationBar(
             containerColor = container,
             tonalElevation = 0.dp,
@@ -441,7 +610,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     selectedTextColor = selected,
                     unselectedIconColor = unselected,
                     unselectedTextColor = unselected,
-                    indicatorColor = appAccentFocusColor()
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
             NavigationBarItem(
@@ -459,7 +628,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     selectedTextColor = selected,
                     unselectedIconColor = unselected,
                     unselectedTextColor = unselected,
-                    indicatorColor = appAccentFocusColor()
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
         }
@@ -505,43 +674,29 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             modifier = modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalItemSpacing = 10.dp,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 10.dp,
+                end = 16.dp,
+                bottom = 96.dp
+            )
         ) {
             item(span = StaggeredGridItemSpan.FullLine) {
                 Column {
-                    CrownBodyText(stringResource(R.string.crown_store_store_summary))
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CrownActionButton(
-                            text = stringResource(R.string.crown_store_action_refresh),
-                            iconRes = R.drawable.phc_action_reset,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            loadStoreProfiles(force = true)
-                        }
-                        CrownActionButton(
-                            text = stringResource(R.string.crown_share_action_import_url),
-                            iconRes = R.drawable.phc_plug,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            showCrownShareUrlImportDialog()
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
                     var sortMenuExpanded by remember { mutableStateOf(false) }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val searchHint = stringResource(R.string.crown_store_search_hint)
-                        val searchTextColor = colorResource(R.color.crown_store_text_primary)
-                        val searchHintColor = colorResource(R.color.crown_store_text_secondary)
+                        val searchTextColor = MaterialTheme.colorScheme.onSurface
+                        val searchHintColor = MaterialTheme.colorScheme.onSurfaceVariant
                         BasicTextField(
                             value = query,
                             onValueChange = onQueryChange,
                             singleLine = true,
-                            textStyle = TextStyle(color = searchTextColor, fontSize = 14.sp, lineHeight = 20.sp),
-                            cursorBrush = SolidColor(appAccentColor()),
+                            textStyle = TextStyle(color = searchTextColor, fontSize = 13.sp, lineHeight = 20.sp),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp)
@@ -552,13 +707,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                                     Icon(
                                         painterResource(R.drawable.ic_search_stylish),
                                         contentDescription = null,
-                                        tint = appAccentColor(),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                         if (query.isEmpty()) {
-                                            Text(searchHint, color = searchHintColor, fontSize = 14.sp)
+                                            Text(searchHint, color = searchHintColor, fontSize = 13.sp)
                                         }
                                         innerTextField()
                                     }
@@ -579,14 +734,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                                 onClick = { sortMenuExpanded = true },
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .background(colorResource(R.color.crown_store_input_background), AppShapes.medium)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, AppShapes.medium)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_crown_sort),
                                     contentDescription = stringResource(R.string.crown_store_sort_by, storeSortLabel(sort)),
                                     tint = if (sort == StoreSort.STORE_ORDER) {
-                                        colorResource(R.color.crown_store_text_primary)
-                                    } else appAccentColor()
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else MaterialTheme.colorScheme.primary
                                 )
                             }
                             DropdownMenu(
@@ -605,9 +760,30 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CrownFilterChip(
+                            text = stringResource(R.string.crown_store_filter_all),
+                            selected = sort == StoreSort.STORE_ORDER,
+                            onClick = { onSortChange(StoreSort.STORE_ORDER) }
+                        )
+                        CrownFilterChip(
+                            text = stringResource(R.string.crown_store_filter_recent),
+                            selected = sort == StoreSort.NEWEST,
+                            onClick = { onSortChange(StoreSort.NEWEST) }
+                        )
+                        CrownFilterChip(
+                            text = stringResource(R.string.crown_store_filter_name),
+                            selected = sort == StoreSort.NAME_ASC,
+                            onClick = { onSortChange(StoreSort.NAME_ASC) }
+                        )
+                    }
                     if (profiles != null && !state.storeLoading && state.storeError == null) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        CrownBodyText(stringResource(R.string.crown_store_results_count, visibleProfiles.size))
+                        CrownFootnote(stringResource(R.string.crown_store_results_count, visibleProfiles.size))
                     }
                 }
             }
@@ -648,11 +824,31 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         message = stringResource(R.string.crown_store_try_another_search)
                     )
                 }
-                else -> items(visibleProfiles) { profile ->
-                    CrownStoreProfileCard(
-                        profile = profile,
-                        modifier = Modifier.clickable { openStoreProfileDetail(profile) }
-                    )
+                else -> {
+                    val featuredProfile = visibleProfiles.first()
+                    item(
+                        key = featuredProfile.url.ifBlank {
+                            "${featuredProfile.name}:${featuredProfile.author}:featured"
+                        },
+                        span = StaggeredGridItemSpan.FullLine
+                    ) {
+                        CrownFeaturedStoreProfileCard(
+                            profile = featuredProfile,
+                            modifier = Modifier.clickable { openStoreProfileDetail(featuredProfile) }
+                        )
+                    }
+                    if (visibleProfiles.size > 1) {
+                        items(
+                            items = visibleProfiles.drop(1),
+                            key = { profile -> profile.url.ifBlank { "${profile.name}:${profile.author}" } },
+                            span = { StaggeredGridItemSpan.SingleLane }
+                        ) { profile ->
+                            CrownStoreProfileCard(
+                                profile = profile,
+                                modifier = Modifier.clickable { openStoreProfileDetail(profile) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -669,7 +865,12 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
     @Composable
     private fun CrownMineTabContent(profiles: List<LocalCrownProfile>) {
-        CrownMineHero(profiles.size)
+        val currentProfile = profiles.firstOrNull { it.isActive } ?: profiles.firstOrNull()
+        if (currentProfile != null) {
+            CrownMineCurrentProfileCard(currentProfile)
+        } else {
+            CrownMineHero(profiles.size)
+        }
         Spacer(modifier = Modifier.height(18.dp))
         CrownSectionHeader(
             title = stringResource(R.string.crown_store_local_profiles),
@@ -695,6 +896,70 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
+    private fun CrownMineCurrentProfileCard(profile: LocalCrownProfile) {
+        val previewKey = localProfilePreviewKey(profile)
+        val previewState = profilePreviewStates.value[previewKey]
+        LaunchedEffect(previewKey) {
+            ensureLocalProfilePreview(profile)
+        }
+        CrownProfileCard(contentPadding = PaddingValues(0.dp)) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                CrownLayoutPreview(
+                    currentLayoutBasis(),
+                    previewState,
+                    height = 128.dp
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+                            ),
+                            AppShapes.large
+                        )
+                )
+                if (profile.isActive) {
+                    CrownStatusChip(
+                        text = stringResource(R.string.crown_store_profile_active),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp)
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = profile.name,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = previewState?.preview?.elements?.size?.takeIf { it > 0 }
+                                ?.let { getString(R.string.crown_store_detail_element_count, it) }
+                                ?: getString(R.string.crown_store_local_profile_id, profile.id),
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 9.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun CrownMineHero(profileCount: Int) {
         CrownProfileCard {
             Row(
@@ -705,7 +970,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     modifier = Modifier
                         .size(52.dp)
                         .background(
-                            color = appAccentFocusColor(),
+                            color = MaterialTheme.colorScheme.primaryContainer,
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -713,7 +978,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     Icon(
                         painter = painterResource(R.drawable.phc_crown),
                         contentDescription = null,
-                        tint = appAccentColor(),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -721,8 +986,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.crown_store_my_workspace_title),
-                        color = colorResource(R.color.crown_store_text_primary),
-                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -732,7 +997,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Box(
                     modifier = Modifier
                         .background(
-                            color = colorResource(R.color.crown_store_input_background),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
                             shape = AppShapes.medium
                         )
                         .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -741,14 +1006,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = profileCount.toString(),
-                            color = appAccentColor(),
-                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = stringResource(R.string.crown_store_profile_unit),
-                            color = colorResource(R.color.crown_store_text_secondary),
-                            fontSize = 10.sp
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.5.sp
                         )
                     }
                 }
@@ -788,26 +1053,26 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = appAccentColor(),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,
-                color = colorResource(R.color.crown_store_text_primary),
-                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
             if (!countText.isNullOrBlank()) {
                 Text(
                     text = countText,
-                    color = colorResource(R.color.crown_store_text_secondary),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     modifier = Modifier
                         .background(
-                            color = colorResource(R.color.crown_store_input_background),
-                            shape = RoundedCornerShape(50)
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            shape = CircleShape
                         )
                         .padding(horizontal = 9.dp, vertical = 4.dp)
                 )
@@ -825,15 +1090,15 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Icon(
                     painter = painterResource(R.drawable.phc_list),
                     contentDescription = null,
-                    tint = colorResource(R.color.crown_store_text_secondary),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.crown_config_action_import_legacy),
-                        color = colorResource(R.color.crown_store_text_primary),
-                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(3.dp))
@@ -856,58 +1121,120 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         profile: CrownProfileShareManager.StoreProfile,
         modifier: Modifier = Modifier
     ) {
-        CrownProfileCard(modifier) {
-            CrownCardTitle(profile.name, maxLines = 2)
-            if (profile.game.isNotBlank() || profile.author.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    if (profile.game.isNotBlank()) {
-                        CrownMetaText(
-                            stringResource(R.string.crown_store_card_game, profile.game),
-                            strong = false,
-                            maxLines = 2
-                        )
-                    }
-                    if (profile.author.isNotBlank()) {
-                        CrownMetaText(
-                            stringResource(R.string.crown_store_card_author, profile.author),
-                            strong = false,
-                            maxLines = 2
-                        )
-                    }
-                }
-            }
-            if (profile.summary.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                CrownBodyText(profile.summary, maxLines = 2)
-            }
-            val layoutBasis = formatLayoutBasisCompact(profile.layoutBasis)
-            val updatedAt = formatStoreUpdatedAtCompact(profile.updatedAt)
-            if (!layoutBasis.isNullOrBlank() || updatedAt.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                CrownStoreCardFooter(
-                    layoutBasis = layoutBasis.orEmpty(),
-                    updatedAt = updatedAt
+        val previewKey = profilePreviewKey(profile)
+        val previewState = profilePreviewStates.value[previewKey]
+        LaunchedEffect(previewKey) {
+            ensureStoreProfilePreview(profile)
+        }
+        CrownProfileCard(modifier, contentPadding = PaddingValues(12.dp)) {
+            // Design P2: preview first so a screen of cards reads as layouts,
+            // then scan-level text only - no actions on the card itself.
+            CrownLayoutPreview(profile.layoutBasis, previewState, height = 84.dp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CrownCardTitle(profile.name, maxLines = 1, modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_right),
+                    contentDescription = stringResource(R.string.crown_store_action_open),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_import_profile),
-                    iconRes = R.drawable.ic_add,
-                    primary = true,
-                    compact = true,
-                    modifier = Modifier.fillMaxWidth()
+            Spacer(modifier = Modifier.height(4.dp))
+            val meta = listOfNotNull(
+                profile.game.takeIf { it.isNotBlank() },
+                profile.author.takeIf { it.isNotBlank() }
+            ).joinToString(" · ")
+            if (meta.isNotBlank()) {
+                CrownMetaText(meta, strong = false, maxLines = 1)
+            }
+            val elementCount = previewState?.preview?.elements?.size?.takeIf { it > 0 }
+            val updatedLabel = formatStoreUpdatedAtCompact(profile.updatedAt)
+            if (elementCount != null || updatedLabel.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                val footer = listOfNotNull(
+                    elementCount?.let {
+                        stringResource(R.string.crown_store_detail_element_count, it)
+                    },
+                    updatedLabel.takeIf { it.isNotBlank() }
+                ).joinToString(" · ")
+                CrownFootnote(footer)
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownFeaturedStoreProfileCard(
+        profile: CrownProfileShareManager.StoreProfile,
+        modifier: Modifier = Modifier
+    ) {
+        val previewKey = profilePreviewKey(profile)
+        val previewState = profilePreviewStates.value[previewKey]
+        LaunchedEffect(previewKey) {
+            ensureStoreProfilePreview(profile)
+        }
+        CrownProfileCard(modifier, contentPadding = PaddingValues(0.dp)) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                CrownLayoutPreview(profile.layoutBasis, previewState, height = 150.dp)
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.84f))
+                            ),
+                            AppShapes.large
+                        )
+                )
+                CrownStatusChip(
+                    text = stringResource(R.string.crown_store_featured),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    importStoreProfile(profile)
-                }
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_report_profile),
-                    iconRes = R.drawable.phc_info,
-                    compact = true,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    reportStoreProfile(profile)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = profile.name,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = listOfNotNull(
+                                profile.author.takeIf { it.isNotBlank() }?.let { "by $it" },
+                                profile.game.takeIf { it.isNotBlank() },
+                                previewState?.preview?.elements?.size?.takeIf { it > 0 }
+                                    ?.let { getString(R.string.crown_store_detail_element_count, it) }
+                            ).joinToString(" · "),
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_right),
+                        contentDescription = stringResource(R.string.crown_store_action_open),
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(Color.White.copy(alpha = 0.16f), AppShapes.medium)
+                            .padding(8.dp)
+                    )
                 }
             }
         }
@@ -918,62 +1245,102 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         profile: CrownProfileShareManager.StoreProfile,
         modifier: Modifier = Modifier
     ) {
+        val previewKey = profilePreviewKey(profile)
+        val previewState = profilePreviewStates.value[previewKey]
+        LaunchedEffect(previewKey) {
+            ensureStoreProfilePreview(profile)
+        }
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(bottom = 96.dp)
         ) {
             CrownProfileCard {
                 Text(
                     text = profile.name,
-                    color = colorResource(R.color.crown_store_text_primary),
-                    fontSize = 20.sp,
-                    lineHeight = 25.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 22.sp,
+                    lineHeight = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_game),
-                    value = profile.game
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_author),
-                    value = profile.author
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_summary),
-                    value = profile.summary
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_tags),
-                    value = profile.tags
-                        .filter { it.isNotBlank() }
-                        .joinToString(" · ")
-                )
-                formatLayoutBasis(profile.layoutBasis)?.let {
-                    CrownDetailMeta(stringResource(R.string.crown_store_layout_basis, it))
+                Spacer(modifier = Modifier.height(12.dp))
+                // Design P3: orientation and control count ride on the preview itself.
+                Box {
+                    CrownLayoutPreview(profile.layoutBasis, previewState, height = 164.dp)
+                    Row(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        formatLayoutBasisCompact(profile.layoutBasis)?.let { basis ->
+                            CrownPreviewOverlayChip(basis)
+                        }
+                        previewState?.preview?.elements?.size?.takeIf { it > 0 }?.let { count ->
+                            CrownPreviewOverlayChip(
+                                stringResource(R.string.crown_store_detail_element_count, count)
+                            )
+                        }
+                    }
                 }
-                if (profile.updatedAt.isNotBlank()) {
-                    CrownDetailMeta(stringResource(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.phc_crown),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(9.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        CrownMetaText(profile.author.ifBlank { profile.game }, strong = true)
+                        CrownFootnote(
+                            profile.updatedAt.takeIf { it.isNotBlank() }?.let {
+                                stringResource(R.string.crown_store_updated_at, formatStoreUpdatedAt(it))
+                            } ?: formatLayoutBasisCompact(profile.layoutBasis).orEmpty()
+                        )
+                    }
+                    CrownStatusChip(stringResource(R.string.crown_store_detail_ready))
                 }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_import_profile),
-                    iconRes = R.drawable.ic_add,
-                    primary = true,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    importStoreProfile(profile)
+                if (profile.summary.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(13.dp))
+                    CrownBodyText(profile.summary, maxLines = 6)
                 }
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_report_profile),
+                if (profile.tags.any { it.isNotBlank() }) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        profile.tags.filter { it.isNotBlank() }.take(5).forEach { tag ->
+                            CrownTagChip(tag)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                CrownDetailInfoRow(
+                    iconRes = R.drawable.phc_list,
+                    title = stringResource(R.string.crown_store_detail_elements),
+                    value = previewState?.preview?.elements?.size?.let {
+                        stringResource(R.string.crown_store_detail_element_count, it)
+                    } ?: stringResource(R.string.crown_store_detail_loading)
+                )
+                CrownDetailInfoRow(
                     iconRes = R.drawable.phc_info,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    reportStoreProfile(profile)
-                }
+                    title = stringResource(R.string.crown_store_detail_compatibility),
+                    value = layoutCompatibilityShortLabel(profile.layoutBasis)
+                )
+                CrownDetailInfoRow(
+                    iconRes = R.drawable.phc_action_copy,
+                    title = stringResource(R.string.crown_store_detail_share_package),
+                    value = stringResource(R.string.crown_store_detail_share_package_value)
+                )
             }
         }
     }
@@ -992,59 +1359,324 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         profile: LocalCrownProfile,
         modifier: Modifier = Modifier
     ) {
-        CrownProfileCard(
-            modifier = modifier.pointerInput(profile.id) {
-                detectTapGestures(onLongPress = { showDeleteLocalProfileDialog(profile) })
-            }
-        ) {
-            Row(verticalAlignment = Alignment.Top) {
+        val previewKey = localProfilePreviewKey(profile)
+        val previewState = profilePreviewStates.value[previewKey]
+        LaunchedEffect(previewKey) {
+            ensureLocalProfilePreview(profile)
+        }
+        var menuExpanded by remember(profile.id) { mutableStateOf(false) }
+        CrownProfileCard(modifier, contentPadding = PaddingValues(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CrownLayoutPreview(
+                    currentLayoutBasis(),
+                    previewState,
+                    height = 64.dp,
+                    width = 112.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     CrownCardTitle(profile.name, maxLines = 1)
                     Spacer(modifier = Modifier.height(4.dp))
-                    CrownMetaText(getString(R.string.crown_store_local_profile_id, profile.id), strong = false)
+                    CrownMetaText(
+                        getString(R.string.crown_store_local_profile_id, profile.id),
+                        strong = false,
+                        maxLines = 1
+                    )
+                    if (profile.isActive) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        CrownStatusChip(stringResource(R.string.crown_store_profile_active))
+                    }
                 }
-                if (profile.isActive) {
-                    CrownStatusChip(stringResource(R.string.crown_store_profile_active))
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_more_vert),
+                            contentDescription = stringResource(R.string.pcview_menu_more_actions),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    if (profile.isActive) {
+                                        stringResource(R.string.crown_store_profile_active)
+                                    } else {
+                                        stringResource(R.string.crown_store_action_use_profile)
+                                    }
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_action_check), contentDescription = null)
+                            },
+                            enabled = !profile.isActive,
+                            onClick = {
+                                menuExpanded = false
+                                PreferenceManager.getDefaultSharedPreferences(this@CrownStoreActivity)
+                                    .edit { putLong(CURRENT_CROWN_CONFIG_ID_KEY, profile.id.toLong()) }
+                                onLocalProfilesChanged()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_store_action_publish_profile)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_action_check), contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                showCrownStorePublishMetadataDialog(profile.id, profile.name)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_store_action_export_share)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_action_copy), contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                exportCrownSharePackage(profile.id, profile.name)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_store_action_export_legacy_short)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_list), contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                exportLegacyConfig(profile.id, profile.name)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.crown_store_action_merge_short)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_plug), contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                openLegacyMergeDocument(profile.id)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_crown_store_delete_profile)) },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.phc_action_trash), contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                showDeleteLocalProfileDialog(profile)
+                            }
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    CrownActionButton(
-                        text = stringResource(R.string.crown_store_action_publish_profile),
-                        iconRes = R.drawable.phc_action_check,
-                        primary = true,
-                        compact = true,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        showCrownStorePublishMetadataDialog(profile.id, profile.name)
-                    }
-                    CrownActionButton(
-                        text = stringResource(R.string.crown_store_action_export_share),
-                        iconRes = R.drawable.phc_action_copy,
-                        compact = true,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        exportCrownSharePackage(profile.id, profile.name)
+        }
+    }
+
+    @Composable
+    private fun CrownLayoutPreview(
+        layoutBasis: CrownProfileShareManager.LayoutBasis?,
+        state: ProfilePreviewUiState? = null,
+        height: androidx.compose.ui.unit.Dp = 76.dp,
+        width: androidx.compose.ui.unit.Dp? = null
+    ) {
+        // Layout previews stay dark in both themes (they mimic the game picture),
+        // so these come from fixed resources instead of the theme's roles.
+        val previewBackground = colorResource(R.color.crown_preview_bg_top)
+        val previewBackgroundEnd = colorResource(R.color.crown_preview_bg_bottom)
+        val previewControl = colorResource(R.color.crown_preview_accent)
+        val previewMuted = colorResource(R.color.crown_preview_ink).copy(alpha = 0.46f)
+        val previewInk = colorResource(R.color.crown_preview_ink)
+        val previewPrimary = colorResource(R.color.crown_preview_accent)
+        val previewSecondary = colorResource(R.color.crown_preview_secondary)
+        val previewTertiary = colorResource(R.color.crown_preview_tertiary)
+        val preview = state?.preview?.takeUnless { it.isEmpty }
+        Box(
+            modifier = (if (width == null) Modifier.fillMaxWidth() else Modifier.width(width))
+                .height(height)
+                .background(
+                    Brush.linearGradient(listOf(previewBackground, previewBackgroundEnd)),
+                    AppShapes.medium
+                )
+                .border(1.dp, Color.White.copy(alpha = 0.12f), AppShapes.medium)
+                .padding(8.dp)
+        ) {
+            if (preview != null) {
+                val drawnElements = remember(preview) {
+                    selectThumbnailElements(
+                        elements = preview.elements,
+                        widthPx = preview.widthPx,
+                        heightPx = preview.heightPx
+                    )
+                        .sortedBy { if (it.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 0 else 1 }
+                }
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val guideColor = Color.White.copy(alpha = 0.055f)
+                    drawLine(guideColor, androidx.compose.ui.geometry.Offset(size.width * 0.33f, 0f), androidx.compose.ui.geometry.Offset(size.width * 0.33f, size.height), strokeWidth = 1f)
+                    drawLine(guideColor, androidx.compose.ui.geometry.Offset(size.width * 0.66f, 0f), androidx.compose.ui.geometry.Offset(size.width * 0.66f, size.height), strokeWidth = 1f)
+                    drawLine(guideColor, androidx.compose.ui.geometry.Offset(0f, size.height * 0.5f), androidx.compose.ui.geometry.Offset(size.width, size.height * 0.5f), strokeWidth = 1f)
+                    val fitScale = minOf(
+                        size.width / preview.widthPx.toFloat().coerceAtLeast(1f),
+                        size.height / preview.heightPx.toFloat().coerceAtLeast(1f)
+                    )
+                    val canvasWidth = preview.widthPx * fitScale
+                    val canvasHeight = preview.heightPx * fitScale
+                    val canvasOffsetX = (size.width - canvasWidth) / 2f
+                    val canvasOffsetY = (size.height - canvasHeight) / 2f
+                    drawnElements.forEach { element ->
+                        val centerX = (canvasOffsetX + element.centerX * fitScale)
+                            .coerceIn(canvasOffsetX, canvasOffsetX + canvasWidth)
+                        val centerY = (canvasOffsetY + element.centerY * fitScale)
+                            .coerceIn(canvasOffsetY, canvasOffsetY + canvasHeight)
+                        val width = (element.width * fitScale).coerceIn(4f, size.width * 0.38f)
+                        val height = (element.height * fitScale).coerceIn(4f, size.height * 0.62f)
+                        val left = centerX - width / 2f
+                        val top = centerY - height / 2f
+                        val accent = when (element.kind) {
+                            CrownProfileShareManager.PreviewElementKind.STICK -> previewSecondary
+                            CrownProfileShareManager.PreviewElementKind.PAD -> previewTertiary
+                            CrownProfileShareManager.PreviewElementKind.WHEEL -> previewSecondary
+                            CrownProfileShareManager.PreviewElementKind.GROUP -> previewInk
+                            CrownProfileShareManager.PreviewElementKind.BUTTON -> previewPrimary
+                        }
+                        val elementAlpha = element.alpha.coerceIn(0.35f, 1f)
+                        val outline = accent.copy(
+                            alpha = when (element.kind) {
+                                CrownProfileShareManager.PreviewElementKind.GROUP -> 0.64f
+                                else -> (0.72f * elementAlpha).coerceAtLeast(0.48f)
+                            }
+                        )
+                        val fill = accent.copy(
+                            alpha = when (element.kind) {
+                                CrownProfileShareManager.PreviewElementKind.BUTTON -> 0.26f * elementAlpha
+                                CrownProfileShareManager.PreviewElementKind.PAD -> 0.20f * elementAlpha
+                                CrownProfileShareManager.PreviewElementKind.STICK -> 0.14f * elementAlpha
+                                CrownProfileShareManager.PreviewElementKind.WHEEL -> 0.12f * elementAlpha
+                                CrownProfileShareManager.PreviewElementKind.GROUP -> 0f
+                            }
+                        )
+                        val stroke = Stroke(
+                            width = if (element.kind == CrownProfileShareManager.PreviewElementKind.GROUP) 1f else 1.25f
+                        )
+
+                        when (element.kind) {
+                            CrownProfileShareManager.PreviewElementKind.STICK -> {
+                                val radius = minOf(width, height) / 2f
+                                if (!element.invisible) {
+                                    drawCircle(fill, radius, androidx.compose.ui.geometry.Offset(centerX, centerY))
+                                }
+                                drawCircle(outline, radius, androidx.compose.ui.geometry.Offset(centerX, centerY), style = stroke)
+                                drawCircle(
+                                    accent.copy(alpha = 0.76f * elementAlpha),
+                                    radius * 0.29f,
+                                    androidx.compose.ui.geometry.Offset(centerX, centerY)
+                                )
+                            }
+                            CrownProfileShareManager.PreviewElementKind.WHEEL -> {
+                                val radius = minOf(width, height) / 2f
+                                drawCircle(fill, radius, androidx.compose.ui.geometry.Offset(centerX, centerY))
+                                drawCircle(outline, radius, androidx.compose.ui.geometry.Offset(centerX, centerY), style = stroke)
+                                drawCircle(outline.copy(alpha = 0.55f), radius * 0.58f, androidx.compose.ui.geometry.Offset(centerX, centerY), style = stroke)
+                            }
+                            CrownProfileShareManager.PreviewElementKind.GROUP -> {
+                                drawRoundRect(
+                                    color = outline,
+                                    topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                                    size = androidx.compose.ui.geometry.Size(width, height),
+                                    cornerRadius = CornerRadius(6f, 6f),
+                                    style = stroke
+                                )
+                            }
+                            CrownProfileShareManager.PreviewElementKind.PAD,
+                            CrownProfileShareManager.PreviewElementKind.BUTTON -> {
+                                if (!element.invisible) {
+                                    drawRoundRect(
+                                        color = fill,
+                                        topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                                        size = androidx.compose.ui.geometry.Size(width, height),
+                                        cornerRadius = CornerRadius(minOf(width, height) * 0.18f, minOf(width, height) * 0.18f)
+                                    )
+                                }
+                                drawRoundRect(
+                                    color = outline,
+                                    topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                                    size = androidx.compose.ui.geometry.Size(width, height),
+                                    cornerRadius = CornerRadius(minOf(width, height) * 0.18f, minOf(width, height) * 0.18f),
+                                    style = stroke
+                                )
+                            }
+                        }
+
+                        if (element.kind == CrownProfileShareManager.PreviewElementKind.PAD && width > 12f && height > 12f) {
+                            drawLine(outline.copy(alpha = 0.72f), androidx.compose.ui.geometry.Offset(centerX, top + height * 0.22f), androidx.compose.ui.geometry.Offset(centerX, top + height * 0.78f), strokeWidth = 1f)
+                            drawLine(outline.copy(alpha = 0.72f), androidx.compose.ui.geometry.Offset(left + width * 0.22f, centerY), androidx.compose.ui.geometry.Offset(left + width * 0.78f, centerY), strokeWidth = 1f)
+                        }
+
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    CrownActionButton(
-                        text = stringResource(R.string.crown_store_action_export_legacy_short),
-                        iconRes = R.drawable.phc_list,
-                        compact = true,
-                        modifier = Modifier.weight(1f)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(0.8f),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        exportLegacyConfig(profile.id, profile.name)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .background(previewMuted, AppShapes.extraSmall)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.72f)
+                                .height(8.dp)
+                                .background(previewMuted, AppShapes.extraSmall)
+                        )
                     }
-                    CrownActionButton(
-                        text = stringResource(R.string.crown_store_action_merge_short),
-                        iconRes = R.drawable.phc_plug,
-                        compact = true,
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(previewControl, CircleShape)
+                    )
+                    Column(
+                        modifier = Modifier.weight(0.7f),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        openLegacyMergeDocument(profile.id)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .background(previewControl, AppShapes.extraSmall)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.58f)
+                                .height(8.dp)
+                                .background(previewMuted, AppShapes.extraSmall)
+                        )
                     }
+                }
+                if (state?.loading == true) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .align(Alignment.TopEnd),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
                 }
             }
         }
@@ -1053,22 +1685,23 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     @Composable
     private fun CrownProfileCard(
         modifier: Modifier = Modifier,
+        contentPadding: PaddingValues = PaddingValues(16.dp),
         content: @Composable ColumnScope.() -> Unit
     ) {
         Card(
             modifier = modifier.fillMaxWidth(),
             shape = AppShapes.large,
             colors = CardDefaults.cardColors(
-                containerColor = colorResource(R.color.crown_store_section_background)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             border = BorderStroke(
-                width = 1.dp,
-                color = colorResource(R.color.crown_store_section_border)
+                width = 0.75.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.58f)
             )
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(contentPadding),
                 content = content
             )
         }
@@ -1083,7 +1716,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                color = appAccentColor(),
+                color = MaterialTheme.colorScheme.primary,
                 strokeWidth = 3.dp
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1103,14 +1736,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 Icon(
                     painter = painterResource(R.drawable.phc_info),
                     contentDescription = null,
-                    tint = colorResource(R.color.crown_store_text_primary),
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = title,
-                    color = colorResource(R.color.crown_store_text_primary),
-                    fontSize = 17.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1129,11 +1762,16 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownCardTitle(text: String, maxLines: Int = 2) {
+    private fun CrownCardTitle(
+        text: String,
+        maxLines: Int = 2,
+        modifier: Modifier = Modifier
+    ) {
         Text(
             text = text,
-            color = colorResource(R.color.crown_store_text_primary),
-            fontSize = 15.4.sp,
+            modifier = modifier,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
@@ -1144,8 +1782,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private fun CrownBodyText(text: String, maxLines: Int = Int.MAX_VALUE) {
         Text(
             text = text,
-            color = colorResource(R.color.crown_store_text_secondary),
-            fontSize = 13.5.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 13.sp,
             lineHeight = 18.sp,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
@@ -1153,44 +1791,11 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownDetailField(label: String, value: String) {
-        if (value.isBlank()) return
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = label,
-            color = colorResource(R.color.crown_store_text_primary),
-            fontSize = 11.6.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.alpha(0.7f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            color = colorResource(R.color.crown_store_text_secondary),
-            fontSize = 13.5.sp,
-            lineHeight = 19.sp
-        )
-    }
-
-    @Composable
-    private fun CrownDetailMeta(text: String) {
-        if (text.isBlank()) return
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = text,
-            color = colorResource(R.color.crown_store_text_secondary),
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
-            modifier = Modifier.alpha(0.72f)
-        )
-    }
-
-    @Composable
     private fun CrownMetaText(text: String, strong: Boolean, maxLines: Int = 1) {
         Text(
             text = text,
-            color = if (strong) colorResource(R.color.crown_store_text_primary) else colorResource(R.color.crown_store_text_secondary),
-            fontSize = if (strong) 12.2.sp else 11.6.sp,
+            color = if (strong) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
@@ -1202,37 +1807,82 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private fun CrownFootnote(text: String) {
         Text(
             text = text,
-            color = colorResource(R.color.crown_store_text_secondary),
-            fontSize = 10.8.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }
 
     @Composable
-    private fun CrownStoreCardFooter(layoutBasis: String, updatedAt: String) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            if (layoutBasis.isNotBlank()) {
-                CrownFootnote(text = layoutBasis)
-            }
-            if (updatedAt.isNotBlank()) {
-                CrownFootnote(text = updatedAt)
+    private fun CrownFilterChip(text: String, selected: Boolean, onClick: () -> Unit) {
+        Text(
+            text = text,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier
+                .height(30.dp)
+                .background(
+                    if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    CircleShape
+                )
+                .border(
+                    1.dp,
+                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                    else MaterialTheme.colorScheme.outline,
+                    CircleShape
+                )
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        )
+    }
+
+    @Composable
+    private fun CrownDetailInfoRow(iconRes: Int, title: String, value: String) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = value,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 
+    /** Design P3: translucent pill pinned over a layout preview. */
     @Composable
-    private fun CrownTags(tags: List<String>) {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            val visibleTags = tags.filter { it.isNotBlank() }.take(2)
-            visibleTags.forEach { tag ->
-                CrownTagChip(tag, Modifier.weight(1f))
-            }
-            val overflowCount = tags.size - visibleTags.size
-            if (overflowCount > 0) {
-                CrownTagChip("+$overflowCount", Modifier.width(36.dp))
-            }
-        }
+    private fun CrownPreviewOverlayChip(text: String) {
+        Text(
+            text = text,
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.45f), AppShapes.small)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 
     @Composable
@@ -1241,7 +1891,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             modifier = modifier
                 .height(25.dp)
                 .background(
-                    color = colorResource(R.color.crown_store_input_background),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     shape = AppShapes.small
                 )
                 .padding(horizontal = 7.dp),
@@ -1249,8 +1899,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         ) {
             Text(
                 text = text,
-                color = colorResource(R.color.crown_store_text_secondary),
-                fontSize = 10.4.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -1258,12 +1908,12 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownStatusChip(text: String) {
+    private fun CrownStatusChip(text: String, modifier: Modifier = Modifier) {
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .background(
-                    color = appAccentFocusColor(),
-                    shape = RoundedCornerShape(50)
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = CircleShape
                 )
                 .padding(horizontal = 8.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -1271,13 +1921,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .background(appAccentColor(), CircleShape)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
             )
             Spacer(modifier = Modifier.width(5.dp))
             Text(
                 text = text,
-                color = appAccentColor(),
-                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 9.5.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -1292,8 +1942,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         compact: Boolean = false,
         onClick: () -> Unit
     ) {
-        val container = if (primary) appAccentColor() else colorResource(R.color.crown_store_input_background)
-        val content = if (primary) colorResource(R.color.app_dialog_title_color) else colorResource(R.color.crown_store_text_primary)
+        val container = if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest
+        val content = if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
         ComposeButton(
             onClick = onClick,
             modifier = modifier.height(if (compact) 38.dp else 44.dp),
@@ -1305,9 +1955,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             border = BorderStroke(
                 width = 1.dp,
                 color = if (primary) {
-                    appAccentColor().copy(alpha = 0.75f)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
                 } else {
-                    colorResource(R.color.crown_store_input_border)
+                    MaterialTheme.colorScheme.outline
                 }
             ),
             contentPadding = if (compact) {
@@ -1325,7 +1975,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Spacer(modifier = Modifier.width(if (compact) 4.dp else 6.dp))
             Text(
                 text = text,
-                fontSize = if (compact) 10.5.sp else 13.sp,
+                fontSize = if (compact) 11.sp else 13.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1486,7 +2136,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         }
         val termsCheckBox = CheckBox(this).apply {
             text = getString(R.string.message_crown_store_publish_terms)
-            textSize = 12f
+            textSize = 11f
             includeFontPadding = true
             setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
             buttonTintList = ColorStateList.valueOf(
@@ -1657,18 +2307,21 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             setSingleLine(true)
             setText(value)
             hint = getString(hintRes)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
-            setHintTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_subtitle_color))
-            backgroundTintList = ColorStateList(
-                arrayOf(
-                    intArrayOf(android.R.attr.state_focused),
-                    intArrayOf()
-                ),
-                intArrayOf(
-                    UiHelper.accentColor(this@CrownStoreActivity),
-                    ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_subtitle_color)
-                )
-            )
+            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_primary))
+            setHintTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
+            setPadding(dp(12), 0, dp(12), 0)
+            minimumHeight = dp(36)
+            val normalStroke = ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_input_border)
+            val focusedStroke = UiHelper.accentColor(this@CrownStoreActivity)
+            fun applyFieldBackground(focused: Boolean) {
+                background = GradientDrawable().apply {
+                    setColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_input_background))
+                    cornerRadius = dp(12).toFloat()
+                    setStroke(dp(if (focused) 2 else 1), if (focused) focusedStroke else normalStroke)
+                }
+            }
+            applyFieldBackground(false)
+            setOnFocusChangeListener { _, focused -> applyFieldBackground(focused) }
         }
     }
 
@@ -1676,9 +2329,11 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val block = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(TextView(context).apply {
-                text = getString(labelRes)
-                setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
-                textSize = 13f
+                // Design P5: micro section labels above each 36dp rounded field.
+                text = getString(labelRes).uppercase(Locale.getDefault())
+                setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.crown_text_secondary))
+                textSize = 9.5f
+                letterSpacing = 0.08f
                 typeface = Typeface.DEFAULT_BOLD
                 includeFontPadding = false
             })
@@ -2105,29 +2760,149 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     private fun showCrownShareImportPreview(profile: CrownProfileShareManager.ImportedProfile) {
-        val details = getString(
-            R.string.message_crown_share_import_preview,
-            profile.name,
-            profile.author.ifBlank { getString(R.string.crown_share_unknown_value) },
-            profile.game.ifBlank { getString(R.string.crown_share_unknown_value) },
-            profile.sourceLabel,
-            profile.payloadInfo.version,
-            profile.payloadInfo.elementCount,
-            profile.payloadInfo.settingsCount
-        ) + "\n\n" + layoutCompatibilityMessage(profile.layoutBasis)
+        val unknown = getString(R.string.crown_share_unknown_value)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(18), dp(22), dp(8))
+        }
+        content.addView(TextView(this).apply {
+            text = getString(R.string.crown_share_action_import)
+            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_primary))
+            textSize = 16f
+            setTypeface(typeface, Typeface.BOLD)
+        })
+        content.addView(TextView(this).apply {
+            text = getString(R.string.crown_store_detail_ready)
+            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_accent))
+            textSize = 11f
+            setPadding(0, dp(4), 0, dp(10))
+        })
 
-        AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.crown_share_action_import)
-            .setMessage(details)
-            .setPositiveButton(R.string.crown_share_install_as_new) { _, _ ->
-                importPendingCrownShareAsNew()
+        val details = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = ContextCompat.getDrawable(context, R.drawable.crown_config_section_bg)
+        }
+        fun addDetail(label: String, value: String) {
+            details.addView(LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(5), 0, dp(5))
+                addView(TextView(this@CrownStoreActivity).apply {
+                    text = label
+                    setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_secondary))
+                    textSize = 11f
+                    layoutParams = LinearLayout.LayoutParams(dp(82), LinearLayout.LayoutParams.WRAP_CONTENT)
+                })
+                addView(TextView(this@CrownStoreActivity).apply {
+                    text = value
+                    setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_primary))
+                    textSize = 13f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+            })
+        }
+        addDetail(getString(R.string.label_crown_store_profile_name), profile.name)
+        addDetail(getString(R.string.label_crown_store_author), profile.author.ifBlank { unknown })
+        addDetail(getString(R.string.label_crown_store_game), profile.game.ifBlank { unknown })
+        addDetail(getString(R.string.label_crown_share_source), profile.sourceLabel)
+        addDetail(getString(R.string.crown_store_detail_elements),
+            getString(R.string.crown_store_detail_element_count, profile.payloadInfo.elementCount))
+        content.addView(details)
+
+        content.addView(CheckBox(this).apply {
+            text = getString(R.string.message_crown_share_import_preview_only)
+            isChecked = true
+            isEnabled = false
+            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_secondary))
+            textSize = 11f
+            setPadding(0, dp(8), 0, 0)
+        })
+        content.addView(TextView(this).apply {
+            text = layoutCompatibilityMessage(profile.layoutBasis)
+            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_secondary))
+            textSize = 11f
+            setPadding(0, dp(2), 0, dp(8))
+        })
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            // Weighted so the install/merge actions stay visible even when the
+            // content is taller than the dialog on short landscape screens.
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            )
+            addView(content)
+        }
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), 0, dp(22), dp(10))
+        }
+        val mainActions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
+            .setView(LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(scroll)
+                addView(actions)
+            })
+            .create()
+
+        fun actionButton(label: Int, primary: Boolean, onClick: () -> Unit): Button =
+            Button(this).apply {
+                text = getString(label)
+                isAllCaps = false
+                textSize = 11f
+                // The primary button is solid accent and needs the on-accent ink;
+                // everything else keeps the regular text color.
+                setTextColor(
+                    ContextCompat.getColor(
+                        context,
+                        if (primary) R.color.crown_on_accent else R.color.crown_text_primary
+                    )
+                )
+                background = ContextCompat.getDrawable(
+                    context,
+                    if (primary) R.drawable.crown_primary_button_bg
+                    else R.drawable.crown_config_action_button_bg
+                )
+                minHeight = dp(44)
+                setPadding(dp(6), 0, dp(6), 0)
+                setOnClickListener { onClick() }
+                layoutParams = LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                    marginEnd = dp(6)
+                }
             }
-            .setNeutralButton(R.string.crown_share_merge_into_existing) { _, _ ->
-                showCrownShareMergeTargetDialog()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
+
+        mainActions.addView(actionButton(
+            R.string.crown_share_install_as_new,
+            primary = true
+        ) {
+            dialog.dismiss()
+            importPendingCrownShareAsNew()
+        })
+        mainActions.addView(actionButton(
+            R.string.crown_share_merge_into_existing,
+            primary = false
+        ) {
+            dialog.dismiss()
+            showCrownShareMergeTargetDialog()
+        })
+        actions.addView(mainActions)
+        actions.addView(TextView(this).apply {
+            text = getString(android.R.string.cancel)
+            gravity = Gravity.CENTER
+            setTextColor(ContextCompat.getColor(context, R.color.ui_shell_text_secondary))
+            textSize = 11f
+            minHeight = dp(38)
+            setOnClickListener { dialog.dismiss() }
+        })
+        dialog.setOnShowListener { AppDialogStyler.installDismissKeys(dialog) }
+        dialog.show()
     }
 
     private fun importPendingCrownShareAsNew() {
@@ -2389,6 +3164,20 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         }
     }
 
+    private fun layoutCompatibilityShortLabel(
+        layoutBasis: CrownProfileShareManager.LayoutBasis?
+    ): String {
+        val currentLayout = currentLayoutBasis()
+        return when {
+            layoutBasis == null || !layoutBasis.isPresent() ->
+                getString(R.string.crown_store_detail_compatibility_unknown)
+            isLayoutBasisCompatible(layoutBasis, currentLayout) ->
+                getString(R.string.crown_store_detail_compatibility_match)
+            else ->
+                getString(R.string.crown_store_detail_compatibility_mismatch)
+        }
+    }
+
     private fun formatLayoutBasisCompact(layoutBasis: CrownProfileShareManager.LayoutBasis?): String? {
         if (layoutBasis == null || !layoutBasis.isPresent()) return null
         val sizeText = "${layoutBasis.widthPx}x${layoutBasis.heightPx}"
@@ -2474,11 +3263,50 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         return true
     }
 
+    private fun selectThumbnailElements(
+        elements: List<CrownProfileShareManager.PreviewElement>,
+        widthPx: Int,
+        heightPx: Int
+    ): List<CrownProfileShareManager.PreviewElement> {
+        if (elements.size <= 18) return elements
+
+        val previewWidth = widthPx.toFloat().coerceAtLeast(1f)
+        val previewHeight = heightPx.toFloat().coerceAtLeast(1f)
+
+        val structural = elements
+            .filter { it.kind != CrownProfileShareManager.PreviewElementKind.BUTTON }
+            .sortedByDescending { it.width * it.height }
+
+        val buttonsByRegion = elements
+            .filter { it.kind == CrownProfileShareManager.PreviewElementKind.BUTTON }
+            .groupBy { element ->
+                val x = (element.centerX / previewWidth * 3f).toInt().coerceIn(0, 2)
+                val y = (element.centerY / previewHeight * 2f).toInt().coerceIn(0, 1)
+                y * 3 + x
+            }
+            .values
+            .flatMap { region -> region.sortedByDescending { it.width * it.height }.take(3) }
+
+        return (structural.take(8) + buttonsByRegion)
+            .distinctBy { element ->
+                listOf(
+                    element.kind,
+                    element.centerX.toInt(),
+                    element.centerY.toInt(),
+                    element.width.toInt(),
+                    element.height.toInt()
+                ).joinToString(":")
+            }
+            .take(18)
+    }
+
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).toInt()
     }
 
     companion object {
+        const val EXTRA_OPEN_IMPORT_PACKAGE = "extra_open_crown_import_package"
+        const val EXTRA_OPEN_MY_CROWNS = "extra_open_crown_my_crowns"
         private const val REQUEST_CODE_CREATE_LEGACY_EXPORT = 501
         private const val REQUEST_CODE_OPEN_LEGACY_IMPORT = 502
         private const val REQUEST_CODE_OPEN_LEGACY_MERGE = 503

@@ -60,11 +60,12 @@ class DevicePickerLayoutTest {
                 // The localized inflation context has its own configuration;
                 // the actual host viewport is the source of truth after rotation.
                 val host = page.parent as View
-                if (orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                val rotated = if (orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
                     host.width > host.height
                 } else {
                     host.height > host.width
                 }
+                rotated && page.x >= 0f && page.x + page.width <= host.width && !page.isLayoutRequested
             }
             reveal(R.id.device_nav_keyboard, R.id.keyboard_drawing)
             capture("$name-keyboard")
