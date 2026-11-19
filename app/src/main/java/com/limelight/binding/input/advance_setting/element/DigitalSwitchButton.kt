@@ -517,12 +517,12 @@ class DigitalSwitchButton(attributesMap: Map<String, Any>,
         valueSendHandler = elementController.getSendEventHandler(value)
     }
 
-    protected fun setElementRadius(radius: Int) {
+    fun setElementRadius(radius: Int) {
         this.radius = radius
         invalidate()
     }
 
-    protected fun setElementThick(thick: Int) {
+    fun setElementThick(thick: Int) {
         this.thick = thick
         invalidate()
     }
@@ -553,7 +553,7 @@ class DigitalSwitchButton(attributesMap: Map<String, Any>,
         invalidate()
     }
 
-    protected fun setElementTextSizePercent(textSizePercent: Int) {
+    fun setElementTextSizePercent(textSizePercent: Int) {
         this.textSizePercent = textSizePercent
         invalidate()
     }

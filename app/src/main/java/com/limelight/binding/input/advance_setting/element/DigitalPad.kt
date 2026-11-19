@@ -530,7 +530,7 @@ class DigitalPad(attributesMap: Map<String, Any>,
         rightValueSenderHandler = elementController.getSendEventHandler(rightValue)
     }
 
-    protected fun setElementThick(thick: Int) {
+    fun setElementThick(thick: Int) {
         this.thick = thick
         invalidate()
     }

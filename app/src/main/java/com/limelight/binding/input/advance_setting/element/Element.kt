@@ -78,7 +78,7 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
         }
     }
 
-    interface ElementSelectedCallBack {
+    fun interface ElementSelectedCallBack {
         fun elementSelected(element: Element)
     }
 
@@ -412,7 +412,7 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
         return true
     }
 
-    protected abstract fun getInfoPage(): SuperPageLayout
+    abstract fun getInfoPage(): SuperPageLayout
 
     abstract fun updatePage()
 
@@ -426,7 +426,7 @@ abstract class Element(attributesMap: Map<String, Any>, elementController: Eleme
         return CrownAutoColorApplier.apply(this, palette, page)
     }
 
-    protected abstract fun onElementDraw(canvas: Canvas)
+    abstract fun onElementDraw(canvas: Canvas)
 
     abstract fun onElementTouchEvent(event: MotionEvent): Boolean
 
