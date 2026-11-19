@@ -410,7 +410,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             prefConfig.width,
             prefConfig.height,
             prefConfig.rotableScreen,
-            prefConfig.onscreenController || prefConfig.enableCrownFeatures
+            prefConfig.onscreenController || prefConfig.enableCrownFeatures,
+            forceLandscapeMultiWindow = prefConfig.forceLandscapeMultiWindow
         ) { currentTargetDisplay }
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
 
@@ -1583,6 +1584,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         newConfig: Configuration
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (::orientationManager.isInitialized) orientationManager.onWindowModeChanged()
         applyPictureInPictureUiState(isInPictureInPictureMode)
     }
 
@@ -1856,6 +1858,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     @Deprecated("Deprecated in Java")
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean) {
         super.onMultiWindowModeChanged(isInMultiWindowMode)
+        if (::orientationManager.isInitialized) orientationManager.onWindowModeChanged()
         if (isInMultiWindowMode) {
             window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             decoderRenderer?.notifyVideoBackground()
@@ -2500,7 +2503,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Accepted on the UI thread, together with connection resources and PiP state. */
     private fun onConnectionEstablished(): Boolean {
         if (!streamSession.markConnectionEstablished()) return false
-        orientationManager.connected = true
+        orientationManager.onConnectionEstablished()
         updatePipAutoEnter()
         return true
     }

@@ -6,6 +6,29 @@
 -dontwarn kotlinx.coroutines.**
 -keep class androidx.compose.** { *; }
 
+# Multi-window orientation instrumentation invokes these APIs across APKs.
+-keep class com.limelight.OrientationManager {
+    public <init>(...);
+    public void onConnectionEstablished();
+    public boolean getConnected();
+    public void setConnection(com.limelight.nvstream.NvConnection);
+    public void setPreferredOrientation();
+    public void syncOrientationOnFirstFrame(int, int);
+    public void onServerResolutionChanged(boolean);
+    public void onWindowModeChanged();
+    public void onConfigurationChanged();
+    public void cleanup();
+    private android.os.Handler handler;
+    private int lastRotation;
+    private java.lang.Runnable pendingRotationRunnable;
+}
+-keep class com.limelight.nvstream.NvConnection { public <init>(...); }
+-keep interface com.limelight.nvstream.NvConnection$DisplayRotationCallback { *; }
+-keep class com.limelight.nvstream.StreamConfiguration
+-keep class com.limelight.nvstream.StreamConfiguration$Builder { public <init>(); public com.limelight.nvstream.StreamConfiguration build(); }
+-keep class com.limelight.nvstream.http.ComputerDetails$AddressTuple { public <init>(...); }
+-keep interface com.limelight.nvstream.http.LimelightCryptoProvider { *; }
+
 # Cross-APK instrumentation tests inspect dialog recreation and focus state.
 -keepclassmembers class com.limelight.utils.AboutDialogLauncher {
 	*** dialogSnapshot*(...);

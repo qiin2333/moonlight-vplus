@@ -1121,6 +1121,8 @@
     <string name="summary_checkbox_reverse_resolution">Request the selected resolution with its width and height exchanged. Use only for portrait or unusual display layouts.</string>
     <string name="title_checkbox_rotable_screen">Follow device rotation</string>
     <string name="summary_checkbox_rotable_screen">Rotate the stream layout when this device\'s orientation changes.</string>
+    <string name="title_force_landscape_multi_window">Force landscape in multi-window</string>
+    <string name="summary_force_landscape_multi_window">Request landscape for the window and host in split-screen or floating windows; restore the previous orientation policy on exit. Some systems or hosts may not support this.</string>
     
     <!-- Moonlight V+ PC download -->
     <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
