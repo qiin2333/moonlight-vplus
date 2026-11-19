@@ -663,6 +663,7 @@
     <string name="native_mouse_mode_preset_custom">自訂（從舊版設定還原）</string>
     <string name="title_crown_config_management">管理 Crown 設定檔</string>
     <string name="summary_crown_config_management">建立、選擇、匯入、匯出或合併螢幕控制與觸控設定檔。</string>
+    <string name="summary_crown_config_management_with_count">%1$d 套設定檔可切換</string>
     <string name="title_crown_edit_current">編輯目前版面</string>
     <string name="summary_crown_edit_current">開啟「我的 Crown」管理目前版面。</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d 個控制項 · 已符合目前串流</string>

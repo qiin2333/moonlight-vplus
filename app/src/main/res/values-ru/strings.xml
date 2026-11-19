@@ -787,6 +787,7 @@
     <string name="summary_merge_super_config">Добавить кнопки нового профиля в существующий</string>
     <string name="title_crown_config_management">Управление профилями Crown</string>
     <string name="summary_crown_config_management">Создание, выбор, импорт, экспорт и слияние профилей экранного управления и касаний.</string>
+    <string name="summary_crown_config_management_with_count">Доступно профилей: %1$d</string>
     <string name="title_crown_edit_current">Изменить текущую раскладку</string>
     <string name="summary_crown_edit_current">Открыть «Мои Crown» для управления текущей раскладкой.</string>
     <string name="summary_crown_enabled_state">%1$s · элементов: %2$d · готово для текущего стрима</string>
