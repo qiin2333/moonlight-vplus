@@ -167,6 +167,11 @@ android {
     def envKeyPassword = System.getenv("KEY_PASSWORD")
     def hasSigningConfig = keystorePath != null && keystorePassword != null && envKeyAlias != null && envKeyPassword != null && new File(keystorePath).exists()
 
+    // Thor fork: CI points THOR_DEBUG_KEYSTORE at a fixed debug key so every
+    // debug build installs as an update. Unset (local builds): AGP default key.
+    def thorDebugKeystore = System.getenv("THOR_DEBUG_KEYSTORE")
+    def hasThorDebugKeystore = thorDebugKeystore != null && new File(thorDebugKeystore).exists()
+
     signingConfigs {
         if (hasSigningConfig) {
             release {
@@ -176,11 +181,22 @@ android {
                 keyPassword envKeyPassword
             }
         }
+        if (hasThorDebugKeystore) {
+            thorDebug {
+                storeFile file(thorDebugKeystore)
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
     }
 
     buildTypes {
         debug {
             applicationIdSuffix ".vplus_debug"
+            if (hasThorDebugKeystore) {
+                signingConfig signingConfigs.thorDebug
+            }
             resValue "string", "app_label", audioHapticsAppLabel
             resValue "string", "app_label_root", audioHapticsAppLabel
 

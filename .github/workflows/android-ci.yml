@@ -194,7 +194,7 @@ jobs:
         run: chmod +x gradlew
 
       # Thor fork: sign debug APKs with one fixed key so each build installs as an
-      # update (keeps pairing/settings). Without the secret, AGP falls back to a
+      # update (keeps pairing/settings). Without the secret, AGP uses its default
       # throwaway per-runner key, as before.
       - name: Install fixed debug keystore
         id: debug_keystore
@@ -207,10 +207,11 @@ jobs:
             echo "::warning::THOR_DEBUG_KEYSTORE_BASE64 is not set; this debug APK will not install over previous builds"
             exit 0
           fi
-          dir="${ANDROID_USER_HOME:-$HOME/.android}"
-          mkdir -p "$dir"
-          printf '%s' "$THOR_DEBUG_KEYSTORE_BASE64" | base64 -d > "$dir/debug.keystore"
-          keytool -list -keystore "$dir/debug.keystore" -storepass android -alias androiddebugkey > /dev/null
+          ks="$RUNNER_TEMP/thor-debug.keystore"
+          printf '%s' "$THOR_DEBUG_KEYSTORE_BASE64" | base64 -d > "$ks"
+          keytool -list -keystore "$ks" -storepass android -alias androiddebugkey > /dev/null
+          # app/build.gradle signs debug builds with this file when the variable is set.
+          echo "THOR_DEBUG_KEYSTORE=$ks" >> "$GITHUB_ENV"
           echo "installed=true" >> "$GITHUB_OUTPUT"
 
       # Thor fork: master builds get versionName <base>.<run number> (e.g. 12.15.17.42)
