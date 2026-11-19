@@ -27,7 +27,7 @@ class CrownConfigPickerDialogTest {
             .setData(Uri.parse("about:blank"))
     )
     private lateinit var dialog: CrownConfigPickerDialog
-    private val selections = mutableListOf<Int>()
+    private val selections = mutableListOf<Long>()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
     private fun show() {
@@ -43,7 +43,7 @@ class CrownConfigPickerDialogTest {
                 )
             },
                 readAxes = { emptyList<Pair<Float, Float>>() to 0f },
-                onSelected = selections::add)
+                onSelected = { selections += it.configId })
             dialog.show()
         }
         instrumentation.waitForIdleSync()
@@ -81,7 +81,7 @@ class CrownConfigPickerDialogTest {
             key(KeyEvent.KEYCODE_BUTTON_A, true)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
-            assertEquals(listOf(1), selections)
+            assertEquals(listOf(1L), selections)
             assertFalse(dialog.isShowing)
         }
     }
@@ -146,7 +146,7 @@ class CrownConfigPickerDialogTest {
             assertTrue(dialog.isShowing)
             key(KeyEvent.KEYCODE_BUTTON_A, true)
             key(KeyEvent.KEYCODE_BUTTON_A, false)
-            assertEquals(listOf(1), selections)
+            assertEquals(listOf(1L), selections)
         }
     }
 

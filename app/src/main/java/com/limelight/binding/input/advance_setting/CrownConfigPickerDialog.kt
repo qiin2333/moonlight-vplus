@@ -2,9 +2,6 @@ package com.limelight.binding.input.advance_setting
 
 import android.app.AlertDialog
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -30,7 +27,7 @@ class CrownConfigPickerDialog(
     context: Context,
     configChoices: List<ConfigChoice>,
     private val readAxes: (MotionEvent) -> Pair<List<Pair<Float, Float>>, Float>,
-    private val onSelected: (Int) -> Unit
+    private val onSelected: (ConfigChoice) -> Unit
 ) : AlertDialog(context, R.style.AppDialogStyle) {
     data class ConfigChoice(
         val name: String,
@@ -66,7 +63,7 @@ class CrownConfigPickerDialog(
             val choice = (adapter as? ConfigChoiceAdapter)?.getItem(position)
             if (choice?.isSelectable != true) return@setOnItemClickListener
             dismiss()
-            onSelected(position)
+            onSelected(choice)
         }
     }
     private val repeat = object : Runnable {
@@ -129,7 +126,7 @@ class CrownConfigPickerDialog(
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val root = (convertView as? LinearLayout) ?: createRow()
             val choice = getItem(position)
-            (root.getChildAt(0) as? CrownChoiceThumbnailView)?.bind(choice.preview)
+            (root.getChildAt(0) as? CrownThumbnailView)?.bind(choice.preview)
             (root.getChildAt(1) as? LinearLayout)?.apply {
                 (getChildAt(0) as? TextView)?.text = choice.name
                 (getChildAt(1) as? TextView)?.text = context.getString(
@@ -160,7 +157,7 @@ class CrownConfigPickerDialog(
             isFocusable = true
             isClickable = true
             background = context.resources.getDrawable(R.drawable.crown_config_action_button_bg)
-            addView(CrownChoiceThumbnailView(context), LinearLayout.LayoutParams(dp(102), dp(56)))
+            addView(CrownThumbnailView(context), LinearLayout.LayoutParams(dp(102), dp(56)))
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
@@ -189,83 +186,6 @@ class CrownConfigPickerDialog(
             (value * context.resources.displayMetrics.density).toInt()
     }
 
-    private class CrownChoiceThumbnailView(context: Context) : View(context) {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private var preview: CrownProfileShareManager.ProfilePreview? = null
-
-        fun bind(value: CrownProfileShareManager.ProfilePreview?) {
-            preview = value
-            invalidate()
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val density = resources.displayMetrics.density
-            val radius = 8f * density
-            paint.style = Paint.Style.FILL
-            paint.alpha = 255
-            paint.color = Color.rgb(28, 31, 39)
-            canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, paint)
-
-            val value = preview ?: return
-            if (value.isEmpty) return
-            val scale = minOf(
-                width / value.widthPx.toFloat().coerceAtLeast(1f),
-                height / value.heightPx.toFloat().coerceAtLeast(1f)
-            )
-            val left = (width - value.widthPx * scale) / 2f
-            val top = (height - value.heightPx * scale) / 2f
-            value.elements.forEach { element ->
-                val x = left + (element.centerX - element.width / 2f) * scale
-                val y = top + (element.centerY - element.height / 2f) * scale
-                val elementWidth = (element.width * scale).coerceAtLeast(2f)
-                val elementHeight = (element.height * scale).coerceAtLeast(2f)
-                paint.alpha = (element.alpha * 220).toInt().coerceIn(20, 220)
-                paint.color = element.fillColor
-                when (element.kind) {
-                    CrownProfileShareManager.PreviewElementKind.STICK -> {
-                        canvas.drawCircle(
-                            x + elementWidth / 2f,
-                            y + elementHeight / 2f,
-                            minOf(elementWidth, elementHeight) / 2f,
-                            paint
-                        )
-                    }
-                    CrownProfileShareManager.PreviewElementKind.WHEEL -> {
-                        paint.style = Paint.Style.STROKE
-                        paint.strokeWidth = (minOf(elementWidth, elementHeight) / 5f).coerceAtLeast(1.5f)
-                        canvas.drawCircle(
-                            x + elementWidth / 2f,
-                            y + elementHeight / 2f,
-                            minOf(elementWidth, elementHeight) / 2f,
-                            paint
-                        )
-                        paint.style = Paint.Style.FILL
-                    }
-                    CrownProfileShareManager.PreviewElementKind.GROUP -> {
-                        paint.style = Paint.Style.STROKE
-                        paint.strokeWidth = (1.5f * density).coerceAtLeast(1f)
-                        canvas.drawRoundRect(
-                            x, y, x + elementWidth, y + elementHeight,
-                            5f * density, 5f * density, paint
-                        )
-                        paint.style = Paint.Style.FILL
-                    }
-                    CrownProfileShareManager.PreviewElementKind.PAD,
-                    CrownProfileShareManager.PreviewElementKind.BUTTON -> {
-                        canvas.drawRoundRect(
-                            x, y, x + elementWidth, y + elementHeight,
-                            minOf(elementWidth, elementHeight) / 3f,
-                            minOf(elementWidth, elementHeight) / 3f,
-                            paint
-                        )
-                    }
-                }
-            }
-            paint.alpha = 255
-        }
-    }
-
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!ownsWindowFocus) return true
         val identity = event.deviceId to event.keyCode
@@ -290,7 +210,7 @@ class CrownConfigPickerDialog(
                     val choice = (choices.adapter as? ConfigChoiceAdapter)?.getItem(position)
                     if (position in 0 until choices.count && choice?.isSelectable == true) {
                         dismiss()
-                        onSelected(position)
+                        onSelected(choice)
                     }
                 } else {
                     focus.performClick()

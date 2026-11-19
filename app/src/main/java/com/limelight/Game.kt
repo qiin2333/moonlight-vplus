@@ -3525,7 +3525,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun showCrownConfigPicker(
         choices: List<CrownConfigPickerDialog.ConfigChoice>,
-        onSelected: (Int) -> Unit,
+        onSelected: (CrownConfigPickerDialog.ConfigChoice) -> Unit,
         onDismiss: () -> Unit
     ) {
         if (isFinishing || isDestroyed || choices.isEmpty() || crownConfigPicker != null) return

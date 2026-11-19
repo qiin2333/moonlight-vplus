@@ -19,8 +19,10 @@ import com.limelight.utils.AppSwitchStyle;
 import com.limelight.Game; // 确保导入 Game 类
 import com.limelight.R;
 import com.limelight.binding.input.advance_setting.ControllerManager;
+import com.limelight.binding.input.advance_setting.CrownConfigChoiceFactory;
 import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog;
 import com.limelight.binding.input.advance_setting.CrownThumbnailView;
+import com.limelight.binding.input.advance_setting.share.CrownProfileSchema;
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager;
 import com.limelight.binding.input.advance_setting.superpage.NumberSeekbar;
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout;
@@ -32,7 +34,7 @@ public class PageConfigController {
 
 
     private static final String CURRENT_CONFIG_KEY = "current_config_id";
-    public static final String COLUMN_STRING_CONFIG_NAME = "config_name";
+    public static final String COLUMN_STRING_CONFIG_NAME = CrownProfileSchema.CONFIG_NAME_KEY;
     public static final String COLUMN_BOOLEAN_TOUCH_ENABLE = "touch_enable";
     public static final String COLUMN_BOOLEAN_TOUCH_MODE = "touch_mode";
     private static final String COLUMN_INT_TOUCH_SENSE = "touch_sense";
@@ -257,28 +259,9 @@ public class PageConfigController {
         for (Long id : configIds) {
             if (!orderedIds.contains(id)) orderedIds.add(id);
         }
-        List<CrownConfigPickerDialog.ConfigChoice> choices = new ArrayList<>();
-        for (Long id : orderedIds) {
-            String name = (String) controllerManager.getSuperConfigDatabaseHelper()
-                    .queryConfigAttribute(id, COLUMN_STRING_CONFIG_NAME, "");
-            CrownProfileShareManager.ProfilePreview preview = null;
-            try {
-                preview = CrownProfileShareManager.INSTANCE.parsePreview(
-                        controllerManager.getSuperConfigDatabaseHelper().exportConfig(id), null);
-            } catch (RuntimeException ignored) {
-                // An old or incomplete profile still appears as a selectable row.
-            }
-            choices.add(new CrownConfigPickerDialog.ConfigChoice(
-                    name,
-                    controllerManager.getSuperConfigDatabaseHelper().queryAllElementIds(id).size(),
-                    preview,
-                    id,
-                    id.equals(currentConfigId),
-                    !id.equals(currentConfigId)
-            ));
-        }
-        ((Game) context).showCrownConfigPicker(choices, position -> {
-            CrownConfigPickerDialog.ConfigChoice choice = choices.get(position);
+        List<CrownConfigPickerDialog.ConfigChoice> choices = CrownConfigChoiceFactory.create(
+                controllerManager.getSuperConfigDatabaseHelper(), orderedIds, currentConfigId);
+        ((Game) context).showCrownConfigPicker(choices, choice -> {
             if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {
                 return kotlin.Unit.INSTANCE;
             }

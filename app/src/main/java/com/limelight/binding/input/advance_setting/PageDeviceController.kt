@@ -11,7 +11,6 @@ import android.widget.Toast
 import com.limelight.R
 import com.limelight.Game
 import com.limelight.binding.input.advance_setting.config.PageConfigController
-import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
 
 class PageDeviceController(
@@ -161,28 +160,12 @@ class PageDeviceController(
             add(sourceId)
             addAll(ids.filter { it != sourceId })
         }
-        val choices = orderedIds.map {
-            val preview = runCatching {
-                CrownProfileShareManager.parsePreview(database.exportConfig(it))
-            }.getOrNull()
-            CrownConfigPickerDialog.ConfigChoice(
-                name = database.queryConfigAttribute(
-                    it,
-                    PageConfigController.COLUMN_STRING_CONFIG_NAME,
-                    ""
-                ) as String,
-                elementCount = database.queryAllElementIds(it).size,
-                preview = preview,
-                configId = it,
-                isCurrent = it == sourceId,
-                isSelectable = it != sourceId
-            )
-        }
+        val choices = CrownConfigChoiceFactory.create(database, orderedIds, sourceId)
         val callback = deviceCallBack ?: return
-        game.showCrownConfigPicker(choices, onSelected = { index ->
-            val selectedId = choices.getOrNull(index)?.configId
+        game.showCrownConfigPicker(choices, onSelected = { choice ->
+            val selectedId = choice.configId
             if (deviceCallBack === callback && controllerManager.superPagesController?.pageNow === devicePage &&
-                configController.currentConfigId == sourceId && selectedId != null &&
+                configController.currentConfigId == sourceId &&
                 selectedId != sourceId && selectedId in configController.directSwitchTargetIds) {
                 val key = TextView(context).apply {
                     tag = DirectConfigAction.encode(selectedId)

@@ -1,6 +1,5 @@
 package com.limelight.binding.input.advance_setting.share
 
-import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.element.Element
 import com.limelight.utils.MathUtils
 import org.json.JSONArray
@@ -390,7 +389,7 @@ object CrownProfileShareManager {
             throw CrownProfileShareException("Crown payload settings are invalid")
         }
 
-        settings.put(PageConfigController.COLUMN_STRING_CONFIG_NAME, installName)
+        settings.put(CrownProfileSchema.CONFIG_NAME_KEY, installName)
         val settingsText = settings.toString()
         val version = root.optInt("version", -1)
         val elements = root.optString("elements", "")
