@@ -281,6 +281,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     var cursorVisible = false
     lateinit var streamView: StreamView
     val screenDs5Touchpad = ScreenDs5Touchpad(this)
+    private val secondScreenTrackpad = SecondScreenTrackpad(this)
 
     /** Host support for controller touch, learned from the first touch packet of a stream. */
     enum class ScreenDs5HostSupport { UNKNOWN, SUPPORTED, UNSUPPORTED }
@@ -1475,6 +1476,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        if (connected) secondScreenTrackpad.show()
         usbForeground = true
         withUsbForwarding { it.startForeground() }
         if (::floatBallHandler.isInitialized &&
@@ -1929,6 +1931,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (::inputCaptureProvider.isInitialized) {
             inputCaptureProvider.destroy()
         }
+        secondScreenTrackpad.dismiss()
         externalDisplayManager?.cleanup()
         microphoneManager?.stopMicrophoneStream()
         clipboardSyncManager?.stop()
@@ -2122,6 +2125,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onStop() {
         super.onStop()
+        secondScreenTrackpad.dismiss()
         resolutionSwitchController.onStop(isChangingResolution)
         usbForeground = false
         usbForwarding?.stopForeground()
@@ -2575,6 +2579,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // Retries run first so pending arrivals populate the metadata cache;
             // the DS5 declaration then re-declares slot 0 with DualSense capabilities.
             controllerHandler.retryPendingControllerArrivals { screenDs5Touchpad.redeclareOnHost() }
+            secondScreenTrackpad.show()
             startClipboardSyncIfEnabled()
         }
     }
@@ -3629,6 +3634,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     @SuppressLint("MissingSuperCall")
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        // An edge swipe on the bottom-screen touchpad arrives as Back; don't open the menu for it.
+        if (secondScreenTrackpad.shouldSwallowBack()) return
         showGameMenu(null)
     }
 

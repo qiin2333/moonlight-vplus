@@ -421,6 +421,7 @@ class ControllerHandler(
 
     @Volatile
     private var screenDs5TouchpadPressed = false
+    @Volatile private var secondScreenButtons = 0
 
     private val REMAP_IGNORE = -1
     private val REMAP_CONSUME = -2
@@ -1978,6 +1979,16 @@ class ControllerHandler(
         sendControllerInputPacket(defaultContext)
     }
 
+    /** Buttons from the bottom-screen touchpad (touchpad click), merged into controller 0. */
+    fun setSecondScreenButtons(mask: Int) {
+        if (secondScreenButtons == mask || stopped) return
+        secondScreenButtons = mask
+        val owner = inputDeviceContextSnapshot.firstOrNull {
+            it.assignedControllerNumber && it.controllerNumber.toInt() == 0
+        } ?: return
+        sendControllerInputPacket(owner)
+    }
+
     internal fun sendControllerArrivalEvent(
         controllerNumber: Byte,
         type: Byte,
@@ -2176,6 +2187,9 @@ class ControllerHandler(
             }
             if (controllerNumber.toInt() == 0 && prefConfig.screenDs5Touchpad && screenDs5TouchpadPressed) {
                 inputMap = inputMap or ControllerPacket.TOUCHPAD_FLAG
+            }
+            if (controllerNumber.toInt() == 0 && secondScreenButtons != 0) {
+                inputMap = inputMap or secondScreenButtons
             }
         }
 
@@ -4170,7 +4184,15 @@ class ControllerHandler(
         backgroundThreadHandler.removeCallbacks(target.enableSensorRunnable)
 
         val sm = target.sensorManager ?: return
-        val sensor = sm.getDefaultSensor(sensorType) ?: return
+        // For the handheld's own gyroscope, prefer the uncalibrated sensor: it reports the
+        // raw rate in values[0..2] without Android's stepwise bias corrections. Falls back
+        // to the calibrated sensor when the device has no uncalibrated one.
+        val rawGyro = if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && sm === deviceSensorManager) {
+            sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
+        } else {
+            null
+        }
+        val sensor = rawGyro ?: sm.getDefaultSensor(sensorType) ?: return
         val listener = gyroManager.createSensorListener(
             controllerNumber, motionType, sm === deviceSensorManager,
             { current -> isContextUsable(target) &&
