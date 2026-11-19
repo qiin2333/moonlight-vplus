@@ -53,40 +53,47 @@ index e1b9e0d7..a073acd1 100644
  
 diff --git a/app/src/main/java/com/limelight/SecondScreenTrackpad.kt b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
 new file mode 100644
-index 00000000..76d5a31d
+index 00000000..60feed89
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
-@@ -0,0 +1,684 @@
+@@ -0,0 +1,1042 @@
 +@file:Suppress("DEPRECATION")
 +package com.limelight
 +
-+// Bottom-screen DualShock 4 touchpad and hotkeys for dual-screen handhelds (AYN Thor, Retroid Pocket Duo).
++// Bottom-screen DualShock 4 touchpad, mouse trackpad and keyboard for dual-screen handhelds
++// (AYN Thor, Retroid Pocket Duo).
 +//
-+// Pad look and pad/click behaviour are ported from DroidDeck's "Deck trackpads" panels
-+// (https://github.com/Droid-Deck/DroidDeck, ui/InputSurfaceView.kt TrackpadView/HoldButton,
-+// input/DualScreen.kt), licensed GPL-3.0 like Moonlight V+.
++// Pad behaviour and the second-display detection are ported from DroidDeck's "Deck trackpads"
++// (https://github.com/Droid-Deck/DroidDeck, ui/InputSurfaceView.kt, input/DualScreen.kt),
++// licensed GPL-3.0 like Moonlight V+.
 +//
-+// Layout: two large pads side by side, with a bottom row [ CLICK | MENU KEYS ESC COLOR | CLICK ].
-+// The pads are the left and right halves of controller 0's DS4 touchpad; each carries one contact
-+// (pointer 0 = left, 1 = right), matching the host's two DS4 touch slots. Touchpad click: the CLICK
-+// button under a pad, a quick tap, or a second finger on the pad. The pad's contact is held while
-+// clicked so the host knows which half was clicked.
++// Gamepad page: two large pads (the left and right halves of controller 0's DS4 touchpad, one
++// contact each, matching the host's two DS4 touch slots) above a row
++// [ CLICK | MENU TYPE KEYS ESC COLOR | CLICK ]. The pads never click by themselves; the touchpad
++// click comes only from the CLICK button under each pad, which holds that pad's contact while
++// pressed so the host knows which half was clicked.
 +//
-+// Edge swipes: the bottom screen hides its system bars (sticky immersive) and excludes both side
-+// edges from Android's back gesture, so a swipe that starts at the bezel lands on the pad. Android
-+// only lifts its 200dp-per-edge exclusion limit while the navigation bar is stickily hidden; if the
-+// platform keeps the bar shown for this window, the 200dp band around the middle of each pad is
-+// excluded instead, and Back from the rest of the edge is still ignored by the stream menu.
++// Keyboard page (TYPE): a mouse trackpad (one finger moves, two fingers scroll) with
++// [ LEFT | KEYBOARD | DONE | RIGHT ] below it, and Android's keyboard on the bottom screen. Text,
++// Backspace and Enter go through the same handlers as V+'s own keyboard. The window is made
++// focusable only while this page is open (the keyboard needs a focused editor); controller input
++// is still forwarded to the stream. DONE or Back returns to the gamepad page.
 +//
-+// OLED care: pure black background, no filled panels, dims after 10 s without a touch and goes fully
-+// black after 60 s (the pads keep working; any touch wakes it), and the whole layout shifts by a few
-+// pixels every minute so static outlines never sit on the same pixels.
++// Edge swipes: system bars are hidden (sticky immersive) and both side edges are excluded from
++// Android's back gesture so a swipe from the bezel lands on the pad. Android only lifts its
++// 200dp-per-edge exclusion limit while the navigation bar is stickily hidden; otherwise a 200dp
++// band mid-pad is excluded, and a gesture Back from the rest of the edge never opens the menu.
++//
++// OLED care: pure black, no filled panels at rest (pads show only corner marks), captions fade
++// out a few seconds after the last touch, everything dims after 10 s and goes black after 60 s
++// (input keeps working; any touch wakes it), and the whole layout drifts a few pixels every 30 s.
 +
 +import android.annotation.SuppressLint
 +import android.app.Presentation
 +import android.content.Context
 +import android.graphics.Canvas
 +import android.graphics.Color
++import android.graphics.LinearGradient
 +import android.graphics.Paint
 +import android.graphics.RadialGradient
 +import android.graphics.Rect
@@ -100,20 +107,27 @@ index 00000000..76d5a31d
 +import android.os.Handler
 +import android.os.Looper
 +import android.os.SystemClock
++import android.text.InputType
 +import android.view.Display
 +import android.view.HapticFeedbackConstants
 +import android.view.KeyEvent
 +import android.view.MotionEvent
 +import android.view.View
-+import android.view.ViewConfiguration
 +import android.view.ViewGroup
 +import android.view.WindowInsets
 +import android.view.WindowInsetsController
 +import android.view.WindowManager
++import android.view.inputmethod.BaseInputConnection
++import android.view.inputmethod.EditorInfo
++import android.view.inputmethod.InputConnection
++import android.view.inputmethod.InputMethodManager
 +import com.limelight.nvstream.input.ControllerPacket
++import com.limelight.nvstream.input.MouseButtonPacket
 +import com.limelight.nvstream.jni.MoonBridge
 +import kotlin.math.abs
++import kotlin.math.max
 +import kotlin.math.min
++import kotlin.math.roundToInt
 +
 +class SecondScreenTrackpad(private val game: Game) {
 +    private var presentation: PadPresentation? = null
@@ -180,6 +194,9 @@ index 00000000..76d5a31d
 +    private var themeIndex = 0
 +    private val accent: Int get() = THEMES[themeIndex]
 +
++    /** Second gradient stop: the accent lifted towards white. */
++    private val accentLight: Int get() = blend(accent, Color.WHITE, 0.45f)
++
 +    private fun loadTheme() {
 +        themeIndex = prefs.getInt(PREF_THEME, 0).coerceIn(0, THEMES.size - 1)
 +    }
@@ -189,11 +206,21 @@ index 00000000..76d5a31d
 +        prefs.edit().putInt(PREF_THEME, themeIndex).apply()
 +    }
 +
-+    private fun withAlpha(color: Int, alpha: Int) = (color and 0x00ffffff) or (alpha shl 24)
++    private fun withAlpha(color: Int, alpha: Int) = (color and 0x00ffffff) or (alpha.coerceIn(0, 255) shl 24)
 +
-+    // ---------------------------------------------------------------- controller output
++    private fun blend(a: Int, b: Int, t: Float): Int = Color.rgb(
++        (Color.red(a) + (Color.red(b) - Color.red(a)) * t).roundToInt(),
++        (Color.green(a) + (Color.green(b) - Color.green(a)) * t).roundToInt(),
++        (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).roundToInt()
++    )
++
++    /** Captions are shown for a few seconds after a touch, then fade out (static text = burn-in). */
++    private var captionsOn = true
++
++    // ---------------------------------------------------------------- controller / mouse output
 +
 +    private val padClicks = BooleanArray(2)
++    private val mouseButtons = BooleanArray(2)
 +
 +    private fun sendContact(side: Int, type: Byte, fx: Float, fy: Float) {
 +        // Left pad covers x 0.0..0.5 of the DS4 touchpad, right pad 0.5..1.0
@@ -203,21 +230,26 @@ index 00000000..76d5a31d
 +        game.conn?.sendControllerTouchEvent(0, type, side, x, y, pressure)
 +    }
 +
-+    private fun pushButtons() {
-+        var mask = 0
-+        if (padClicks[0] || padClicks[1]) mask = mask or ControllerPacket.TOUCHPAD_FLAG
-+        game.controllerHandler.setSecondScreenButtons(mask)
-+    }
-+
 +    private fun setPadClick(side: Int, down: Boolean) {
 +        if (padClicks[side] == down) return
 +        padClicks[side] = down
-+        pushButtons()
++        val mask = if (padClicks[0] || padClicks[1]) ControllerPacket.TOUCHPAD_FLAG else 0
++        game.controllerHandler.setSecondScreenButtons(mask)
++    }
++
++    private fun setMouseButton(index: Int, down: Boolean) {
++        if (mouseButtons[index] == down) return
++        mouseButtons[index] = down
++        val button = if (index == 0) MouseButtonPacket.BUTTON_LEFT else MouseButtonPacket.BUTTON_RIGHT
++        val conn = game.conn ?: return
++        if (down) conn.sendMouseButtonDown(button) else conn.sendMouseButtonUp(button)
 +    }
 +
 +    private fun releaseAll() {
 +        padClicks[0] = false
 +        padClicks[1] = false
++        setMouseButton(0, false)
++        setMouseButton(1, false)
 +        game.controllerHandler.setSecondScreenButtons(0)
 +        game.conn?.sendControllerTouchEvent(0, MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0f, 0f, 0f)
 +    }
@@ -229,19 +261,34 @@ index 00000000..76d5a31d
 +
 +        override fun onCreate(savedInstanceState: Bundle?) {
 +            super.onCreate(savedInstanceState)
-+            // Not focusable, as in DroidDeck: the stream window keeps controller and key focus.
++            // Not focusable, as in DroidDeck, so the stream window keeps controller and key focus.
++            // The keyboard page lifts this while it is open.
 +            window?.addFlags(
 +                WindowManager.LayoutParams.FLAG_FULLSCREEN or
 +                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
 +                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 +            )
-+            // Black window behind the layout, so the anti-burn-in pixel shift never exposes another colour
++            // The layout makes room for the keyboard itself (from the IME insets)
++            window?.setSoftInputMode(
++                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING or
++                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
++            )
++            // Black behind the layout, so the anti-burn-in drift never exposes another colour
 +            window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
 +            loadTheme()
-+            val layout = PadLayout(context)
++            val layout = PadLayout(context) { typing -> setFocusable(typing) }
 +            root = layout
 +            setContentView(layout)
 +            hideSystemBars()
++        }
++
++        private fun setFocusable(focusable: Boolean) {
++            val w = window ?: return
++            if (focusable) {
++                w.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
++            } else {
++                w.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
++            }
 +        }
 +
 +        // Sticky immersive: lifts Android's 200dp limit on back-gesture exclusion for this screen.
@@ -263,10 +310,18 @@ index 00000000..76d5a31d
 +            }
 +        }
 +
-+        // Fallback if the platform still routes input here: hand it back to the stream,
-+        // except a gesture-generated Back.
++        // Controller and key input that reaches this window (only while the keyboard page has
++        // focus) goes back to the stream, except Back, which closes the keyboard page, and a
++        // gesture-generated Back, which is ignored.
 +        override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-+            if (event.keyCode == KeyEvent.KEYCODE_BACK && shouldSwallowBack()) return true
++            if (event.keyCode == KeyEvent.KEYCODE_BACK) {
++                val layout = root
++                if (layout != null && layout.keyboardPage) {
++                    if (event.action == KeyEvent.ACTION_UP) layout.closeKeyboardPage()
++                    return true
++                }
++                if (shouldSwallowBack()) return true
++            }
 +            return game.dispatchKeyEvent(event)
 +        }
 +
@@ -285,18 +340,41 @@ index 00000000..76d5a31d
 +
 +    // ---------------------------------------------------------------- layout
 +
-+    private inner class PadLayout(context: Context) : ViewGroup(context) {
++    private inner class PadLayout(
++        context: Context,
++        private val onTypingChanged: (Boolean) -> Unit
++    ) : ViewGroup(context) {
 +        private val density = resources.displayMetrics.density
++        private val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
++
++        // Gamepad page
 +        private val leftPad = TrackpadView(context, LEFT)
 +        private val rightPad = TrackpadView(context, RIGHT)
-+        private val leftClick = ClickStripView(context, leftPad)
-+        private val rightClick = ClickStripView(context, rightPad)
++        private val leftClick = ButtonView(context, "CLICK", hold = true) { leftPad.clickButton(it) }
++        private val rightClick = ButtonView(context, "CLICK", hold = true) { rightPad.clickButton(it) }
 +        private val hotkeys = listOf(
-+            HotkeyView(context, "MENU") { actions.execute("open_menu") },
-+            HotkeyView(context, "KEYS") { actions.execute("open_keyboard") },
-+            HotkeyView(context, "ESC") { actions.execute("send_esc") },
-+            HotkeyView(context, "COLOR") { nextTheme(); invalidateAll() },
++            ButtonView(context, "MENU") { actions.execute("open_menu") },
++            ButtonView(context, "TYPE") { openKeyboardPage() },
++            ButtonView(context, "KEYS") { actions.execute("open_keyboard") },
++            ButtonView(context, "ESC") { actions.execute("send_esc") },
++            ButtonView(context, "COLOR") { nextTheme(); invalidateAll() },
 +        )
++        private val gamepadViews: List<View> = listOf(leftPad, rightPad, leftClick, rightClick) + hotkeys
++
++        // Keyboard page
++        private val mousePad = MousePadView(context)
++        private val mouseLeft = ButtonView(context, "LEFT", hold = true) { setMouseButton(0, it) }
++        private val mouseRight = ButtonView(context, "RIGHT", hold = true) { setMouseButton(1, it) }
++        private val keyboardToggle = ButtonView(context, "KEYBOARD") { toggleIme() }
++        private val done = ButtonView(context, "DONE") { closeKeyboardPage() }
++        private val textSink = TextSinkView(context)
++        private val keyboardViews: List<View> = listOf(mousePad, mouseLeft, mouseRight, keyboardToggle, done)
++
++        var keyboardPage = false
++            private set
++        private var imeBottom = 0
++        private var imeVisible = false
++
 +        private val gestureRects = listOf(Rect(), Rect())
 +
 +        private var dimmed = false
@@ -304,6 +382,7 @@ index 00000000..76d5a31d
 +        private var shiftStep = 0
 +        private val dimRunnable = Runnable { setLevel(dim = true, black = false) }
 +        private val offRunnable = Runnable { setLevel(dim = true, black = true) }
++        private val captionRunnable = Runnable { setCaptions(false) }
 +        private val shiftRunnable = object : Runnable {
 +            override fun run() {
 +                shiftStep = (shiftStep + 1) % SHIFT_PATTERN.size
@@ -316,35 +395,128 @@ index 00000000..76d5a31d
 +        init {
 +            setBackgroundColor(Color.BLACK)
 +            isMotionEventSplittingEnabled = true
-+            addView(leftPad)
-+            addView(rightPad)
-+            addView(leftClick)
-+            addView(rightClick)
-+            hotkeys.forEach { addView(it) }
++            gamepadViews.forEach { addView(it) }
++            keyboardViews.forEach { addView(it) }
++            addView(textSink)
++            showPage()
 +            wake()
 +            mainHandler.postDelayed(shiftRunnable, SHIFT_INTERVAL_MS)
 +        }
 +
-+        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-+            val w = (r - l).toFloat()
-+            val h = (b - t).toFloat()
-+            // Pads fill the screen down to the bottom row; they meet the side bezels.
-+            place(leftPad, 0f, .02f, .495f, PAD_BOTTOM - .02f, w, h)
-+            place(rightPad, .505f, .02f, .495f, PAD_BOTTOM - .02f, w, h)
-+            // Bottom row: a CLICK under each pad, the four hotkeys between them
-+            val rowY = PAD_BOTTOM + .02f
-+            val rowH = .98f - rowY
-+            place(leftClick, 0f, rowY, .22f, rowH, w, h)
-+            place(rightClick, .78f, rowY, .22f, rowH, w, h)
-+            val gap = .012f
-+            val each = (.56f - .024f - gap * (hotkeys.size - 1)) / hotkeys.size
-+            hotkeys.forEachIndexed { i, v -> place(v, .232f + i * (each + gap), rowY, each, rowH, w, h) }
-+            updateGestureExclusion()
++        // ------------------------------------------------------------ pages
++
++        private fun showPage() {
++            gamepadViews.forEach { it.visibility = if (keyboardPage) GONE else VISIBLE }
++            keyboardViews.forEach { it.visibility = if (keyboardPage) VISIBLE else GONE }
++            requestLayout()
++            invalidateAll()
++        }
++
++        private fun openKeyboardPage() {
++            if (keyboardPage) return
++            leftPad.reset()
++            rightPad.reset()
++            leftClick.reset()
++            rightClick.reset()
++            releaseAll()
++            keyboardPage = true
++            showPage()
++            onTypingChanged(true)
++            // Focus moves to this window once it is focusable; then the keyboard can attach.
++            post { showIme() }
++        }
++
++        fun closeKeyboardPage() {
++            if (!keyboardPage) return
++            hideIme()
++            mousePad.reset()
++            mouseLeft.reset()
++            mouseRight.reset()
++            setMouseButton(0, false)
++            setMouseButton(1, false)
++            textSink.clearFocus()
++            keyboardPage = false
++            onTypingChanged(false)
++            showPage()
++        }
++
++        private fun showIme() {
++            if (!keyboardPage) return
++            textSink.requestFocus()
++            imm.restartInput(textSink)
++            imm.showSoftInput(textSink, 0)
++        }
++
++        private fun hideIme() {
++            imm.hideSoftInputFromWindow(windowToken, 0)
++        }
++
++        private fun toggleIme() {
++            if (imeVisible) hideIme() else showIme()
 +        }
 +
 +        override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
++            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
++                imeVisible = insets.isVisible(WindowInsets.Type.ime())
++                imeBottom = if (imeVisible) insets.getInsets(WindowInsets.Type.ime()).bottom else 0
++            }
++            requestLayout()
 +            post { updateGestureExclusion() }
 +            return super.onApplyWindowInsets(insets)
++        }
++
++        // ------------------------------------------------------------ layout
++
++        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
++            val w = (r - l).toFloat()
++            val h = (b - t).toFloat()
++            val gap = 10 * density
++            place(textSink, 0f, 0f, 1f, 1f)
++            if (!keyboardPage) {
++                // Pads fill the screen down to the bottom row and meet the side bezels.
++                val rowH = h * ROW_FRACTION
++                val padBottom = h - rowH - 2 * gap
++                place(leftPad, 0f, gap, w / 2f - gap / 2f, padBottom)
++                place(rightPad, w / 2f + gap / 2f, gap, w, padBottom)
++                val rowTop = padBottom + gap
++                val rowBottom = h - gap
++                val clickW = w * .22f
++                place(leftClick, 0f, rowTop, clickW, rowBottom)
++                place(rightClick, w - clickW, rowTop, w, rowBottom)
++                val start = clickW + gap
++                val end = w - clickW - gap
++                val each = (end - start - gap * (hotkeys.size - 1)) / hotkeys.size
++                hotkeys.forEachIndexed { i, v ->
++                    val x = start + i * (each + gap)
++                    place(v, x, rowTop, x + each, rowBottom)
++                }
++            } else {
++                // Mouse pad above [ LEFT | KEYBOARD | DONE | RIGHT ], all above the keyboard.
++                val usable = (h - imeBottom).coerceAtLeast(h * .35f)
++                val rowH = min(h * ROW_FRACTION, usable * .28f)
++                val rowBottom = usable - gap
++                val rowTop = rowBottom - rowH
++                place(mousePad, 0f, gap, w, rowTop - gap)
++                val sideW = w * .3f
++                place(mouseLeft, 0f, rowTop, sideW, rowBottom)
++                place(mouseRight, w - sideW, rowTop, w, rowBottom)
++                val mid = (w - 2 * sideW - 3 * gap) / 2f
++                place(keyboardToggle, sideW + gap, rowTop, sideW + gap + mid, rowBottom)
++                place(done, sideW + 2 * gap + mid, rowTop, w - sideW - gap, rowBottom)
++            }
++            updateGestureExclusion()
++        }
++
++        private fun place(v: View, left: Float, top: Float, right: Float, bottom: Float) {
++            val l = left.toInt()
++            val t = top.toInt()
++            val r = max(right.toInt(), l + 1)
++            val b = max(bottom.toInt(), t + 1)
++            v.measure(
++                MeasureSpec.makeMeasureSpec(r - l, MeasureSpec.EXACTLY),
++                MeasureSpec.makeMeasureSpec(b - t, MeasureSpec.EXACTLY)
++            )
++            v.layout(l, t, r, b)
 +        }
 +
 +        // Keep Android's back gesture off both side edges so edge swipes reach the pads.
@@ -358,7 +530,7 @@ index 00000000..76d5a31d
 +                // Outside sticky immersive Android honours only 200dp per edge: put it mid-pad.
 +                val band = (EXCLUSION_LIMIT_DP * density).toInt()
 +                if (band < height) {
-+                    val centre = (height * PAD_BOTTOM / 2f).toInt()
++                    val centre = (height * (1f - ROW_FRACTION) / 2f).toInt()
 +                    top = (centre - band / 2).coerceAtLeast(0)
 +                    bottom = (top + band).coerceAtMost(height)
 +                }
@@ -368,17 +540,7 @@ index 00000000..76d5a31d
 +            systemGestureExclusionRects = gestureRects
 +        }
 +
-+        private fun place(v: View, x: Float, y: Float, width: Float, height: Float, w: Float, h: Float) {
-+            val left = (x * w).toInt()
-+            val top = (y * h).toInt()
-+            val right = ((x + width) * w).toInt()
-+            val bottom = ((y + height) * h).toInt()
-+            v.measure(
-+                MeasureSpec.makeMeasureSpec(right - left, MeasureSpec.EXACTLY),
-+                MeasureSpec.makeMeasureSpec(bottom - top, MeasureSpec.EXACTLY)
-+            )
-+            v.layout(left, top, right, bottom)
-+        }
++        // ------------------------------------------------------------ idle / OLED care
 +
 +        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
 +            lastTouchUptime = SystemClock.uptimeMillis()
@@ -388,23 +550,36 @@ index 00000000..76d5a31d
 +                MotionEvent.ACTION_POINTER_UP -> touchesDown = event.pointerCount - 1
 +                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> touchesDown = 0
 +            }
-+            if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) wake()
-+            else if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) scheduleIdle()
++            when (event.actionMasked) {
++                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> wake()
++                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> scheduleIdle()
++            }
 +            return super.dispatchTouchEvent(event)
 +        }
 +
 +        private fun wake() {
 +            mainHandler.removeCallbacks(dimRunnable)
 +            mainHandler.removeCallbacks(offRunnable)
++            mainHandler.removeCallbacks(captionRunnable)
 +            setLevel(dim = false, black = false)
++            setCaptions(true)
 +            scheduleIdle()
 +        }
 +
 +        private fun scheduleIdle() {
 +            mainHandler.removeCallbacks(dimRunnable)
 +            mainHandler.removeCallbacks(offRunnable)
++            mainHandler.removeCallbacks(captionRunnable)
++            mainHandler.postDelayed(captionRunnable, CAPTION_MS)
 +            mainHandler.postDelayed(dimRunnable, DIM_AFTER_MS)
-+            mainHandler.postDelayed(offRunnable, OFF_AFTER_MS)
++            // While typing, keep the mouse page visible (dimmed) rather than black.
++            if (!keyboardPage) mainHandler.postDelayed(offRunnable, OFF_AFTER_MS)
++        }
++
++        private fun setCaptions(on: Boolean) {
++            if (captionsOn == on) return
++            captionsOn = on
++            invalidateAll()
 +        }
 +
 +        private fun setLevel(dim: Boolean, black: Boolean) {
@@ -416,7 +591,7 @@ index 00000000..76d5a31d
 +                dim -> DIM_ALPHA
 +                else -> 1f
 +            }
-+            for (i in 0 until childCount) getChildAt(i).alpha = a
++            for (i in 0 until childCount) getChildAt(i).animate().alpha(a).setDuration(FADE_MS).start()
 +        }
 +
 +        fun invalidateAll() {
@@ -426,42 +601,89 @@ index 00000000..76d5a31d
 +        fun release() {
 +            mainHandler.removeCallbacks(dimRunnable)
 +            mainHandler.removeCallbacks(offRunnable)
++            mainHandler.removeCallbacks(captionRunnable)
 +            mainHandler.removeCallbacks(shiftRunnable)
++            if (keyboardPage) {
++                hideIme()
++                keyboardPage = false
++                onTypingChanged(false)
++            }
 +            leftPad.reset()
 +            rightPad.reset()
-+            leftClick.reset()
-+            rightClick.reset()
++            mousePad.reset()
++            listOf(leftClick, rightClick, mouseLeft, mouseRight).forEach { it.reset() }
 +            hotkeys.forEach { it.reset() }
 +            touchesDown = 0
 +            releaseAll()
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- drawing (after DroidDeck Surface)
++    // ---------------------------------------------------------------- drawing
 +
 +    private abstract inner class Surface(context: Context) : View(context) {
 +        protected val density = resources.displayMetrics.density
 +        protected val rect = RectF()
 +        private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-+        private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
++        protected val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            style = Paint.Style.STROKE
++            strokeCap = Paint.Cap.ROUND
++        }
 +        protected val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
 +            textAlign = Paint.Align.CENTER
 +            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
++            letterSpacing = 0.12f
 +        }
-+        protected val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
++        protected val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            textAlign = Paint.Align.CENTER
++            letterSpacing = 0.2f
++        }
 +
-+        /** Outline-only panel (no fill when idle, for OLED); a faint accent wash only while lit. */
-+        protected fun drawSurface(canvas: Canvas, lit: Boolean, corner: Float = CORNER) {
-+            val inset = density
++        /**
++         * At rest: only four short corner marks (few lit pixels). Lit: a full outline with an
++         * accent gradient and a soft gradient wash that fades towards the bottom.
++         */
++        protected fun drawFrame(canvas: Canvas, lit: Boolean, corner: Float) {
++            val inset = 1.5f * density
 +            rect.set(inset, inset, width - inset, height - inset)
 +            val radius = corner * density
 +            if (lit) {
-+                fill.color = withAlpha(accent, 0x2E)
++                fill.shader = LinearGradient(0f, 0f, 0f, height.toFloat(),
++                    withAlpha(accent, 0x38), Color.TRANSPARENT, Shader.TileMode.CLAMP)
 +                canvas.drawRoundRect(rect, radius, radius, fill)
++                stroke.shader = LinearGradient(0f, 0f, width.toFloat(), height.toFloat(),
++                    accentLight, accent, Shader.TileMode.CLAMP)
++                stroke.strokeWidth = 2f * density
++                canvas.drawRoundRect(rect, radius, radius, stroke)
++                stroke.shader = null
++            } else {
++                drawCornerMarks(canvas, radius)
 +            }
-+            stroke.color = if (lit) accent else withAlpha(accent, IDLE_LINE_ALPHA)
-+            stroke.strokeWidth = (if (lit) 2f else 1f) * density
-+            canvas.drawRoundRect(rect, radius, radius, stroke)
++        }
++
++        private fun drawCornerMarks(canvas: Canvas, radius: Float) {
++            stroke.shader = null
++            stroke.color = withAlpha(accent, IDLE_LINE_ALPHA)
++            stroke.strokeWidth = 1.5f * density
++            val len = min(min(width, height) * .18f, 28 * density)
++            val l = rect.left
++            val t = rect.top
++            val r = rect.right
++            val b = rect.bottom
++            val arc = RectF()
++            val d = radius * 2
++            // Each corner: the rounded arc plus a short straight run on both sides.
++            arc.set(l, t, l + d, t + d); canvas.drawArc(arc, 180f, 90f, false, stroke)
++            canvas.drawLine(l + radius, t, l + radius + len, t, stroke)
++            canvas.drawLine(l, t + radius, l, t + radius + len, stroke)
++            arc.set(r - d, t, r, t + d); canvas.drawArc(arc, 270f, 90f, false, stroke)
++            canvas.drawLine(r - radius, t, r - radius - len, t, stroke)
++            canvas.drawLine(r, t + radius, r, t + radius + len, stroke)
++            arc.set(l, b - d, l + d, b); canvas.drawArc(arc, 90f, 90f, false, stroke)
++            canvas.drawLine(l + radius, b, l + radius + len, b, stroke)
++            canvas.drawLine(l, b - radius, l, b - radius - len, stroke)
++            arc.set(r - d, b - d, r, b); canvas.drawArc(arc, 0f, 90f, false, stroke)
++            canvas.drawLine(r - radius, b, r - radius - len, b, stroke)
++            canvas.drawLine(r, b - radius, r, b - radius - len, stroke)
 +        }
 +
 +        protected fun feedback() {
@@ -469,113 +691,110 @@ index 00000000..76d5a31d
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- pad (from DroidDeck TrackpadView)
-+
-+    private inner class TrackpadView(context: Context, val side: Int) : Surface(context) {
-+        private var touching = false
-+        private var fingerDown = false
-+        private var touchClick = false
-+        private var stripDown = false
-+        private var clicked = false
-+        private var fingerX = 0f
-+        private var fingerY = 0f
-+        private var downTime = 0L
-+        private var downX = 0f
-+        private var downY = 0f
-+        private var tapCandidate = false
-+        private var pendingTapRelease: Runnable? = null
-+        private val slop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
-+        private val guide = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
++    /** Finger glow plus a short fading trail; nothing is drawn once the trail has faded. */
++    private abstract inner class TouchSurface(context: Context) : Surface(context) {
++        protected var touching = false
++        protected var fingerX = 0f
++        protected var fingerY = 0f
++        private val trailX = FloatArray(TRAIL_POINTS)
++        private val trailY = FloatArray(TRAIL_POINTS)
++        private val trailT = LongArray(TRAIL_POINTS)
++        private var trailHead = 0
++        private var trailCount = 0
 +        private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
 +        private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
-+        private val caption = if (side == LEFT) "LEFT TRACKPAD" else "RIGHT TRACKPAD"
++        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
++
++        protected fun recordTrail(x: Float, y: Float) {
++            trailX[trailHead] = x
++            trailY[trailHead] = y
++            trailT[trailHead] = SystemClock.uptimeMillis()
++            trailHead = (trailHead + 1) % TRAIL_POINTS
++            trailCount = min(trailCount + 1, TRAIL_POINTS)
++        }
++
++        protected fun clearTrail() {
++            trailCount = 0
++        }
++
++        protected fun drawTouch(canvas: Canvas, pressed: Boolean, caption: String) {
++            val now = SystemClock.uptimeMillis()
++            var live = false
++            for (i in 0 until trailCount) {
++                val idx = (trailHead - 1 - i + TRAIL_POINTS) % TRAIL_POINTS
++                val age = now - trailT[idx]
++                if (age > TRAIL_MS) continue
++                live = true
++                val k = 1f - age.toFloat() / TRAIL_MS
++                dot.color = withAlpha(accent, (0x70 * k).toInt())
++                canvas.drawCircle(trailX[idx], trailY[idx], (3f + 5f * k) * density, dot)
++            }
++            if (touching) {
++                val radius = 64 * density
++                glow.shader = RadialGradient(fingerX, fingerY, radius, withAlpha(accent, 0x60),
++                    Color.TRANSPARENT, Shader.TileMode.CLAMP)
++                canvas.drawCircle(fingerX, fingerY, radius, glow)
++                ring.color = withAlpha(accentLight, 0xB0)
++                ring.strokeWidth = 1.5f * density
++                canvas.drawCircle(fingerX, fingerY, (if (pressed) 26 else 20) * density, ring)
++                dot.color = if (pressed) accentLight else accent
++                canvas.drawCircle(fingerX, fingerY, (if (pressed) 14 else 10) * density, dot)
++            }
++            if (captionsOn) {
++                captionPaint.textSize = 11 * density
++                captionPaint.color = if (touching) accent else TEXT_DIM
++                canvas.drawText(caption, width / 2f, 26 * density, captionPaint)
++            }
++            if (live) postInvalidateOnAnimation()
++        }
++    }
++
++    // ---------------------------------------------------------------- DS4 pad (after DroidDeck TrackpadView)
++
++    /** Half of the DS4 touchpad. Touch moves the contact only; clicking is done with the CLICK button. */
++    private inner class TrackpadView(context: Context, val side: Int) : TouchSurface(context) {
++        private var fingerDown = false
++        private var clickHeld = false
++        private val caption = if (side == LEFT) "L  TOUCHPAD" else "R  TOUCHPAD"
 +
 +        override fun onDraw(canvas: Canvas) {
-+            drawSurface(canvas, clicked)
-+            val cx = width / 2f
-+            val cy = height / 2f
-+            guide.color = withAlpha(accent, GUIDE_ALPHA)
-+            guide.strokeWidth = density
-+            val reach = min(width, height) / 2f - 24 * density
-+            if (reach > 0) {
-+                canvas.drawCircle(cx, cy, reach, guide)
-+                canvas.drawCircle(cx, cy, reach / 2f, guide)
-+                canvas.drawLine(cx - reach, cy, cx + reach, cy, guide)
-+                canvas.drawLine(cx, cy - reach, cx, cy + reach, guide)
-+            }
-+            captionPaint.textSize = 12 * density
-+            captionPaint.color = if (touching) accent else withAlpha(TEXT_DIM, 0xFF)
-+            canvas.drawText(caption, cx, 28 * density, captionPaint)
-+            if (touching) {
-+                val radius = 56 * density
-+                glow.shader = RadialGradient(fingerX, fingerY, radius, withAlpha(accent, 0x66), Color.TRANSPARENT, Shader.TileMode.CLAMP)
-+                canvas.drawCircle(fingerX, fingerY, radius, glow)
-+                dot.color = accent
-+                canvas.drawCircle(fingerX, fingerY, (if (clicked) 16 else 12) * density, dot)
-+            }
++            drawFrame(canvas, touching || clickHeld, CORNER)
++            drawTouch(canvas, clickHeld, caption)
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
 +        override fun onTouchEvent(event: MotionEvent): Boolean {
 +            when (event.actionMasked) {
 +                MotionEvent.ACTION_DOWN -> {
-+                    flushPendingTap()
 +                    fingerDown = true
-+                    downTime = event.eventTime
-+                    downX = event.x
-+                    downY = event.y
-+                    tapCandidate = true
 +                    touch(event.x, event.y)
 +                }
-+                MotionEvent.ACTION_MOVE -> {
-+                    if (tapCandidate && (abs(event.x - downX) > slop || abs(event.y - downY) > slop)) tapCandidate = false
-+                    touch(event.getX(0), event.getY(0))
-+                    click(event.pointerCount > 1)
-+                }
-+                MotionEvent.ACTION_POINTER_DOWN -> {
-+                    tapCandidate = false
-+                    click(true)
-+                }
++                MotionEvent.ACTION_MOVE -> touch(event.getX(0), event.getY(0))
 +                MotionEvent.ACTION_POINTER_UP -> {
-+                    val stays = if (event.actionIndex == 0) 1 else 0
-+                    touch(event.getX(stays), event.getY(stays))
-+                    click(event.pointerCount - 1 > 1)
++                    // If the first finger lifts, keep following the one that stays
++                    if (event.actionIndex == 0 && event.pointerCount > 1) touch(event.getX(1), event.getY(1))
 +                }
-+                MotionEvent.ACTION_UP -> {
-+                    val tap = tapCandidate && event.eventTime - downTime <= TAP_MS
-+                    tapCandidate = false
++                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
 +                    fingerDown = false
-+                    if (tap) {
-+                        // Quick tap = touchpad click, with the contact still down so the host knows the side.
-+                        click(true)
-+                        val release = Runnable {
-+                            pendingTapRelease = null
-+                            click(false)
-+                            liftIfFree()
-+                        }
-+                        pendingTapRelease = release
-+                        mainHandler.postDelayed(release, TAP_CLICK_HOLD_MS)
-+                    } else {
-+                        click(false)
-+                        liftIfFree()
-+                    }
-+                }
-+                MotionEvent.ACTION_CANCEL -> {
-+                    tapCandidate = false
-+                    fingerDown = false
-+                    flushPendingTap()
-+                    click(false)
-+                    liftIfFree()
++                    if (!clickHeld) lift()
 +                }
 +            }
 +            return true
 +        }
 +
-+        private fun flushPendingTap() {
-+            val pending = pendingTapRelease ?: return
-+            pendingTapRelease = null
-+            mainHandler.removeCallbacks(pending)
-+            pending.run()
++        /**
++         * CLICK button under this pad. With no finger on the pad the contact is held at the last
++         * position (centre if none yet), so the host still sees which half of the DS4 pad is clicked.
++         */
++        fun clickButton(down: Boolean) {
++            if (clickHeld == down) return
++            clickHeld = down
++            if (down && !touching) {
++                touch(if (fingerX > 0f) fingerX else width / 2f, if (fingerY > 0f) fingerY else height / 2f)
++            }
++            setPadClick(side, down)
++            if (!down && !fingerDown) lift()
++            invalidate()
 +        }
 +
 +        private fun touch(x: Float, y: Float) {
@@ -583,13 +802,9 @@ index 00000000..76d5a31d
 +            fingerY = y.coerceIn(0f, height.toFloat())
 +            val type = if (touching) MoonBridge.LI_TOUCH_EVENT_MOVE else MoonBridge.LI_TOUCH_EVENT_DOWN
 +            touching = true
++            recordTrail(fingerX, fingerY)
 +            sendContact(side, type, fingerX / width.coerceAtLeast(1), fingerY / height.coerceAtLeast(1))
 +            invalidate()
-+        }
-+
-+        // Lift the contact unless the CLICK button is still holding it.
-+        private fun liftIfFree() {
-+            if (!stripDown) lift()
 +        }
 +
 +        private fun lift() {
@@ -599,102 +814,237 @@ index 00000000..76d5a31d
 +            invalidate()
 +        }
 +
-+        // Click from the pad itself (tap or second finger)
-+        private fun click(down: Boolean) {
-+            touchClick = down
-+            applyClick()
-+        }
-+
-+        /**
-+         * CLICK button under this pad. With no finger on the pad the contact is held at the last
-+         * position (centre if none yet), so the host still sees which half of the DS4 pad is clicked.
-+         */
-+        fun stripPress(down: Boolean) {
-+            if (stripDown == down) return
-+            stripDown = down
-+            if (down && !touching) touch(if (fingerX > 0f) fingerX else width / 2f, if (fingerY > 0f) fingerY else height / 2f)
-+            applyClick()
-+            if (!down && !fingerDown && pendingTapRelease == null) lift()
-+        }
-+
-+        private fun applyClick() {
-+            val down = touchClick || stripDown
-+            if (clicked == down) return
-+            clicked = down
-+            if (down && !stripDown) feedback() // the CLICK button gives its own haptic
-+            setPadClick(side, down)
-+            invalidate()
-+        }
-+
 +        fun reset() {
-+            pendingTapRelease?.let { mainHandler.removeCallbacks(it) }
-+            pendingTapRelease = null
-+            clicked = false
-+            touchClick = false
-+            stripDown = false
++            if (clickHeld) setPadClick(side, false)
++            clickHeld = false
 +            fingerDown = false
 +            touching = false
-+            tapCandidate = false
++            clearTrail()
 +            invalidate()
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- hotkey (after DroidDeck HoldButton)
++    // ---------------------------------------------------------------- mouse pad
 +
-+    private open inner class HotkeyView(
-+        context: Context,
-+        private val label: String,
-+        private val onPress: () -> Unit
-+    ) : Surface(context) {
-+        private var pressedDown = false
++    /** Relative mouse: one finger moves the pointer, two fingers scroll. Clicks are the buttons below. */
++    private inner class MousePadView(context: Context) : TouchSurface(context) {
++        private var lastX = 0f
++        private var lastY = 0f
++        private var restX = 0f
++        private var restY = 0f
++        private var restScroll = 0f
++        private var scrolling = false
 +
 +        override fun onDraw(canvas: Canvas) {
-+            drawSurface(canvas, pressedDown, corner = HOTKEY_CORNER)
-+            labelPaint.color = if (pressedDown) Color.WHITE else withAlpha(TEXT, 0xFF)
-+            labelPaint.textSize = min(height * .32f, 16 * density)
-+            val labelWidth = labelPaint.measureText(label)
-+            if (labelWidth > width * .84f) labelPaint.textSize *= width * .84f / labelWidth
-+            canvas.drawText(label, width / 2f, height / 2f + labelPaint.textSize * .35f, labelPaint)
++            drawFrame(canvas, touching, CORNER)
++            drawTouch(canvas, mouseButtons[0] || mouseButtons[1], if (scrolling) "SCROLL" else "MOUSE")
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
 +        override fun onTouchEvent(event: MotionEvent): Boolean {
 +            when (event.actionMasked) {
-+                MotionEvent.ACTION_DOWN -> setDown(true)
-+                MotionEvent.ACTION_UP -> setDown(false)
-+                MotionEvent.ACTION_CANCEL -> setDown(false, cancelled = true)
++                MotionEvent.ACTION_DOWN -> {
++                    touching = true
++                    baseline(event, -1)
++                    mark(event.x, event.y)
++                }
++                MotionEvent.ACTION_POINTER_DOWN -> {
++                    scrolling = event.pointerCount >= 2
++                    baseline(event, -1)
++                }
++                MotionEvent.ACTION_POINTER_UP -> {
++                    scrolling = event.pointerCount - 1 >= 2
++                    baseline(event, event.actionIndex)
++                }
++                MotionEvent.ACTION_MOVE -> {
++                    val i = 0
++                    val dx = event.getX(i) - lastX
++                    val dy = event.getY(i) - lastY
++                    lastX = event.getX(i)
++                    lastY = event.getY(i)
++                    if (scrolling) scroll(dy) else move(dx, dy)
++                    mark(lastX, lastY)
++                }
++                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
++                    touching = false
++                    scrolling = false
++                    invalidate()
++                }
 +            }
 +            return true
 +        }
 +
-+        protected open fun setDown(down: Boolean, cancelled: Boolean = false) {
-+            if (pressedDown == down) return
-+            pressedDown = down
-+            if (down) {
-+                feedback()
-+                onPress()
-+            }
++        /** Re-anchor on a remaining pointer when fingers are added or lifted, so the cursor doesn't jump. */
++        private fun baseline(event: MotionEvent, leaving: Int) {
++            val i = if (leaving == 0 && event.pointerCount > 1) 1 else 0
++            lastX = event.getX(i)
++            lastY = event.getY(i)
++        }
++
++        private fun mark(x: Float, y: Float) {
++            fingerX = x.coerceIn(0f, width.toFloat())
++            fingerY = y.coerceIn(0f, height.toFloat())
++            recordTrail(fingerX, fingerY)
 +            invalidate()
 +        }
 +
-+        open fun reset() {
-+            pressedDown = false
++        private fun move(dxPx: Float, dyPx: Float) {
++            val dist = abs(dxPx) + abs(dyPx)
++            // Gentle acceleration: slow strokes stay precise, fast flicks cross the screen.
++            val gain = MOUSE_GAIN * (1f + min(dist / (ACCEL_DP * density), MAX_ACCEL))
++            restX += dxPx / density * gain
++            restY += dyPx / density * gain
++            val sx = restX.toInt()
++            val sy = restY.toInt()
++            if (sx == 0 && sy == 0) return
++            restX -= sx
++            restY -= sy
++            game.conn?.sendMouseMove(sx.toShort(), sy.toShort())
++        }
++
++        private fun scroll(dyPx: Float) {
++            // Natural scrolling: fingers up = content up (wheel down)
++            restScroll += -dyPx / density * SCROLL_GAIN
++            val amount = restScroll.toInt()
++            if (amount == 0) return
++            restScroll -= amount
++            game.conn?.sendMouseHighResScroll(amount.coerceIn(-1200, 1200).toShort())
++        }
++
++        fun reset() {
++            touching = false
++            scrolling = false
++            restX = 0f
++            restY = 0f
++            restScroll = 0f
++            clearTrail()
 +            invalidate()
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- CLICK button (held while pressed)
++    // ---------------------------------------------------------------- buttons (after DroidDeck HoldButton)
 +
-+    private inner class ClickStripView(context: Context, private val pad: TrackpadView) :
-+        HotkeyView(context, "CLICK", {}) {
-+        override fun setDown(down: Boolean, cancelled: Boolean) {
-+            super.setDown(down, cancelled)
-+            pad.stripPress(down)
++    /**
++     * Pill button. hold = true reports press and release (CLICK, LEFT, RIGHT); otherwise it fires
++     * once on press. Pressed: gradient fill and a ripple from the touch point.
++     */
++    private inner class ButtonView(
++        context: Context,
++        private val label: String,
++        private val hold: Boolean = false,
++        private val onChange: (Boolean) -> Unit
++    ) : Surface(context) {
++        private var pressedDown = false
++        private var rippleX = 0f
++        private var rippleY = 0f
++        private var rippleStart = 0L
++        private val ripple = Paint(Paint.ANTI_ALIAS_FLAG)
++
++        override fun onDraw(canvas: Canvas) {
++            drawFrame(canvas, pressedDown, BUTTON_CORNER)
++            val age = SystemClock.uptimeMillis() - rippleStart
++            if (rippleStart != 0L && age < RIPPLE_MS) {
++                val k = age.toFloat() / RIPPLE_MS
++                ripple.color = withAlpha(accentLight, (0x50 * (1f - k)).toInt())
++                canvas.save()
++                canvas.clipRect(rect)
++                canvas.drawCircle(rippleX, rippleY, max(width, height) * (0.2f + 0.9f * k), ripple)
++                canvas.restore()
++                postInvalidateOnAnimation()
++            }
++            labelPaint.color = if (pressedDown) Color.WHITE else TEXT
++            labelPaint.textSize = min(height * .30f, 15 * density)
++            val labelWidth = labelPaint.measureText(label)
++            if (labelWidth > width * .8f) labelPaint.textSize *= width * .8f / labelWidth
++            canvas.drawText(label, width / 2f, height / 2f + labelPaint.textSize * .36f, labelPaint)
 +        }
 +
-+        override fun reset() {
-+            super.reset()
-+            pad.stripPress(false)
++        @SuppressLint("ClickableViewAccessibility")
++        override fun onTouchEvent(event: MotionEvent): Boolean {
++            when (event.actionMasked) {
++                MotionEvent.ACTION_DOWN -> {
++                    rippleX = event.x
++                    rippleY = event.y
++                    rippleStart = SystemClock.uptimeMillis()
++                    setDown(true)
++                }
++                MotionEvent.ACTION_UP -> setDown(false)
++                MotionEvent.ACTION_CANCEL -> setDown(false)
++            }
++            return true
++        }
++
++        private fun setDown(down: Boolean) {
++            if (pressedDown == down) return
++            pressedDown = down
++            if (down) feedback()
++            if (hold) onChange(down) else if (down) onChange(true)
++            invalidate()
++        }
++
++        fun reset() {
++            if (pressedDown && hold) onChange(false)
++            pressedDown = false
++            rippleStart = 0L
++            invalidate()
++        }
++    }
++
++    // ---------------------------------------------------------------- keyboard target
++
++    /**
++     * Invisible editor the Android keyboard types into. Text goes to the PC as Unicode, Backspace,
++     * Delete and Enter as keys, through the same Game handlers V+'s own keyboard uses.
++     */
++    private inner class TextSinkView(context: Context) : View(context) {
++        init {
++            isFocusable = true
++            isFocusableInTouchMode = true
++        }
++
++        override fun onCheckIsTextEditor() = true
++
++        override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection {
++            outAttrs.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
++            outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN or
++                EditorInfo.IME_ACTION_NONE
++            return object : BaseInputConnection(this, false) {
++                private var composing: String? = null
++
++                override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
++                    composing = null
++                    if (!text.isNullOrEmpty()) {
++                        if (text.toString() == "\n") game.handleEnter() else game.handleText(text.toString())
++                    }
++                    return true
++                }
++
++                override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
++                    composing = text?.toString()?.takeIf { it.isNotEmpty() }
++                    return true
++                }
++
++                override fun finishComposingText(): Boolean {
++                    composing?.let { game.handleText(it) }
++                    composing = null
++                    return true
++                }
++
++                override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
++                    composing = null
++                    repeat(beforeLength.coerceIn(0, 32)) { game.handleDelete() }
++                    repeat(afterLength.coerceIn(0, 32)) { game.handleForwardDelete() }
++                    return true
++                }
++
++                override fun sendKeyEvent(event: KeyEvent): Boolean =
++                    if (event.action == KeyEvent.ACTION_DOWN) game.handleKeyDown(event) else game.handleKeyUp(event)
++
++                override fun performEditorAction(actionCode: Int): Boolean {
++                    game.handleEnter()
++                    return true
++                }
++            }
 +        }
 +    }
 +
@@ -708,25 +1058,33 @@ index 00000000..76d5a31d
 +        const val PREF_THEME = "accent_theme"
 +
 +        const val BACK_GUARD_MS = 800L
-+        const val PAD_BOTTOM = .78f // pads end here; bottom row below
++        const val ROW_FRACTION = .17f // bottom button row height, as a share of the screen
 +        const val EXCLUSION_LIMIT_DP = 200f // Android's per-edge limit outside sticky immersive
-+        const val TAP_MS = 180L
-+        const val TAP_CLICK_HOLD_MS = 60L
++
++        // Mouse
++        const val MOUSE_GAIN = 1.6f // PC pixels per dp of finger travel, before acceleration
++        const val ACCEL_DP = 12f
++        const val MAX_ACCEL = 1.5f
++        const val SCROLL_GAIN = 6f // high-res wheel units (120 = one notch) per dp
 +
 +        // OLED care
++        const val CAPTION_MS = 4_000L
 +        const val DIM_AFTER_MS = 10_000L
 +        const val OFF_AFTER_MS = 60_000L
-+        const val DIM_ALPHA = 0.25f
-+        const val SHIFT_INTERVAL_MS = 60_000L
-+        val SHIFT_PATTERN = listOf(0f to 0f, 2f to 1f, -1f to 2f, -2f to -1f, 1f to -2f)
-+        const val IDLE_LINE_ALPHA = 0x55
-+        const val GUIDE_ALPHA = 0x22
++        const val DIM_ALPHA = 0.22f
++        const val FADE_MS = 400L
++        const val SHIFT_INTERVAL_MS = 30_000L
++        val SHIFT_PATTERN = listOf(0f to 0f, 3f to 1f, -1f to 3f, -3f to -1f, 1f to -3f, 2f to 2f, -2f to -2f)
++        const val IDLE_LINE_ALPHA = 0x4A
 +
-+        // Shapes and text (DroidDeck)
-+        const val CORNER = 20f
-+        const val HOTKEY_CORNER = 12f
-+        val TEXT = Color.rgb(0xC8, 0xCC, 0xD2)
-+        val TEXT_DIM = Color.rgb(0x5A, 0x60, 0x6A)
++        // Look
++        const val CORNER = 22f
++        const val BUTTON_CORNER = 16f
++        const val TRAIL_POINTS = 14
++        const val TRAIL_MS = 260L
++        const val RIPPLE_MS = 320L
++        val TEXT = Color.rgb(0xB4, 0xB9, 0xC1)
++        val TEXT_DIM = Color.rgb(0x50, 0x56, 0x60)
 +
 +        // Accent colours, cycled with the COLOR hotkey (first is DroidDeck's blue)
 +        val THEMES = intArrayOf(
@@ -742,7 +1100,7 @@ index 00000000..76d5a31d
 +    }
 +}
 diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
-index 39ed1c38..4d26dc0e 100644
+index 39ed1c38..691dd347 100644
 --- a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
 +++ b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
 @@ -421,6 +421,7 @@ class ControllerHandler(
@@ -757,7 +1115,7 @@ index 39ed1c38..4d26dc0e 100644
          sendControllerInputPacket(defaultContext)
      }
  
-+    /** Buttons from the bottom-screen touchpad (touchpad click, Guide), merged into controller 0. */
++    /** Buttons from the bottom-screen touchpad (touchpad click), merged into controller 0. */
 +    fun setSecondScreenButtons(mask: Int) {
 +        if (secondScreenButtons == mask || stopped) return
 +        secondScreenButtons = mask
