@@ -4,6 +4,49 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PerfOverlayGestureControllerTest {
+    @Test
+    fun longSecondPressWithoutLongPressDeliversFirstTap() {
+        val tasks = mutableListOf<Runnable>()
+        val events = mutableListOf<String>()
+        val controller = PerfOverlayGestureController(
+            postDelayed = { task, _ -> tasks.add(task); Unit },
+            removeCallbacks = { task -> tasks.remove(task); Unit },
+            onSingleTap = { _, _ -> events.add("single") },
+            onDoubleTap = { events.add("double") },
+            onLongPress = { events.add("long") },
+            onPressHighlight = {},
+            longPressTimeoutMs = 500
+        )
+        controller.down(0, 0f, 0f, 0f, 0f, 40, true, true, false)
+        controller.up(10)
+        controller.down(200, 0f, 0f, 0f, 0f, 40, true, true, false)
+        controller.up(700)
+        assertEquals(listOf("single"), events)
+        assertEquals(0, tasks.size)
+    }
+
+    @Test
+    fun distantPressResolvesPreviousTapBeforeStartingNextGesture() {
+        val events = mutableListOf<String>()
+        lateinit var controller: PerfOverlayGestureController
+        controller = PerfOverlayGestureController(
+            postDelayed = { _, _ -> },
+            removeCallbacks = {},
+            onSingleTap = { _, _ -> events.add("single"); controller.cancel() },
+            onDoubleTap = { events.add("double") },
+            onLongPress = {},
+            onPressHighlight = {},
+            longPressTimeoutMs = 500
+        )
+        controller.down(0, 0f, 0f, 0f, 0f, 40, true, true, false)
+        controller.up(10)
+        controller.resolvePendingBeforeDown(100, 100f, 100f, 40, true)
+        controller.down(100, 100f, 100f, 100f, 100f, 40, true, true, false)
+        controller.up(110)
+        controller.resolvePendingBeforeDown(500, 200f, 200f, 40, true)
+        assertEquals(listOf("single", "single"), events)
+    }
+
     private class Harness {
         private data class Scheduled(val task: Runnable, val at: Long)
 

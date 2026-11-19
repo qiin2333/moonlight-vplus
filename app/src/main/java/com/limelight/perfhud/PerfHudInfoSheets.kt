@@ -20,6 +20,7 @@ class PerfHudInfoSheets(
     private val isHudStyle: () -> Boolean,
     private val anchor: () -> View?,
     private val showFallback: (PerfHudTarget) -> Unit,
+    private val hasDisplayableBattery: () -> Boolean,
     private val onOpenSettings: () -> Unit,
     private val moodText: (PerfMood) -> String,
     private val fpsHeader: () -> View
@@ -58,14 +59,15 @@ class PerfHudInfoSheets(
     ) {
         val (titleIcon, name) = PerfHudSheetText.splitIcon(title)
         val live = PerfHudInsights.liveValue(target, snapshot(), Locale.getDefault())
-        val pageIndex = PAGE_TARGETS.indexOf(target)
+        val pages = PAGE_TARGETS.filter { it != PerfHudTarget.BATTERY || hasDisplayableBattery() }
+        val pageIndex = pages.indexOf(target)
         val navigation = if (pageIndex >= 0) {
             Triple(
                 PerfHudSheet.Action(activity.getString(R.string.perf_sheet_previous_page)) {
-                    navigateTo(PAGE_TARGETS[(pageIndex + PAGE_TARGETS.size - 1) % PAGE_TARGETS.size])
+                    navigateTo(pages[(pageIndex + pages.size - 1) % pages.size])
                 },
                 PerfHudSheet.Action(activity.getString(R.string.perf_sheet_next_page)) {
-                    navigateTo(PAGE_TARGETS[(pageIndex + 1) % PAGE_TARGETS.size])
+                    navigateTo(pages[(pageIndex + 1) % pages.size])
                 },
                 PerfHudSheet.Action(activity.getString(R.string.perf_sheet_settings)) {
                     onOpenSettings()

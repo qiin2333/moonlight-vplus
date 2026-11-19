@@ -189,7 +189,7 @@ private fun MenuOptionRow(
                     role = Role.Switch
                     toggleableState = if (inlineControl.checked) ToggleableState.On else ToggleableState.Off
                 }
-                .gameMenuActivatable(hapticFeedback, activate, inlineControl)
+                .gameMenuActivatable(hapticFeedback, activate, option)
         inlineControl !is GameMenu.InlineControl.Segmented && option.runnable != null ->
             initialFocusModifier
                 .gamepadFocusOutline(shape)
@@ -370,6 +370,7 @@ internal fun Modifier.gameMenuActivatable(
         Key.DirectionCenter,
         Key.Enter,
         Key.NumPadEnter,
+        Key.Spacebar,
         Key.ButtonA
     )
     if (!confirmed) {
@@ -655,6 +656,7 @@ internal fun InlineSegmentedControl(
                             Key.DirectionCenter,
                             Key.Enter,
                             Key.NumPadEnter,
+                            Key.Spacebar,
                             Key.ButtonA
                         )
                         if (!confirmed) {

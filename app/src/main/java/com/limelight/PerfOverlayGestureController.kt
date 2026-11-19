@@ -36,6 +36,15 @@ internal class PerfOverlayGestureController(
     private var doubleEnabled = false
     private var cancellationGeneration = 0
 
+    fun resolvePendingBeforeDown(time: Long, rawX: Float, rawY: Float, doubleTapSlop: Int, double: Boolean) {
+        val previous = pendingTap ?: return
+        val dx = rawX - previous.rawX
+        val dy = rawY - previous.rawY
+        val isSecondTap = double && time >= previous.time && time - previous.time < DOUBLE_TAP_MS &&
+            dx * dx + dy * dy <= doubleTapSlop.toFloat() * doubleTapSlop
+        if (!isSecondTap) finishPendingTap()
+    }
+
     fun down(
         time: Long, rawX: Float, rawY: Float, x: Float, y: Float, doubleTapSlop: Int,
         single: Boolean, double: Boolean, longPress: Boolean,
@@ -93,6 +102,10 @@ internal class PerfOverlayGestureController(
         if (!active) return
         active = false
         cancelPressTasks()
+        if (!moved && !longPressed && secondTap && time >= downTime && time - downTime >= MAX_TAP_MS) {
+            finishPendingTap()
+            return
+        }
         if (moved || longPressed || time < downTime || time - downTime >= MAX_TAP_MS) {
             clearPendingTap()
             return

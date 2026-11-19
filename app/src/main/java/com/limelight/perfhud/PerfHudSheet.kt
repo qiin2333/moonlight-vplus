@@ -178,7 +178,7 @@ class PerfHudSheet(private val activity: Activity) {
         }
         return minOf(
             dp(MAX_WIDTH_DP),
-            maxOf(dp(MIN_WIDTH_DP), screenW - 2 * dp(12f) - navigationWidth)
+            maxOf(0, screenW - 2 * dp(12f) - navigationWidth)
         )
     }
 

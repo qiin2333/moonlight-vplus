@@ -107,6 +107,7 @@ class PerformanceOverlayManager(
             isHudStyle = ::isHudStyle,
             anchor = { performanceOverlayView },
             showFallback = ::showManagerTargetInfo,
+            hasDisplayableBattery = { hasDisplayableBattery },
             onOpenSettings = onOpenSettings,
             moodText = { buildHudStrings().mood(it) },
             fpsHeader = ::createJitterMonitorSwitchRow
@@ -258,6 +259,7 @@ class PerformanceOverlayManager(
                     it.horizontalGuide() == guideX && it.verticalGuide() == guideY
                 }
             }
+            if (isPortrait()) return PerfOverlayAnchor.TOP_RIGHT
             return when (prefConfig.perfOverlayPosition) {
                 PreferenceConfiguration.PerfOverlayPosition.TOP -> PerfOverlayAnchor.TOP_CENTER
                 PreferenceConfiguration.PerfOverlayPosition.BOTTOM -> PerfOverlayAnchor.BOTTOM_CENTER
@@ -714,6 +716,7 @@ class PerformanceOverlayManager(
             currentPerformanceInfo = null
             lastHudSnapshot = null
             hudView?.clearHistory()
+            configureDisplayItems()
             updateBatteryViewIfVisible()
         }
     }
@@ -1165,7 +1168,8 @@ class PerformanceOverlayManager(
         val hud = isHudStyle()
         for (itemInfo in performanceItems) {
             if (itemInfo.view != null) {
-                val isEnabled = !hud && PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey)
+                val isEnabled = !hud && (itemInfo.item != PerformanceItem.BATTERY || hasDisplayableBattery) &&
+                    PerfOverlayDisplayItemsPreference.isItemEnabled(activity, itemInfo.item.preferenceKey)
                 itemInfo.view.visibility = if (isEnabled) View.VISIBLE else View.GONE
             }
         }
@@ -1670,7 +1674,13 @@ class PerformanceOverlayManager(
         if (prefConfig.perfOverlayOrientation == orientation) return
         cancelOverlayInteraction()
         prefConfig.perfOverlayOrientation = orientation
-        saveLayoutOrientation()
+        if (overlayPrefs.contains(KEY_LEGACY_ORIENTATION)) {
+            if (saveLayoutOrientation(synchronous = true)) {
+                overlayPrefs.edit { remove(KEY_LEGACY_ORIENTATION) }
+            }
+        } else {
+            saveLayoutOrientation()
+        }
         if (requestedPerformanceOverlayVisibility == View.VISIBLE && !overlayTemporarilyHidden) refreshOverlayNow()
         when {
             currentHudLayout == PerfHudLayout.DOCK ->
@@ -2268,6 +2278,12 @@ class PerformanceOverlayManager(
     }
 
     private fun handleOverlayTouch(v: View, event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && isHudStyle()) {
+            gestures.resolvePendingBeforeDown(
+                event.eventTime, event.rawX, event.rawY,
+                ViewConfiguration.get(activity).scaledDoubleTapSlop, perfOverlayDoubleTapEnabled
+            )
+        }
         val hud = isHudStyle()
         val docked = hud && currentHudLayout == PerfHudLayout.DOCK
         when (event.actionMasked) {

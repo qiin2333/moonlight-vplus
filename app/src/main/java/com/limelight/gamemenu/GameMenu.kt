@@ -2714,7 +2714,7 @@ class GameMenu(
             style == PerfHudDensity.MINI || style == PerfHudDensity.DETAILED -> R.string.game_menu_perf_orientation_fixed
             else -> null
         }
-        return listOf(
+        return listOfNotNull(
             MenuOption(
                 label = getString(R.string.game_menu_toggle_performance_overlay).trim(),
                 isWithGameFocus = false,
@@ -2753,7 +2753,7 @@ class GameMenu(
                     }
                 )
             ),
-            MenuOption(
+            if (game.isPerfOverlayMovable) MenuOption(
                 label = getString(R.string.game_menu_perf_position),
                 isWithGameFocus = false,
                 runnable = Runnable { showPerformancePositionPage() },
@@ -2762,7 +2762,7 @@ class GameMenu(
                 isKeepDialog = true,
                 showChevron = true,
                 focusKey = PERF_POSITION_FOCUS_KEY
-            ),
+            ) else null,
             MenuOption(
                 label = getString(R.string.game_menu_perf_metrics),
                 isWithGameFocus = false,

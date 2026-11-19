@@ -3490,7 +3490,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val opened = activeGameMenu?.isShowing() == true
         if (opened) {
             afterShow?.invoke(menu)
-            if (!openedFromUsbShortcut && device == null && ::controllerHandler.isInitialized) {
+            if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                 controllerHandler.onExternalGameMenuOpened()
             }
         }

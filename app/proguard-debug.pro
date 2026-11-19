@@ -129,11 +129,16 @@
     public void setResolutionScale(int);
     public boolean getShowAudioHapticsCard();
     public int getPerfOverlayBgOpacity();
+    public com.limelight.preferences.PreferenceConfiguration$PerfOverlayOrientation getPerfOverlayOrientation();
+    public void setPerfOverlayOrientation(com.limelight.preferences.PreferenceConfiguration$PerfOverlayOrientation);
+    public boolean writePreferences(...);
 }
 -keepclassmembers class com.limelight.preferences.PreferenceConfiguration$Companion {
     public int getDefaultBitrate(java.lang.String, java.lang.String);
     public com.limelight.preferences.PreferenceConfiguration readPreferences(android.content.Context, android.view.Display);
+    public com.limelight.preferences.PreferenceConfiguration readPreferences(android.content.Context);
 }
+-keep class com.limelight.preferences.PreferenceConfiguration$PerfOverlayOrientation { *; }
 
 # Feature-page navigation is exercised by instrumentation after R8.
 -keep class com.limelight.preferences.StreamSettings$SettingsFragment {
