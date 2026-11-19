@@ -19,8 +19,8 @@ object WheelPadGeometry {
     @JvmStatic
     fun segmentStartAngleDegrees(index: Int, segmentCount: Int, alignSegmentEdge: Boolean): Float {
         val sweepAngle = sweepAngleDegrees(segmentCount)
-        return (index * sweepAngle) - (sweepAngle / 2.0f) - 90.0f
-                + rotationOffsetDegrees(segmentCount, alignSegmentEdge)
+        return (index * sweepAngle) - (sweepAngle / 2.0f) - 90.0f +
+                rotationOffsetDegrees(segmentCount, alignSegmentEdge)
     }
 
     @JvmStatic
