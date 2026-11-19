@@ -1136,22 +1136,6 @@ public class ElementController {
         });
     }
 
-    private int getCrownActionIconRes(String idName) {
-        if (idName.endsWith("_copy")) {
-            return R.drawable.phc_action_copy;
-        }
-        if (idName.endsWith("_delete")) {
-            return R.drawable.phc_action_trash;
-        }
-        if (idName.endsWith("_reset")) {
-            return R.drawable.phc_action_reset;
-        }
-        if (idName.endsWith("_ensure")) {
-            return R.drawable.phc_action_check;
-        }
-        return R.drawable.phc_settings;
-    }
-
     private void collectCrownActionButtons(View view, List<Button> actionButtons) {
         if (view instanceof Button && isCrownDetailActionButton(view)) {
             actionButtons.add((Button) view);
