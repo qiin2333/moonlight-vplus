@@ -53,10 +53,10 @@ index e1b9e0d7..a073acd1 100644
  
 diff --git a/app/src/main/java/com/limelight/SecondScreenTrackpad.kt b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
 new file mode 100644
-index 00000000..4a166e65
+index 00000000..f36939c3
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
-@@ -0,0 +1,1488 @@
+@@ -0,0 +1,1570 @@
 +@file:Suppress("DEPRECATION")
 +package com.limelight
 +
@@ -69,19 +69,25 @@ index 00000000..4a166e65
 +//
 +// Gamepad page: two large pads (the left and right halves of controller 0's DS4 touchpad, one
 +// contact each, matching the host's two DS4 touch slots) with a round hub between them, above a
-+// row [ CLICK | TYPE COLOR | CLICK ]. The hub opens a radial wheel with MENU, ESC and KEYS: press
-+// and slide onto an item, or tap the hub and then tap an item. The pads never click by themselves; the touchpad
-+// click comes only from the CLICK button under each pad, which holds that pad's contact while
-+// pressed so the host knows which half was clicked.
++// row [ CLICK | TYPE | CLICK ]. The pads never click by themselves; the touchpad click comes only
++// from the CLICK button under each pad, which holds that pad's contact while pressed so the host
++// knows which half was clicked.
 +//
-+// Keyboard page (TYPE), laid out like a ThinkPad: [ KEYBOARD | DONE ] on top, a mouse trackpad
-+// with a TrackPoint-style nub in the middle, [ LEFT | MIDDLE | RIGHT ] under it, and Android's
-+// keyboard below. Trackpad: one finger moves, two fingers scroll. Nub: press and push; the
-+// pointer keeps moving at a speed set by how far you push. Holding MIDDLE turns nub or trackpad
-+// movement into scrolling; tapping MIDDLE alone is a middle click. Text,
-+// Backspace and Enter go through the same handlers as V+'s own keyboard. The window is made
++// Hub wheel: MENU, KEYS, ESC, COLOR, OPTIONS. Press the hub and slide onto an item, or tap the hub
++// and then tap an item. OPTIONS opens a second wheel: pixel shift on/off, mouse speed down/up,
++// gyro calibrate/reset, reload style, back.
++//
++// Keyboard page (TYPE): [ KEYBOARD | DONE ], a mouse trackpad (one finger moves, two fingers
++// scroll), [ MIDDLE | LEFT | RIGHT ] with MIDDLE on the left for the left thumb, then Android's
++// keyboard. Holding MIDDLE turns trackpad movement into scrolling; tapping it is a middle click.
++// Text, Backspace and Enter go through the same handlers as V+'s own keyboard. The window is
 +// focusable only while this page is open (the keyboard needs a focused editor); controller input
 +// is still forwarded to the stream. DONE or Back returns to the gamepad page.
++//
++// Styles: every colour, size and timing is read from bottom_screen_style.properties, a plain
++// "name = value" text file (BottomScreenStyle below lists the names and defaults). It's built into
++// the app from assets, and a copy in the app's files folder on the device overrides it without a
++// rebuild (OPTIONS > RELOAD STYLE re-reads it).
 +//
 +// Edge swipes: system bars are hidden (sticky immersive) and both side edges are excluded from
 +// Android's back gesture so a swipe from the bezel lands on the pad. Android only lifts its
@@ -89,12 +95,12 @@ index 00000000..4a166e65
 +// band mid-pad is excluded, and a gesture Back from the rest of the edge never opens the menu.
 +//
 +// Touch rate: the pads ask Android for every touch sample as it arrives (unbuffered dispatch, as
-+// V+'s main touch view does) and also replay any batched samples, instead of one sample per frame
-+// of the bottom display.
++// V+'s main touch view does) and also replay any batched samples.
 +//
-+// OLED care: pure black, no filled panels at rest (pads show only corner marks), captions fade
-+// out a few seconds after the last touch, everything dims after 10 s and goes black after 60 s
-+// (input keeps working; any touch wakes it), and the whole layout drifts a few pixels every 30 s.
++// OLED care: pure black, no filled panels at rest (pads show only corner marks), captions fade out
++// a few seconds after the last touch, everything dims and later goes black when idle (input keeps
++// working; any touch wakes it), and the layout drifts a few pixels now and then (pixel shift,
++// switchable in OPTIONS). Never while a finger is down.
 +
 +import android.annotation.SuppressLint
 +import android.app.Presentation
@@ -113,8 +119,6 @@ index 00000000..4a166e65
 +import android.os.Build
 +import android.os.Bundle
 +import android.os.Handler
-+import android.os.HandlerThread
-+import android.os.Process
 +import android.os.Looper
 +import android.os.SystemClock
 +import android.text.InputType
@@ -131,9 +135,14 @@ index 00000000..4a166e65
 +import android.view.inputmethod.EditorInfo
 +import android.view.inputmethod.InputConnection
 +import android.view.inputmethod.InputMethodManager
++import com.limelight.binding.input.GyroCalibration
 +import com.limelight.nvstream.input.ControllerPacket
 +import com.limelight.nvstream.input.MouseButtonPacket
 +import com.limelight.nvstream.jni.MoonBridge
++import java.io.File
++import java.io.InputStream
++import java.util.Locale
++import java.util.Properties
 +import kotlin.math.abs
 +import kotlin.math.max
 +import kotlin.math.min
@@ -149,6 +158,7 @@ index 00000000..4a166e65
 +    @Volatile private var touchesDown = 0
 +
 +    fun show() {
++        loadGyroCalibration()
 +        if (presentation != null) return
 +        if (game.externalDisplayManager?.isUsingExternalDisplay() == true) return
 +        val displayManager = game.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager ?: return
@@ -177,7 +187,7 @@ index 00000000..4a166e65
 +    /**
 +     * True when a Back event was caused by an edge swipe on the bottom screen (Android's back
 +     * gesture) rather than a deliberate Back. Game.onBackPressed() ignores Back in that case, so
-+     * swiping on the pads never opens the stream menu. Use the MENU hotkey to open it instead.
++     * swiping on the pads never opens the stream menu. MENU in the hub wheel opens it instead.
 +     */
 +    fun shouldSwallowBack(): Boolean =
 +        presentation != null &&
@@ -199,24 +209,154 @@ index 00000000..4a166e65
 +        return KNOWN_DUAL_SCREEN_MODELS.any { model.startsWith(it) }
 +    }
 +
-+    // ---------------------------------------------------------------- colours
++    // ---------------------------------------------------------------- style file
++
++    /**
++     * Everything you can change in bottom_screen_style.properties, with its default. Values:
++     * colours as #RRGGBB, sizes in dp, times in seconds or ms as named, *_percent as 0–100.
++     */
++    private class BottomScreenStyle(p: Properties) {
++        val accentColors = colors(p, "accent_colors", intArrayOf(
++            0x1A9FFF, 0xFF3B3B, 0x2BD96B, 0xA06BFF, 0xFF8A1F, 0xFF4FA3, 0x2EE6E6, 0xB0B0B0))
++        val textColor = color(p, "text_color", 0xB4B9C1)
++        val textDimColor = color(p, "text_dim_color", 0x505660)
++        val pressedTextColor = color(p, "pressed_text_color", 0xFFFFFF)
++        val backgroundColor = color(p, "background_color", 0x000000)
++
++        val padCornerDp = num(p, "pad_corner_dp", 22f)
++        val buttonCornerDp = num(p, "button_corner_dp", 16f)
++        val lineWidthDp = num(p, "line_width_dp", 1.5f)
++        val litLineWidthDp = num(p, "lit_line_width_dp", 2f)
++        val idleLineOpacity = pct(p, "idle_line_opacity_percent", 29f)
++        val cornerMarkLengthDp = num(p, "corner_mark_length_dp", 28f)
++        val litFillOpacity = pct(p, "lit_fill_opacity_percent", 22f)
++        val gradientWhiteMix = pct(p, "gradient_white_mix_percent", 45f)
++        val labelSizeDp = num(p, "label_size_dp", 15f)
++        val captionSizeDp = num(p, "caption_size_dp", 11f)
++
++        val glowSizeDp = num(p, "touch_glow_size_dp", 64f)
++        val glowOpacity = pct(p, "touch_glow_opacity_percent", 38f)
++        val dotSizeDp = num(p, "touch_dot_size_dp", 10f)
++        val trailLength = num(p, "trail_length", 14f).toInt().coerceIn(0, 64)
++        val trailFadeMs = num(p, "trail_fade_ms", 260f).toLong().coerceAtLeast(1L)
++        val rippleMs = num(p, "ripple_ms", 320f).toLong().coerceAtLeast(1L)
++
++        val rowHeightPercent = pct(p, "button_row_height_percent", 17f)
++        val gapDp = num(p, "gap_dp", 10f)
++        val hubColumnDp = num(p, "hub_column_dp", 64f)
++        val wheelRadiusDp = num(p, "wheel_radius_dp", 130f)
++
++        val captionHideMs = (num(p, "caption_hide_seconds", 4f) * 1000).toLong()
++        val dimAfterMs = (num(p, "dim_after_seconds", 10f) * 1000).toLong()
++        val blackAfterMs = (num(p, "black_after_seconds", 60f) * 1000).toLong()
++        val dimBrightness = pct(p, "dim_brightness_percent", 22f)
++        val pixelShiftEveryMs = (num(p, "pixel_shift_every_seconds", 30f) * 1000).toLong().coerceAtLeast(1000L)
++        val pixelShiftMaxDp = num(p, "pixel_shift_max_dp", 3f)
++
++        val pixelShiftDefault = bool(p, "pixel_shift_default", true)
++        val mouseSpeedDefault = num(p, "mouse_speed_default", 1f)
++
++        companion object {
++            private fun raw(p: Properties, key: String): String? =
++                p.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
++
++            private fun parseColor(s: String): Int? =
++                runCatching { Color.parseColor(if (s.startsWith("#")) s else "#$s") }.getOrNull()
++
++            fun color(p: Properties, key: String, def: Int): Int =
++                raw(p, key)?.let { parseColor(it) } ?: (def or (0xFF shl 24))
++
++            fun colors(p: Properties, key: String, def: IntArray): IntArray {
++                val parsed = raw(p, key)?.split(',')?.mapNotNull { parseColor(it.trim()) }
++                return if (!parsed.isNullOrEmpty()) parsed.toIntArray() else def.map { it or (0xFF shl 24) }.toIntArray()
++            }
++
++            fun num(p: Properties, key: String, def: Float): Float =
++                raw(p, key)?.toFloatOrNull() ?: def
++
++            /** Percent in the file, 0..1 in code. */
++            fun pct(p: Properties, key: String, def: Float): Float =
++                (num(p, key, def) / 100f).coerceIn(0f, 1f)
++
++            fun bool(p: Properties, key: String, def: Boolean): Boolean =
++                when (raw(p, key)?.lowercase()) {
++                    "on", "true", "yes", "1" -> true
++                    "off", "false", "no", "0" -> false
++                    else -> def
++                }
++        }
++    }
++
++    private var style = BottomScreenStyle(Properties())
++
++    /** The device copy, if present, overrides the one built into the app. */
++    private fun styleOverrideFile(): File? = game.getExternalFilesDir(null)?.let { File(it, STYLE_FILE) }
++
++    private fun loadStyle(): String {
++        val p = Properties()
++        var source = "built-in defaults"
++        fun read(open: () -> InputStream, name: String) {
++            runCatching { open().use { s -> s.reader(Charsets.UTF_8).use { p.load(it) } } }
++                .onSuccess { source = name }
++                .onFailure { if (it !is java.io.FileNotFoundException) LimeLog.warning("Style $name: $it") }
++        }
++        read({ game.assets.open(STYLE_FILE) }, "app")
++        val device = styleOverrideFile()
++        if (device != null && device.isFile) read({ device.inputStream() }, "device file")
++        style = BottomScreenStyle(p)
++        LimeLog.info("Bottom-screen style from $source (device override: ${device?.absolutePath})")
++        return source
++    }
++
++    // ---------------------------------------------------------------- settings (OPTIONS wheel)
 +
 +    private var themeIndex = 0
-+    private val accent: Int get() = THEMES[themeIndex]
++    private var pixelShiftOn = true
++    private var mouseSpeed = 1f
 +
-+    /** Second gradient stop: the accent lifted towards white. */
-+    private val accentLight: Int get() = blend(accent, Color.WHITE, 0.45f)
-+
-+    private fun loadTheme() {
-+        themeIndex = prefs.getInt(PREF_THEME, 0).coerceIn(0, THEMES.size - 1)
++    private fun loadSettings() {
++        themeIndex = prefs.getInt(PREF_THEME, 0).coerceIn(0, style.accentColors.size - 1)
++        pixelShiftOn = prefs.getBoolean(PREF_PIXEL_SHIFT, style.pixelShiftDefault)
++        mouseSpeed = prefs.getFloat(PREF_MOUSE_SPEED, style.mouseSpeedDefault).coerceIn(MOUSE_SPEEDS.first(), MOUSE_SPEEDS.last())
 +    }
 +
 +    private fun nextTheme() {
-+        themeIndex = (themeIndex + 1) % THEMES.size
++        themeIndex = (themeIndex + 1) % style.accentColors.size
 +        prefs.edit().putInt(PREF_THEME, themeIndex).apply()
 +    }
 +
++    private fun stepMouseSpeed(up: Boolean) {
++        val i = MOUSE_SPEEDS.indexOfFirst { it >= mouseSpeed - 0.001f }.let { if (it < 0) MOUSE_SPEEDS.size - 1 else it }
++        val next = (if (up) i + 1 else i - 1).coerceIn(0, MOUSE_SPEEDS.size - 1)
++        mouseSpeed = MOUSE_SPEEDS[next]
++        prefs.edit().putFloat(PREF_MOUSE_SPEED, mouseSpeed).apply()
++    }
++
++    private fun loadGyroCalibration() {
++        GyroCalibration.setBias(prefs.getFloat(PREF_GYRO_X, 0f), prefs.getFloat(PREF_GYRO_Y, 0f), prefs.getFloat(PREF_GYRO_Z, 0f))
++    }
++
++    private fun saveGyroCalibration() {
++        prefs.edit()
++            .putFloat(PREF_GYRO_X, GyroCalibration.biasX)
++            .putFloat(PREF_GYRO_Y, GyroCalibration.biasY)
++            .putFloat(PREF_GYRO_Z, GyroCalibration.biasZ)
++            .apply()
++    }
++
++    private fun speedLabel() =
++        String.format(Locale.US, "%.2f", mouseSpeed).trimEnd('0').trimEnd('.') + "x"
++
++    // ---------------------------------------------------------------- colours
++
++    private val accent: Int get() = style.accentColors[themeIndex.coerceIn(0, style.accentColors.size - 1)]
++
++    /** Second gradient stop: the accent lifted towards white. */
++    private val accentLight: Int get() = blend(accent, Color.WHITE, style.gradientWhiteMix)
++
 +    private fun withAlpha(color: Int, alpha: Int) = (color and 0x00ffffff) or (alpha.coerceIn(0, 255) shl 24)
++
++    private fun withOpacity(color: Int, opacity: Float) = withAlpha(color, (opacity * 255).roundToInt())
 +
 +    private fun blend(a: Int, b: Int, t: Float): Int = Color.rgb(
 +        (Color.red(a) + (Color.red(b) - Color.red(a)) * t).roundToInt(),
@@ -231,8 +371,8 @@ index 00000000..4a166e65
 +
 +    private val padClicks = BooleanArray(2)
 +    private val mouseButtons = BooleanArray(2)
-+    @Volatile private var middleHeld = false
-+    @Volatile private var middleScrolled = false
++    private var middleHeld = false
++    private var middleScrolled = false
 +
 +    private fun sendContact(side: Int, type: Byte, fx: Float, fy: Float) {
 +        // Left pad covers x 0.0..0.5 of the DS4 touchpad, right pad 0.5..1.0
@@ -257,7 +397,7 @@ index 00000000..4a166e65
 +        if (down) conn.sendMouseButtonDown(button) else conn.sendMouseButtonUp(button)
 +    }
 +
-+    /** ThinkPad middle button: held = scroll with nub or trackpad; tapped alone = middle click. */
++    /** Middle button: held = trackpad scrolls; tapped alone = middle click. */
 +    private fun setMiddle(down: Boolean) {
 +        if (middleHeld == down) return
 +        middleHeld = down
@@ -299,13 +439,18 @@ index 00000000..4a166e65
 +                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING or
 +                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
 +            )
-+            // Black behind the layout, so the anti-burn-in drift never exposes another colour
-+            window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
-+            loadTheme()
++            loadStyle()
++            loadSettings()
++            // Solid background behind the layout, so pixel shift never exposes another colour
++            window?.setBackgroundDrawable(ColorDrawable(style.backgroundColor))
 +            val layout = PadLayout(context) { typing -> setFocusable(typing) }
 +            root = layout
 +            setContentView(layout)
 +            hideSystemBars()
++        }
++
++        fun applyStyle() {
++            window?.setBackgroundDrawable(ColorDrawable(style.backgroundColor))
 +        }
 +
 +        private fun setFocusable(focusable: Boolean) {
@@ -378,28 +523,39 @@ index 00000000..4a166e65
 +        private val rightPad = TrackpadView(context, RIGHT)
 +        private val leftClick = ButtonView(context, "CLICK", hold = true) { leftPad.clickButton(it) }
 +        private val rightClick = ButtonView(context, "CLICK", hold = true) { rightPad.clickButton(it) }
-+        private val hotkeys = listOf(
-+            ButtonView(context, "TYPE") { openKeyboardPage() },
-+            ButtonView(context, "COLOR") { nextTheme(); invalidateAll() },
++        private val typeButton = ButtonView(context, "TYPE") { openKeyboardPage() }
++
++        private val mainItems: List<WheelItem> = listOf(
++            WheelItem({ "MENU" }) { actions.execute("open_menu") },
++            WheelItem({ "KEYS" }) { actions.execute("open_keyboard") },
++            WheelItem({ "COLOR" }, keepOpen = true) { nextTheme(); invalidateAll() },
++            WheelItem({ "OPTIONS" }, keepOpen = true) { wheel.showItems(optionItems) },
++            WheelItem({ "ESC" }) { actions.execute("send_esc") },
 +        )
-+        private val wheel = RadialWheelView(context, listOf(
-+            WheelItem("MENU", -90f) { actions.execute("open_menu") },
-+            WheelItem("KEYS", 30f) { actions.execute("open_keyboard") },
-+            WheelItem("ESC", 150f) { actions.execute("send_esc") },
-+        ))
-+        private val hub = HubView(context, wheel)
-+        private val gamepadViews: List<View> = listOf(leftPad, rightPad, hub, leftClick, rightClick) + hotkeys
++        private val optionItems: List<WheelItem> = listOf(
++            WheelItem({ "BACK" }, keepOpen = true) { wheel.showItems(mainItems) },
++            WheelItem({ "PIXEL SHIFT\n" + if (pixelShiftOn) "ON" else "OFF" }, keepOpen = true) { togglePixelShift() },
++            WheelItem({ "MOUSE −\n" + speedLabel() }, keepOpen = true) { stepMouseSpeed(false) },
++            WheelItem({ "MOUSE +\n" + speedLabel() }, keepOpen = true) { stepMouseSpeed(true) },
++            WheelItem({ "GYRO\nCALIBRATE" }) { calibrateGyro() },
++            WheelItem({ "GYRO\nRESET" }) { resetGyro() },
++            WheelItem({ "RELOAD\nSTYLE" }) { reloadStyle() },
++        )
++        private val wheel = RadialWheelView(context, mainItems)
++        private val hub = HubView(context, wheel, mainItems.size)
++        private val banner = BannerView(context)
++        private val gamepadViews: List<View> = listOf(leftPad, rightPad, hub, leftClick, rightClick, typeButton)
 +
 +        // Keyboard page
 +        private val mousePad = MousePadView(context)
-+        private val mouseLeft = ButtonView(context, "LEFT", hold = true) { setMouseButton(0, it) }
 +        private val mouseMiddle = ButtonView(context, "MIDDLE", hold = true) { setMiddle(it) }
++        private val mouseLeft = ButtonView(context, "LEFT", hold = true) { setMouseButton(0, it) }
 +        private val mouseRight = ButtonView(context, "RIGHT", hold = true) { setMouseButton(1, it) }
 +        private val keyboardToggle = ButtonView(context, "KEYBOARD") { toggleIme() }
 +        private val done = ButtonView(context, "DONE") { closeKeyboardPage() }
 +        private val textSink = TextSinkView(context)
 +        private val keyboardViews: List<View> =
-+            listOf(mousePad, mouseLeft, mouseMiddle, mouseRight, keyboardToggle, done)
++            listOf(mousePad, mouseMiddle, mouseLeft, mouseRight, keyboardToggle, done)
 +
 +        var keyboardPage = false
 +            private set
@@ -416,28 +572,80 @@ index 00000000..4a166e65
 +        private val captionRunnable = Runnable { setCaptions(false) }
 +        private val shiftRunnable = object : Runnable {
 +            override fun run() {
++                if (!pixelShiftOn) return
 +                // Never shift the pads under a finger; try again shortly.
 +                if (touchesDown > 0) {
 +                    mainHandler.postDelayed(this, 1_000L)
 +                    return
 +                }
 +                shiftStep = (shiftStep + 1) % SHIFT_PATTERN.size
-+                translationX = SHIFT_PATTERN[shiftStep].first * density
-+                translationY = SHIFT_PATTERN[shiftStep].second * density
-+                mainHandler.postDelayed(this, SHIFT_INTERVAL_MS)
++                applyShift()
++                mainHandler.postDelayed(this, style.pixelShiftEveryMs)
 +            }
 +        }
 +
 +        init {
-+            setBackgroundColor(Color.BLACK)
++            setBackgroundColor(style.backgroundColor)
 +            isMotionEventSplittingEnabled = true
 +            gamepadViews.forEach { addView(it) }
 +            keyboardViews.forEach { addView(it) }
 +            addView(textSink)
-+            addView(wheel) // last, so it draws over everything when open
++            addView(wheel) // over the pages when open
++            addView(banner) // status messages, on top of everything
 +            showPage()
 +            wake()
-+            mainHandler.postDelayed(shiftRunnable, SHIFT_INTERVAL_MS)
++            startPixelShift()
++        }
++
++        // ------------------------------------------------------------ options
++
++        private fun applyShift() {
++            val (sx, sy) = SHIFT_PATTERN[shiftStep]
++            translationX = sx * style.pixelShiftMaxDp * density
++            translationY = sy * style.pixelShiftMaxDp * density
++        }
++
++        private fun startPixelShift() {
++            mainHandler.removeCallbacks(shiftRunnable)
++            if (pixelShiftOn) {
++                mainHandler.postDelayed(shiftRunnable, style.pixelShiftEveryMs)
++            } else {
++                shiftStep = 0
++                applyShift()
++            }
++        }
++
++        private fun togglePixelShift() {
++            pixelShiftOn = !pixelShiftOn
++            prefs.edit().putBoolean(PREF_PIXEL_SHIFT, pixelShiftOn).apply()
++            startPixelShift()
++        }
++
++        private fun calibrateGyro() {
++            banner.show("Hold the Thor still on a table…", CALIBRATION_MS + 500)
++            GyroCalibration.start(CALIBRATION_MS, mainHandler) { result ->
++                if (result.ok) saveGyroCalibration()
++                banner.show(result.message, 3_500L)
++            }
++        }
++
++        private fun resetGyro() {
++            GyroCalibration.reset()
++            saveGyroCalibration()
++            banner.show("Gyro offset cleared", 2_500L)
++        }
++
++        private fun reloadStyle() {
++            val source = loadStyle()
++            loadSettings()
++            setBackgroundColor(style.backgroundColor)
++            presentation?.applyStyle()
++            startPixelShift()
++            requestLayout()
++            invalidateAll()
++            scheduleIdle()
++            val where = if (source == "device file") "from the file on the Thor" else "from the app (no file on the Thor)"
++            banner.show("Style reloaded $where", 3_000L)
 +        }
 +
 +        // ------------------------------------------------------------ pages
@@ -468,8 +676,8 @@ index 00000000..4a166e65
 +            if (!keyboardPage) return
 +            hideIme()
 +            mousePad.reset()
-+            mouseLeft.reset()
 +            mouseMiddle.reset()
++            mouseLeft.reset()
 +            mouseRight.reset()
 +            setMiddle(false)
 +            setMouseButton(0, false)
@@ -510,49 +718,44 @@ index 00000000..4a166e65
 +        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
 +            val w = (r - l).toFloat()
 +            val h = (b - t).toFloat()
-+            val gap = 10 * density
++            val gap = style.gapDp * density
 +            place(textSink, 0f, 0f, 1f, 1f)
 +            if (!keyboardPage) {
 +                // Pads fill the screen down to the bottom row and meet the side bezels, with a
 +                // narrow centre column for the wheel hub.
-+                val rowH = h * ROW_FRACTION
++                val rowH = h * style.rowHeightPercent
 +                val padBottom = h - rowH - 2 * gap
-+                val hubCol = HUB_COLUMN_DP * density
++                val hubCol = style.hubColumnDp * density
 +                place(leftPad, 0f, gap, w / 2f - hubCol / 2f, padBottom)
 +                place(rightPad, w / 2f + hubCol / 2f, gap, w, padBottom)
-+                val hubSize = hubCol - gap
++                val hubSize = max(hubCol - gap, 24 * density)
 +                val hubCy = (gap + padBottom) / 2f
 +                place(hub, w / 2f - hubSize / 2f, hubCy - hubSize / 2f, w / 2f + hubSize / 2f, hubCy + hubSize / 2f)
 +                val rowTop = padBottom + gap
 +                val rowBottom = h - gap
-+                val clickW = w * .3f
++                val clickW = w * .36f
 +                place(leftClick, 0f, rowTop, clickW, rowBottom)
 +                place(rightClick, w - clickW, rowTop, w, rowBottom)
-+                val start = clickW + gap
-+                val end = w - clickW - gap
-+                val each = (end - start - gap * (hotkeys.size - 1)) / hotkeys.size
-+                hotkeys.forEachIndexed { i, v ->
-+                    val x = start + i * (each + gap)
-+                    place(v, x, rowTop, x + each, rowBottom)
-+                }
++                place(typeButton, clickW + gap, rowTop, w - clickW - gap, rowBottom)
 +            } else {
-+                // ThinkPad-style: [ KEYBOARD | DONE ], trackpad with the nub in the middle,
-+                // [ LEFT | MIDDLE | RIGHT ], then Android's keyboard below.
++                // [ KEYBOARD | DONE ], trackpad, [ MIDDLE | LEFT | RIGHT ], then Android's keyboard.
 +                val usable = (h - imeBottom).coerceAtLeast(h * .35f)
-+                val topH = min(h * ROW_FRACTION * .6f, usable * .14f)
++                val topH = min(h * style.rowHeightPercent * .6f, usable * .14f)
 +                place(keyboardToggle, 0f, gap, w / 2f - gap / 2f, gap + topH)
 +                place(done, w / 2f + gap / 2f, gap, w, gap + topH)
-+                val rowH = min(h * ROW_FRACTION, usable * .24f)
++                val rowH = min(h * style.rowHeightPercent, usable * .24f)
 +                val rowBottom = usable - gap
 +                val rowTop = rowBottom - rowH
 +                place(mousePad, 0f, 2 * gap + topH, w, rowTop - gap)
++                // MIDDLE at the far left, under the left thumb
 +                val midW = w * .22f
 +                val sideW = (w - midW - 2 * gap) / 2f
-+                place(mouseLeft, 0f, rowTop, sideW, rowBottom)
-+                place(mouseMiddle, sideW + gap, rowTop, sideW + gap + midW, rowBottom)
++                place(mouseMiddle, 0f, rowTop, midW, rowBottom)
++                place(mouseLeft, midW + gap, rowTop, midW + gap + sideW, rowBottom)
 +                place(mouseRight, w - sideW, rowTop, w, rowBottom)
 +            }
 +            place(wheel, 0f, 0f, w, h)
++            place(banner, 0f, 0f, w, h)
 +            updateGestureExclusion()
 +        }
 +
@@ -579,7 +782,7 @@ index 00000000..4a166e65
 +                // Outside sticky immersive Android honours only 200dp per edge: put it mid-pad.
 +                val band = (EXCLUSION_LIMIT_DP * density).toInt()
 +                if (band < height) {
-+                    val centre = (height * (1f - ROW_FRACTION) / 2f).toInt()
++                    val centre = (height * (1f - style.rowHeightPercent) / 2f).toInt()
 +                    top = (centre - band / 2).coerceAtLeast(0)
 +                    bottom = (top + band).coerceAtMost(height)
 +                }
@@ -619,10 +822,10 @@ index 00000000..4a166e65
 +            mainHandler.removeCallbacks(dimRunnable)
 +            mainHandler.removeCallbacks(offRunnable)
 +            mainHandler.removeCallbacks(captionRunnable)
-+            mainHandler.postDelayed(captionRunnable, CAPTION_MS)
-+            mainHandler.postDelayed(dimRunnable, DIM_AFTER_MS)
++            mainHandler.postDelayed(captionRunnable, style.captionHideMs)
++            mainHandler.postDelayed(dimRunnable, style.dimAfterMs)
 +            // While typing, keep the mouse page visible (dimmed) rather than black.
-+            if (!keyboardPage) mainHandler.postDelayed(offRunnable, OFF_AFTER_MS)
++            if (!keyboardPage) mainHandler.postDelayed(offRunnable, style.blackAfterMs)
 +        }
 +
 +        private fun setCaptions(on: Boolean) {
@@ -637,10 +840,13 @@ index 00000000..4a166e65
 +            off = black
 +            val a = when {
 +                black -> 0f
-+                dim -> DIM_ALPHA
++                dim -> style.dimBrightness
 +                else -> 1f
 +            }
-+            for (i in 0 until childCount) getChildAt(i).animate().alpha(a).setDuration(FADE_MS).start()
++            for (i in 0 until childCount) {
++                val child = getChildAt(i)
++                if (child !== banner) child.animate().alpha(a).setDuration(FADE_MS).start()
++            }
 +        }
 +
 +        fun invalidateAll() {
@@ -660,10 +866,9 @@ index 00000000..4a166e65
 +            leftPad.reset()
 +            rightPad.reset()
 +            mousePad.reset()
-+            mousePad.shutdown()
-+            listOf(leftClick, rightClick, mouseLeft, mouseMiddle, mouseRight).forEach { it.reset() }
-+            hotkeys.forEach { it.reset() }
++            listOf(leftClick, rightClick, typeButton, mouseMiddle, mouseLeft, mouseRight).forEach { it.reset() }
 +            wheel.close()
++            banner.hide()
 +            touchesDown = 0
 +            releaseAll()
 +        }
@@ -675,6 +880,7 @@ index 00000000..4a166e65
 +        protected val density = resources.displayMetrics.density
 +        protected val rect = RectF()
 +        private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
++        private val arc = RectF()
 +        protected val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
 +            style = Paint.Style.STROKE
 +            strokeCap = Paint.Cap.ROUND
@@ -699,11 +905,11 @@ index 00000000..4a166e65
 +            val radius = corner * density
 +            if (lit) {
 +                fill.shader = LinearGradient(0f, 0f, 0f, height.toFloat(),
-+                    withAlpha(accent, 0x38), Color.TRANSPARENT, Shader.TileMode.CLAMP)
++                    withOpacity(accent, style.litFillOpacity), Color.TRANSPARENT, Shader.TileMode.CLAMP)
 +                canvas.drawRoundRect(rect, radius, radius, fill)
 +                stroke.shader = LinearGradient(0f, 0f, width.toFloat(), height.toFloat(),
 +                    accentLight, accent, Shader.TileMode.CLAMP)
-+                stroke.strokeWidth = 2f * density
++                stroke.strokeWidth = style.litLineWidthDp * density
 +                canvas.drawRoundRect(rect, radius, radius, stroke)
 +                stroke.shader = null
 +            } else {
@@ -713,14 +919,13 @@ index 00000000..4a166e65
 +
 +        private fun drawCornerMarks(canvas: Canvas, radius: Float) {
 +            stroke.shader = null
-+            stroke.color = withAlpha(accent, IDLE_LINE_ALPHA)
-+            stroke.strokeWidth = 1.5f * density
-+            val len = min(min(width, height) * .18f, 28 * density)
++            stroke.color = withOpacity(accent, style.idleLineOpacity)
++            stroke.strokeWidth = style.lineWidthDp * density
++            val len = min(min(width, height) * .18f, style.cornerMarkLengthDp * density)
 +            val l = rect.left
 +            val t = rect.top
 +            val r = rect.right
 +            val b = rect.bottom
-+            val arc = RectF()
 +            val d = radius * 2
 +            // Each corner: the rounded arc plus a short straight run on both sides.
 +            arc.set(l, t, l + d, t + d); canvas.drawArc(arc, 180f, 90f, false, stroke)
@@ -737,6 +942,17 @@ index 00000000..4a166e65
 +            canvas.drawLine(r, b - radius, r, b - radius - len, stroke)
 +        }
 +
++        /** Centred text; "\n" splits it into lines. */
++        protected fun drawLabel(canvas: Canvas, text: String, cx: Float, cy: Float, paint: Paint) {
++            val lines = text.split('\n')
++            val lineH = paint.textSize * 1.15f
++            var y = cy - lineH * (lines.size - 1) / 2f + paint.textSize * .36f
++            for (line in lines) {
++                canvas.drawText(line, cx, y, paint)
++                y += lineH
++            }
++        }
++
 +        protected fun feedback() {
 +            performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
 +        }
@@ -747,9 +963,9 @@ index 00000000..4a166e65
 +        protected var touching = false
 +        protected var fingerX = 0f
 +        protected var fingerY = 0f
-+        private val trailX = FloatArray(TRAIL_POINTS)
-+        private val trailY = FloatArray(TRAIL_POINTS)
-+        private val trailT = LongArray(TRAIL_POINTS)
++        private val trailX = FloatArray(64)
++        private val trailY = FloatArray(64)
++        private val trailT = LongArray(64)
 +        private var trailHead = 0
 +        private var trailCount = 0
 +        private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -762,11 +978,14 @@ index 00000000..4a166e65
 +        }
 +
 +        protected fun recordTrail(x: Float, y: Float) {
++            val n = style.trailLength
++            if (n == 0) return
++            trailHead %= n
 +            trailX[trailHead] = x
 +            trailY[trailHead] = y
 +            trailT[trailHead] = SystemClock.uptimeMillis()
-+            trailHead = (trailHead + 1) % TRAIL_POINTS
-+            trailCount = min(trailCount + 1, TRAIL_POINTS)
++            trailHead = (trailHead + 1) % n
++            trailCount = min(trailCount + 1, n)
 +        }
 +
 +        protected fun clearTrail() {
@@ -775,30 +994,32 @@ index 00000000..4a166e65
 +
 +        protected fun drawTouch(canvas: Canvas, pressed: Boolean, caption: String) {
 +            val now = SystemClock.uptimeMillis()
++            val n = style.trailLength
 +            var live = false
-+            for (i in 0 until trailCount) {
-+                val idx = (trailHead - 1 - i + TRAIL_POINTS) % TRAIL_POINTS
++            for (i in 0 until min(trailCount, n)) {
++                val idx = ((trailHead - 1 - i) % n + n) % n
 +                val age = now - trailT[idx]
-+                if (age > TRAIL_MS) continue
++                if (age > style.trailFadeMs) continue
 +                live = true
-+                val k = 1f - age.toFloat() / TRAIL_MS
++                val k = 1f - age.toFloat() / style.trailFadeMs
 +                dot.color = withAlpha(accent, (0x70 * k).toInt())
 +                canvas.drawCircle(trailX[idx], trailY[idx], (3f + 5f * k) * density, dot)
 +            }
 +            if (touching) {
-+                val radius = 64 * density
-+                glow.shader = RadialGradient(fingerX, fingerY, radius, withAlpha(accent, 0x60),
++                val radius = style.glowSizeDp * density
++                glow.shader = RadialGradient(fingerX, fingerY, radius, withOpacity(accent, style.glowOpacity),
 +                    Color.TRANSPARENT, Shader.TileMode.CLAMP)
 +                canvas.drawCircle(fingerX, fingerY, radius, glow)
 +                ring.color = withAlpha(accentLight, 0xB0)
-+                ring.strokeWidth = 1.5f * density
-+                canvas.drawCircle(fingerX, fingerY, (if (pressed) 26 else 20) * density, ring)
++                ring.strokeWidth = style.lineWidthDp * density
++                val dotR = style.dotSizeDp * density
++                canvas.drawCircle(fingerX, fingerY, if (pressed) dotR * 2.6f else dotR * 2f, ring)
 +                dot.color = if (pressed) accentLight else accent
-+                canvas.drawCircle(fingerX, fingerY, (if (pressed) 14 else 10) * density, dot)
++                canvas.drawCircle(fingerX, fingerY, if (pressed) dotR * 1.4f else dotR, dot)
 +            }
 +            if (captionsOn) {
-+                captionPaint.textSize = 11 * density
-+                captionPaint.color = if (touching) accent else TEXT_DIM
++                captionPaint.textSize = style.captionSizeDp * density
++                captionPaint.color = if (touching) accent else style.textDimColor
 +                canvas.drawText(caption, width / 2f, 26 * density, captionPaint)
 +            }
 +            if (live) postInvalidateOnAnimation()
@@ -814,7 +1035,7 @@ index 00000000..4a166e65
 +        private val caption = if (side == LEFT) "L  TOUCHPAD" else "R  TOUCHPAD"
 +
 +        override fun onDraw(canvas: Canvas) {
-+            drawFrame(canvas, touching || clickHeld, CORNER)
++            drawFrame(canvas, touching || clickHeld, style.padCornerDp)
 +            drawTouch(canvas, clickHeld, caption)
 +        }
 +
@@ -885,13 +1106,9 @@ index 00000000..4a166e65
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- mouse pad with pointing-stick nub
++    // ---------------------------------------------------------------- mouse pad
 +
-+    /**
-+     * Relative mouse. Trackpad: one finger moves the pointer, two fingers scroll. Nub (centre):
-+     * press and push; the pointer moves continuously at a speed set by how far the finger has been
-+     * pushed from where it pressed, like a ThinkPad TrackPoint. Holding MIDDLE makes either one scroll.
-+     */
++    /** Relative mouse: one finger moves the pointer, two fingers scroll; MIDDLE held also scrolls. */
 +    private inner class MousePadView(context: Context) : TouchSurface(context) {
 +        private var lastX = 0f
 +        private var lastY = 0f
@@ -900,80 +1117,10 @@ index 00000000..4a166e65
 +        private var restScroll = 0f
 +        private var scrolling = false
 +
-+        // Nub. Its pointer loop runs on its own high-priority thread, not the busy UI thread, so
-+        // moves go out on time; the UI thread only updates where the finger is.
-+        @Volatile private var nubActive = false
-+        @Volatile private var nubDownX = 0f
-+        @Volatile private var nubDownY = 0f
-+        @Volatile private var nubX = 0f
-+        @Volatile private var nubY = 0f
-+        private var nubLastTick = 0L
-+        private var nubRestX = 0f
-+        private var nubRestY = 0f
-+        private var nubRestScroll = 0f
-+        private var nubThread: HandlerThread? = null
-+        private var nubHandler: Handler? = null
-+        private val nubFill = Paint(Paint.ANTI_ALIAS_FLAG)
-+        private val nubRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-+        private val nubTick = object : Runnable {
-+            override fun run() {
-+                if (!nubActive) return
-+                val now = SystemClock.uptimeMillis()
-+                val dt = (now - nubLastTick).coerceIn(1L, 50L) / 1000f
-+                nubLastTick = now
-+                nubStep(dt)
-+                nubHandler?.postDelayed(this, NUB_TICK_MS)
-+            }
-+        }
-+
-+        private fun nubLoop(): Handler {
-+            nubHandler?.let { return it }
-+            val thread = HandlerThread("BottomScreenNub", Process.THREAD_PRIORITY_URGENT_DISPLAY).apply { start() }
-+            nubThread = thread
-+            return Handler(thread.looper).also { nubHandler = it }
-+        }
-+
-+        fun shutdown() {
-+            stopNub()
-+            nubThread?.quitSafely()
-+            nubThread = null
-+            nubHandler = null
-+        }
-+
-+        private val nubCx get() = width / 2f
-+        private val nubCy get() = height / 2f
-+
 +        override fun onDraw(canvas: Canvas) {
-+            drawFrame(canvas, touching || nubActive, CORNER)
-+            val caption = when {
-+                nubActive -> if (middleHeld) "SCROLL" else "POINTER"
-+                scrolling || (touching && middleHeld) -> "SCROLL"
-+                else -> "MOUSE"
-+            }
++            drawFrame(canvas, touching, style.padCornerDp)
++            val caption = if (scrolling || (touching && middleHeld)) "SCROLL" else "MOUSE  " + speedLabel()
 +            drawTouch(canvas, mouseButtons[0] || mouseButtons[1], caption)
-+            drawNub(canvas)
-+        }
-+
-+        /** Red ThinkPad-style nub: outline only at rest (OLED), filled with a push indicator in use. */
-+        private fun drawNub(canvas: Canvas) {
-+            val r = NUB_DP * density
-+            if (nubActive) {
-+                val px = (nubX - nubDownX).coerceIn(-r * 1.5f, r * 1.5f)
-+                val py = (nubY - nubDownY).coerceIn(-r * 1.5f, r * 1.5f)
-+                nubFill.shader = RadialGradient(nubCx + px * .3f, nubCy + py * .3f, r * 1.4f,
-+                    blend(NUB_RED, Color.WHITE, .25f), withAlpha(NUB_RED, 0x30), Shader.TileMode.CLAMP)
-+                canvas.drawCircle(nubCx, nubCy, r * 1.4f, nubFill)
-+                nubFill.shader = null
-+                nubFill.color = NUB_RED
-+                canvas.drawCircle(nubCx + px * .35f, nubCy + py * .35f, r * .55f, nubFill)
-+            } else {
-+                nubRing.color = withAlpha(NUB_RED, 0x80)
-+                nubRing.strokeWidth = 2f * density
-+                canvas.drawCircle(nubCx, nubCy, r, nubRing)
-+                nubFill.shader = null
-+                nubFill.color = withAlpha(NUB_RED, 0x50)
-+                canvas.drawCircle(nubCx, nubCy, r * .35f, nubFill)
-+            }
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
@@ -981,39 +1128,25 @@ index 00000000..4a166e65
 +            when (event.actionMasked) {
 +                MotionEvent.ACTION_DOWN -> {
 +                    unbuffered(event)
-+                    val dx = event.x - nubCx
-+                    val dy = event.y - nubCy
-+                    val hit = NUB_HIT_DP * density
-+                    if (dx * dx + dy * dy <= hit * hit) {
-+                        startNub(event.x, event.y)
-+                    } else {
-+                        touching = true
-+                        baseline(event, -1)
-+                        mark(event.x, event.y)
-+                    }
++                    touching = true
++                    baseline(event, -1)
++                    mark(event.x, event.y)
 +                }
-+                MotionEvent.ACTION_POINTER_DOWN -> if (!nubActive) {
++                MotionEvent.ACTION_POINTER_DOWN -> {
 +                    scrolling = event.pointerCount >= 2
 +                    baseline(event, -1)
 +                }
-+                MotionEvent.ACTION_POINTER_UP -> if (!nubActive) {
++                MotionEvent.ACTION_POINTER_UP -> {
 +                    scrolling = event.pointerCount - 1 >= 2
 +                    baseline(event, event.actionIndex)
 +                }
 +                MotionEvent.ACTION_MOVE -> {
-+                    if (nubActive) {
-+                        nubX = event.getX(0)
-+                        nubY = event.getY(0)
-+                        invalidate()
-+                    } else {
-+                        // Replay batched samples, then the newest, so no movement is skipped
-+                        for (h in 0 until event.historySize) track(event.getHistoricalX(0, h), event.getHistoricalY(0, h))
-+                        track(event.getX(0), event.getY(0))
-+                        mark(lastX, lastY)
-+                    }
++                    // Replay batched samples, then the newest, so no movement is skipped
++                    for (h in 0 until event.historySize) track(event.getHistoricalX(0, h), event.getHistoricalY(0, h))
++                    track(event.getX(0), event.getY(0))
++                    mark(lastX, lastY)
 +                }
 +                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-+                    stopNub()
 +                    touching = false
 +                    scrolling = false
 +                    invalidate()
@@ -1051,13 +1184,9 @@ index 00000000..4a166e65
 +        private fun move(dxPx: Float, dyPx: Float) {
 +            val dist = abs(dxPx) + abs(dyPx)
 +            // Gentle acceleration: slow strokes stay precise, fast flicks cross the screen.
-+            val gain = MOUSE_GAIN * (1f + min(dist / (ACCEL_DP * density), MAX_ACCEL))
-+            send(dxPx / density * gain, dyPx / density * gain)
-+        }
-+
-+        private fun send(dx: Float, dy: Float) {
-+            restX += dx
-+            restY += dy
++            val gain = MOUSE_GAIN * mouseSpeed * (1f + min(dist / (ACCEL_DP * density), MAX_ACCEL))
++            restX += dxPx / density * gain
++            restY += dyPx / density * gain
 +            val sx = restX.toInt()
 +            val sy = restY.toInt()
 +            if (sx == 0 && sy == 0) return
@@ -1075,72 +1204,7 @@ index 00000000..4a166e65
 +            game.conn?.sendMouseHighResScroll(amount.coerceIn(-1200, 1200).toShort())
 +        }
 +
-+        // ------------------------------------------------------------ nub
-+
-+        private fun startNub(x: Float, y: Float) {
-+            nubActive = true
-+            nubDownX = x
-+            nubDownY = y
-+            nubX = x
-+            nubY = y
-+            feedback()
-+            val loop = nubLoop()
-+            loop.removeCallbacks(nubTick)
-+            loop.post {
-+                nubLastTick = SystemClock.uptimeMillis()
-+                nubRestX = 0f
-+                nubRestY = 0f
-+                nubRestScroll = 0f
-+                loop.postDelayed(nubTick, NUB_TICK_MS)
-+            }
-+            invalidate()
-+        }
-+
-+        private fun stopNub() {
-+            if (!nubActive) return
-+            nubActive = false
-+            nubHandler?.removeCallbacks(nubTick)
-+            invalidate()
-+        }
-+
-+        /**
-+         * Pointing-stick transfer: the push distance (dp from where the finger pressed) sets the
-+         * pointer speed. A small dead zone so a resting finger doesn't drift, then a gentle,
-+         * nearly linear rise (push^1.2) so small pushes already move and big ones don't shoot off.
-+         */
-+        private fun nubStep(dt: Float) {
-+            val dx = (nubX - nubDownX) / density
-+            val dy = (nubY - nubDownY) / density
-+            val push = kotlin.math.sqrt(dx * dx + dy * dy)
-+            if (push <= NUB_DEADZONE_DP) return
-+            val over = push - NUB_DEADZONE_DP
-+            val speed = min(NUB_GAIN * Math.pow(over.toDouble(), NUB_EXPONENT).toFloat(), NUB_MAX_SPEED) // PC pixels/s
-+            val vx = speed * dx / push
-+            val vy = speed * dy / push
-+            val conn = game.conn ?: return
-+            if (middleHeld) {
-+                middleScrolled = true
-+                nubRestScroll += -vy * dt * NUB_SCROLL_RATIO
-+                val amount = nubRestScroll.toInt()
-+                if (amount != 0) {
-+                    nubRestScroll -= amount
-+                    conn.sendMouseHighResScroll(amount.coerceIn(-1200, 1200).toShort())
-+                }
-+            } else {
-+                nubRestX += vx * dt
-+                nubRestY += vy * dt
-+                val sx = nubRestX.toInt()
-+                val sy = nubRestY.toInt()
-+                if (sx != 0 || sy != 0) {
-+                    nubRestX -= sx
-+                    nubRestY -= sy
-+                    conn.sendMouseMove(sx.toShort(), sy.toShort())
-+                }
-+            }
-+        }
-+
 +        fun reset() {
-+            stopNub()
 +            touching = false
 +            scrolling = false
 +            restX = 0f
@@ -1154,8 +1218,8 @@ index 00000000..4a166e65
 +    // ---------------------------------------------------------------- buttons (after DroidDeck HoldButton)
 +
 +    /**
-+     * Pill button. hold = true reports press and release (CLICK, LEFT, RIGHT); otherwise it fires
-+     * once on press. Pressed: gradient fill and a ripple from the touch point.
++     * Pill button. hold = true reports press and release (CLICK, LEFT, MIDDLE, RIGHT); otherwise it
++     * fires once on press. Pressed: gradient fill and a ripple from the touch point.
 +     */
 +    private inner class ButtonView(
 +        context: Context,
@@ -1170,10 +1234,10 @@ index 00000000..4a166e65
 +        private val ripple = Paint(Paint.ANTI_ALIAS_FLAG)
 +
 +        override fun onDraw(canvas: Canvas) {
-+            drawFrame(canvas, pressedDown, BUTTON_CORNER)
++            drawFrame(canvas, pressedDown, style.buttonCornerDp)
 +            val age = SystemClock.uptimeMillis() - rippleStart
-+            if (rippleStart != 0L && age < RIPPLE_MS) {
-+                val k = age.toFloat() / RIPPLE_MS
++            if (rippleStart != 0L && age < style.rippleMs) {
++                val k = age.toFloat() / style.rippleMs
 +                ripple.color = withAlpha(accentLight, (0x50 * (1f - k)).toInt())
 +                canvas.save()
 +                canvas.clipRect(rect)
@@ -1181,11 +1245,11 @@ index 00000000..4a166e65
 +                canvas.restore()
 +                postInvalidateOnAnimation()
 +            }
-+            labelPaint.color = if (pressedDown) Color.WHITE else TEXT
-+            labelPaint.textSize = min(height * .30f, 15 * density)
++            labelPaint.color = if (pressedDown) style.pressedTextColor else style.textColor
++            labelPaint.textSize = min(height * .30f, style.labelSizeDp * density)
 +            val labelWidth = labelPaint.measureText(label)
 +            if (labelWidth > width * .8f) labelPaint.textSize *= width * .8f / labelWidth
-+            canvas.drawText(label, width / 2f, height / 2f + labelPaint.textSize * .36f, labelPaint)
++            drawLabel(canvas, label, width / 2f, height / 2f, labelPaint)
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
@@ -1219,12 +1283,13 @@ index 00000000..4a166e65
 +        }
 +    }
 +
-+    // ---------------------------------------------------------------- radial wheel (MENU / KEYS / ESC)
++    // ---------------------------------------------------------------- radial wheel
 +
-+    private class WheelItem(val label: String, val angleDeg: Float, val action: () -> Unit)
++    /** keepOpen: the wheel stays open after it (COLOR, OPTIONS and the option toggles). */
++    private class WheelItem(val label: () -> String, val keepOpen: Boolean = false, val action: () -> Unit)
 +
 +    /** Round button between the pads. Press-and-slide picks a wheel item; a tap leaves the wheel open. */
-+    private inner class HubView(context: Context, private val wheel: RadialWheelView) : Surface(context) {
++    private inner class HubView(context: Context, private val wheel: RadialWheelView, private val dots: Int) : Surface(context) {
 +        private var downTime = 0L
 +        private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
 +        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -1234,14 +1299,14 @@ index 00000000..4a166e65
 +            val cy = height / 2f
 +            val r = min(width, height) / 2f - 2 * density
 +            val open = wheel.isOpen
-+            ring.color = if (open) accent else withAlpha(accent, IDLE_LINE_ALPHA + 0x20)
-+            ring.strokeWidth = (if (open) 2.5f else 1.5f) * density
++            ring.color = if (open) accent else withOpacity(accent, min(1f, style.idleLineOpacity + .12f))
++            ring.strokeWidth = (if (open) style.litLineWidthDp else style.lineWidthDp) * density
 +            canvas.drawCircle(cx, cy, r, ring)
-+            // Three dots, one per wheel item, at the items' angles
++            // One dot per wheel item, at the items' angles
 +            dot.color = if (open) accentLight else withAlpha(accent, 0x90)
-+            for (deg in floatArrayOf(-90f, 30f, 150f)) {
-+                val a = Math.toRadians(deg.toDouble())
-+                canvas.drawCircle(cx + (r * .45f * Math.cos(a)).toFloat(), cy + (r * .45f * Math.sin(a)).toFloat(), 2.5f * density, dot)
++            for (i in 0 until dots) {
++                val a = Math.toRadians((-90.0 + i * 360.0 / dots))
++                canvas.drawCircle(cx + (r * .5f * Math.cos(a)).toFloat(), cy + (r * .5f * Math.sin(a)).toFloat(), 2.2f * density, dot)
 +            }
 +        }
 +
@@ -1255,30 +1320,25 @@ index 00000000..4a166e65
 +                    downTime = event.eventTime
 +                    feedback()
 +                    wheel.open(left + width / 2f, top + height / 2f)
-+                    invalidate()
 +                }
 +                MotionEvent.ACTION_MOVE -> wheel.track(x, y)
-+                MotionEvent.ACTION_UP -> {
-+                    wheel.release(x, y, sticky = event.eventTime - downTime < WHEEL_TAP_MS)
-+                    invalidate()
-+                }
-+                MotionEvent.ACTION_CANCEL -> {
-+                    wheel.close()
-+                    invalidate()
-+                }
++                MotionEvent.ACTION_UP -> wheel.release(x, y, tapped = event.eventTime - downTime < WHEEL_TAP_MS)
++                MotionEvent.ACTION_CANCEL -> wheel.close()
 +            }
++            invalidate()
 +            return true
 +        }
 +    }
 +
 +    /**
-+     * Full-screen overlay drawn over the pads while the wheel is open. Items sit on a ring around
-+     * the hub; the one under the finger (by angle, outside the centre) lights up. Black, outline-only
-+     * segments at rest; only the highlighted segment is filled.
++     * Full-screen overlay drawn over the pads while the wheel is open. Items sit evenly on a ring
++     * around the hub, starting at the top; the one under the finger (by angle, outside the centre)
++     * lights up. Outline-only segments at rest; only the highlighted one is filled.
 +     */
-+    private inner class RadialWheelView(context: Context, private val items: List<WheelItem>) : Surface(context) {
++    private inner class RadialWheelView(context: Context, private val home: List<WheelItem>) : Surface(context) {
 +        var isOpen = false
 +            private set
++        private var items: List<WheelItem> = home
 +        private var sticky = false
 +        private var cx = 0f
 +        private var cy = 0f
@@ -1291,12 +1351,21 @@ index 00000000..4a166e65
 +            visibility = GONE
 +        }
 +
-+        private val outerR get() = min(WHEEL_RADIUS_DP * density, min(cx, cy) - 4 * density)
-+        private val innerR get() = outerR * .38f
++        private val outerR get() = min(style.wheelRadiusDp * density, min(min(cx, cy), min(width - cx, height - cy)) - 4 * density)
++        private val innerR get() = outerR * .36f
++
++        private fun angleOf(i: Int) = -90f + i * 360f / items.size
++
++        fun showItems(next: List<WheelItem>) {
++            items = next
++            highlighted = -1
++            invalidate()
++        }
 +
 +        fun open(x: Float, y: Float) {
 +            cx = x
 +            cy = y
++            items = home
 +            highlighted = -1
 +            sticky = false
 +            isOpen = true
@@ -1310,10 +1379,11 @@ index 00000000..4a166e65
 +            isOpen = false
 +            sticky = false
 +            highlighted = -1
++            items = home
 +            visibility = GONE
 +        }
 +
-+        /** Item index under (x, y), or -1 in the centre or beyond the ring. */
++        /** Item index under (x, y), or -1 in the centre or far beyond the ring. */
 +        private fun itemAt(x: Float, y: Float): Int {
 +            val dx = x - cx
 +            val dy = y - cy
@@ -1322,8 +1392,8 @@ index 00000000..4a166e65
 +            val ang = Math.toDegrees(kotlin.math.atan2(dy, dx).toDouble()).toFloat()
 +            var best = -1
 +            var bestDiff = 360f
-+            items.forEachIndexed { i, item ->
-+                var diff = abs(ang - item.angleDeg) % 360f
++            for (i in items.indices) {
++                var diff = abs(ang - angleOf(i)) % 360f
 +                if (diff > 180f) diff = 360f - diff
 +                if (diff < bestDiff) { bestDiff = diff; best = i }
 +            }
@@ -1339,23 +1409,27 @@ index 00000000..4a166e65
 +            }
 +        }
 +
-+        /** Finger lifted from the hub. Returns true if an item was chosen. */
-+        fun release(x: Float, y: Float, sticky: Boolean): Boolean {
-+            val chosen = itemAt(x, y)
-+            if (chosen >= 0) {
-+                close()
-+                items[chosen].action()
-+                return true
-+            }
-+            if (sticky) {
-+                // Tapped the hub: keep the wheel open for a second tap on an item
-+                this.sticky = true
++        private fun choose(i: Int) {
++            val item = items[i]
++            if (item.keepOpen) {
++                item.action()
++                sticky = true
 +                highlighted = -1
 +                invalidate()
 +            } else {
 +                close()
++                item.action()
 +            }
-+            return false
++        }
++
++        /** Finger lifted from the hub after pressing it. */
++        fun release(x: Float, y: Float, tapped: Boolean) {
++            val chosen = itemAt(x, y)
++            when {
++                chosen >= 0 -> choose(chosen)
++                tapped -> { sticky = true; highlighted = -1; invalidate() } // stay open for a tap
++                else -> close()
++            }
 +        }
 +
 +        @SuppressLint("ClickableViewAccessibility")
@@ -1366,8 +1440,7 @@ index 00000000..4a166e65
 +                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> track(event.x, event.y)
 +                MotionEvent.ACTION_UP -> {
 +                    val chosen = itemAt(event.x, event.y)
-+                    close()
-+                    if (chosen >= 0) items[chosen].action()
++                    if (chosen >= 0) choose(chosen) else close()
 +                }
 +                MotionEvent.ACTION_CANCEL -> close()
 +            }
@@ -1379,45 +1452,87 @@ index 00000000..4a166e65
 +            val ro = outerR
 +            val ri = innerR
 +            // Darken what is under the wheel so the items read clearly
-+            backdrop.shader = RadialGradient(cx, cy, ro * 1.25f, Color.BLACK, withAlpha(Color.BLACK, 0x00), Shader.TileMode.CLAMP)
++            backdrop.shader = RadialGradient(cx, cy, ro * 1.25f, style.backgroundColor,
++                withAlpha(style.backgroundColor, 0), Shader.TileMode.CLAMP)
 +            canvas.drawCircle(cx, cy, ro * 1.25f, backdrop)
 +            backdrop.shader = null
 +            val mid = (ro + ri) / 2f
 +            val thick = ro - ri
-+            arcRect.set(cx - mid, cy - mid, cx + mid, cy + mid)
 +            val sweep = 360f / items.size
 +            items.forEachIndexed { i, item ->
-+                val start = item.angleDeg - sweep / 2f + WHEEL_GAP_DEG / 2f
++                val start = angleOf(i) - sweep / 2f + WHEEL_GAP_DEG / 2f
 +                val lit = i == highlighted
-+                segment.strokeWidth = thick
 +                segment.strokeCap = Paint.Cap.BUTT
++                segment.strokeWidth = thick
++                arcRect.set(cx - mid, cy - mid, cx + mid, cy + mid)
 +                if (lit) {
 +                    segment.shader = RadialGradient(cx, cy, ro, accentLight, accent, Shader.TileMode.CLAMP)
 +                    segment.alpha = 0xD0
 +                } else {
 +                    segment.shader = null
-+                    segment.color = withAlpha(accent, 0x26)
++                    segment.color = withOpacity(accent, style.litFillOpacity * .7f)
 +                }
 +                canvas.drawArc(arcRect, start, sweep - WHEEL_GAP_DEG, false, segment)
 +                // thin outline on the outer edge
 +                segment.shader = null
-+                segment.strokeWidth = 1.5f * density
-+                segment.color = withAlpha(accent, if (lit) 0xFF else 0x70)
++                segment.strokeWidth = style.lineWidthDp * density
++                segment.color = if (lit) accent else withOpacity(accent, min(1f, style.idleLineOpacity * 1.6f))
 +                arcRect.set(cx - ro, cy - ro, cx + ro, cy + ro)
 +                canvas.drawArc(arcRect, start, sweep - WHEEL_GAP_DEG, false, segment)
-+                arcRect.set(cx - mid, cy - mid, cx + mid, cy + mid)
 +                // label
-+                val a = Math.toRadians(item.angleDeg.toDouble())
-+                labelPaint.textSize = min(15 * density, thick * .32f)
-+                labelPaint.color = if (lit) Color.WHITE else TEXT
-+                canvas.drawText(item.label, cx + (mid * Math.cos(a)).toFloat(),
-+                    cy + (mid * Math.sin(a)).toFloat() + labelPaint.textSize * .36f, labelPaint)
++                val a = Math.toRadians(angleOf(i).toDouble())
++                labelPaint.textSize = min(style.labelSizeDp * density * .85f, thick * .24f)
++                labelPaint.color = if (lit) style.pressedTextColor else style.textColor
++                drawLabel(canvas, item.label(), cx + (mid * Math.cos(a)).toFloat(), cy + (mid * Math.sin(a)).toFloat(), labelPaint)
 +            }
 +            if (sticky) {
 +                captionPaint.textSize = 10 * density
-+                captionPaint.color = TEXT_DIM
-+                canvas.drawText("TAP OUTSIDE TO CLOSE", cx, cy + ro + 18 * density, captionPaint)
++                captionPaint.color = style.textDimColor
++                canvas.drawText("TAP OUTSIDE TO CLOSE", cx, min(height - 8 * density, cy + ro + 18 * density), captionPaint)
 +            }
++        }
++    }
++
++    /** Short status message near the top of the bottom screen (gyro calibration, style reload). */
++    private inner class BannerView(context: Context) : Surface(context) {
++        private var text: String? = null
++        private val hideRunnable = Runnable { hide() }
++        private val back = Paint(Paint.ANTI_ALIAS_FLAG)
++
++        init {
++            isClickable = false
++        }
++
++        fun show(message: String, ms: Long) {
++            text = message
++            mainHandler.removeCallbacks(hideRunnable)
++            mainHandler.postDelayed(hideRunnable, ms)
++            invalidate()
++        }
++
++        fun hide() {
++            text = null
++            mainHandler.removeCallbacks(hideRunnable)
++            invalidate()
++        }
++
++        override fun onTouchEvent(event: MotionEvent) = false
++
++        override fun onDraw(canvas: Canvas) {
++            val t = text ?: return
++            labelPaint.textSize = style.labelSizeDp * density
++            labelPaint.color = style.pressedTextColor
++            val tw = labelPaint.measureText(t)
++            val pad = 14 * density
++            val h = labelPaint.textSize + 2 * pad
++            rect.set(width / 2f - tw / 2f - pad, 24 * density, width / 2f + tw / 2f + pad, 24 * density + h)
++            back.color = style.backgroundColor
++            canvas.drawRoundRect(rect, h / 2f, h / 2f, back)
++            stroke.shader = null
++            stroke.color = accent
++            stroke.strokeWidth = style.lineWidthDp * density
++            canvas.drawRoundRect(rect, h / 2f, h / 2f, stroke)
++            canvas.drawText(t, width / 2f, rect.centerY() + labelPaint.textSize * .36f, labelPaint)
 +        }
 +    }
 +
@@ -1485,64 +1600,31 @@ index 00000000..4a166e65
 +        const val TYPE_INTERNAL = 1
 +        val KNOWN_DUAL_SCREEN_MODELS = setOf("retroid pocket duo", "ayn thor")
 +
++        const val STYLE_FILE = "bottom_screen_style.properties"
 +        const val PREFS = "second_screen_trackpad"
 +        const val PREF_THEME = "accent_theme"
++        const val PREF_PIXEL_SHIFT = "pixel_shift"
++        const val PREF_MOUSE_SPEED = "mouse_speed"
++        const val PREF_GYRO_X = "gyro_bias_x"
++        const val PREF_GYRO_Y = "gyro_bias_y"
++        const val PREF_GYRO_Z = "gyro_bias_z"
 +
 +        const val BACK_GUARD_MS = 800L
-+        const val ROW_FRACTION = .17f
-+        const val HUB_COLUMN_DP = 64f // centre column between the pads, holding the wheel hub
-+        const val WHEEL_RADIUS_DP = 120f
-+        const val WHEEL_GAP_DEG = 6f
-+        const val WHEEL_TAP_MS = 250L // bottom button row height, as a share of the screen
 +        const val EXCLUSION_LIMIT_DP = 200f // Android's per-edge limit outside sticky immersive
++        const val WHEEL_GAP_DEG = 5f
++        const val WHEEL_TAP_MS = 250L
++        const val FADE_MS = 400L
++        const val CALIBRATION_MS = 2_000L
 +
 +        // Mouse
-+        const val MOUSE_GAIN = 1.6f // PC pixels per dp of finger travel, before acceleration
++        const val MOUSE_GAIN = 1.6f // PC pixels per dp of finger travel at speed 1x, before acceleration
 +        const val ACCEL_DP = 12f
 +        const val MAX_ACCEL = 1.5f
 +        const val SCROLL_GAIN = 6f // high-res wheel units (120 = one notch) per dp
++        val MOUSE_SPEEDS = floatArrayOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 2.5f, 3f)
 +
-+        // Nub (pointing stick)
-+        const val NUB_DP = 20f // drawn radius
-+        const val NUB_HIT_DP = 34f // press within this radius of the centre to use the nub
-+        const val NUB_DEADZONE_DP = 2f
-+        const val NUB_GAIN = 45f // PC pixels/s at 1dp of push past the dead zone
-+        const val NUB_EXPONENT = 1.2 // 3dp push ~170 px/s, 6dp ~390, 10dp ~710
-+        const val NUB_MAX_SPEED = 1200f // PC pixels/s
-+        const val NUB_SCROLL_RATIO = 1.0f // wheel units per pointer pixel while MIDDLE is held
-+        const val NUB_TICK_MS = 4L // 250 Hz pointer updates
-+        val NUB_RED = Color.rgb(0xE2, 0x23, 0x1A)
-+
-+        // OLED care
-+        const val CAPTION_MS = 4_000L
-+        const val DIM_AFTER_MS = 10_000L
-+        const val OFF_AFTER_MS = 60_000L
-+        const val DIM_ALPHA = 0.22f
-+        const val FADE_MS = 400L
-+        const val SHIFT_INTERVAL_MS = 30_000L
-+        val SHIFT_PATTERN = listOf(0f to 0f, 3f to 1f, -1f to 3f, -3f to -1f, 1f to -3f, 2f to 2f, -2f to -2f)
-+        const val IDLE_LINE_ALPHA = 0x4A
-+
-+        // Look
-+        const val CORNER = 22f
-+        const val BUTTON_CORNER = 16f
-+        const val TRAIL_POINTS = 14
-+        const val TRAIL_MS = 260L
-+        const val RIPPLE_MS = 320L
-+        val TEXT = Color.rgb(0xB4, 0xB9, 0xC1)
-+        val TEXT_DIM = Color.rgb(0x50, 0x56, 0x60)
-+
-+        // Accent colours, cycled with the COLOR hotkey (first is DroidDeck's blue)
-+        val THEMES = intArrayOf(
-+            Color.rgb(0x1A, 0x9F, 0xFF), // blue
-+            Color.rgb(0xFF, 0x3B, 0x3B), // red
-+            Color.rgb(0x2B, 0xD9, 0x6B), // green
-+            Color.rgb(0xA0, 0x6B, 0xFF), // purple
-+            Color.rgb(0xFF, 0x8A, 0x1F), // orange
-+            Color.rgb(0xFF, 0x4F, 0xA3), // pink
-+            Color.rgb(0x2E, 0xE6, 0xE6), // cyan
-+            Color.rgb(0xB0, 0xB0, 0xB0), // grey
-+        )
++        // Pixel shift steps, as fractions of pixel_shift_max_dp
++        val SHIFT_PATTERN = listOf(0f to 0f, 1f to .33f, -.33f to 1f, -1f to -.33f, .33f to -1f, .67f to .67f, -.67f to -.67f)
 +    }
 +}
 diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
@@ -1584,3 +1666,161 @@ index 39ed1c38..691dd347 100644
          }
  
          if (originalContext.mouseEmulationActive) {
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt b/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt
+index 042964a7..a3bcc327 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt
+@@ -12,11 +12,21 @@ internal class ControllerMotionSender(
+     // Platform source arbitration only. Failed frame submissions must not claim another source.
+     private var frameGyroSlots = 0
+ 
++    // Gyro zero-offset correction for controller 0 (bottom-screen OPTIONS > GYRO CALIBRATE)
++    private val corrected = FloatArray(3)
++
+     @Synchronized
+     fun submit(controller: Short, type: Byte, x: Float, y: Float, z: Float) {
+         val stop = type == MoonBridge.LI_MOTION_TYPE_GYRO && x == 0f && y == 0f && z == 0f
+         if (!closed && controller in 0..15 && canForward(controller, type, stop)) {
+-            if (connection.sendControllerMotionEvent(controller.toByte(), type, x, y, z) == 0 &&
++            var sx = x
++            var sy = y
++            var sz = z
++            if (type == MoonBridge.LI_MOTION_TYPE_GYRO && controller.toInt() == 0 && !stop) {
++                GyroCalibration.correct(x, y, z, corrected)
++                sx = corrected[0]; sy = corrected[1]; sz = corrected[2]
++            }
++            if (connection.sendControllerMotionEvent(controller.toByte(), type, sx, sy, sz) == 0 &&
+                 type == MoonBridge.LI_MOTION_TYPE_GYRO) {
+                 frameGyroSlots = frameGyroSlots and (1 shl controller.toInt()).inv()
+             }
+@@ -28,7 +38,14 @@ internal class ControllerMotionSender(
+         if (closed || controller !in 0..15) return
+         if (canForward(controller, MoonBridge.LI_MOTION_TYPE_GYRO, gx == 0f && gy == 0f && gz == 0f) &&
+             canForward(controller, MoonBridge.LI_MOTION_TYPE_ACCEL, false)) {
+-            if (connection.sendControllerMotionFrame(controller.toByte(), gx, gy, gz, ax, ay, az) == 0) {
++            var cx = gx
++            var cy = gy
++            var cz = gz
++            if (controller.toInt() == 0 && !(gx == 0f && gy == 0f && gz == 0f)) {
++                GyroCalibration.correct(gx, gy, gz, corrected)
++                cx = corrected[0]; cy = corrected[1]; cz = corrected[2]
++            }
++            if (connection.sendControllerMotionFrame(controller.toByte(), cx, cy, cz, ax, ay, az) == 0) {
+                 frameGyroSlots = frameGyroSlots or (1 shl controller.toInt())
+             } else if (gx == 0f && gy == 0f && gz == 0f) {
+                 pauseGyro(controller, onlyFromFrame = true)
+diff --git a/app/src/main/java/com/limelight/binding/input/GyroCalibration.kt b/app/src/main/java/com/limelight/binding/input/GyroCalibration.kt
+new file mode 100644
+index 00000000..1b6f0123
+--- /dev/null
++++ b/app/src/main/java/com/limelight/binding/input/GyroCalibration.kt
+@@ -0,0 +1,109 @@
++package com.limelight.binding.input
++
++import android.os.Handler
++import kotlin.math.abs
++import kotlin.math.max
++import kotlin.math.sqrt
++
++/**
++ * Gyro zero-offset calibration for controller 0, the handheld's built-in controller.
++ *
++ * Every gyro sample V+ sends to the PC passes through ControllerMotionSender, which calls
++ * [correct]. While a calibration runs, those samples are also collected; when it ends, their
++ * average (with the device held still) becomes the offset subtracted from every later sample.
++ * Units are Moonlight's, degrees per second.
++ *
++ * Started from the bottom-screen OPTIONS wheel (GYRO CALIBRATE / GYRO RESET), which also stores
++ * the offset so it survives restarts.
++ */
++object GyroCalibration {
++    @Volatile var biasX = 0f
++        private set
++    @Volatile var biasY = 0f
++        private set
++    @Volatile var biasZ = 0f
++        private set
++
++    /** Result of a calibration run. */
++    class Result(val ok: Boolean, val message: String, val x: Float, val y: Float, val z: Float)
++
++    private class Sampler {
++        var n = 0
++        var sx = 0.0; var sy = 0.0; var sz = 0.0
++        var qx = 0.0; var qy = 0.0; var qz = 0.0
++    }
++
++    @Volatile private var sampler: Sampler? = null
++
++    fun setBias(x: Float, y: Float, z: Float) {
++        biasX = x
++        biasY = y
++        biasZ = z
++    }
++
++    fun reset() = setBias(0f, 0f, 0f)
++
++    /**
++     * Called by ControllerMotionSender for each controller-0 gyro sample (never for the all-zero
++     * "gyro stopped" marker). Records it if a calibration is running and returns the corrected
++     * value in [out].
++     */
++    fun correct(x: Float, y: Float, z: Float, out: FloatArray) {
++        sampler?.let { s ->
++            synchronized(s) {
++                s.n++
++                s.sx += x; s.sy += y; s.sz += z
++                s.qx += x.toDouble() * x; s.qy += y.toDouble() * y; s.qz += z.toDouble() * z
++            }
++        }
++        var cx = x - biasX
++        var cy = y - biasY
++        val cz = z - biasZ
++        // All-zero means "gyro stopped" to the sender; never produce it from a real sample.
++        if (cx == 0f && cy == 0f && cz == 0f) cx = Float.MIN_VALUE
++        out[0] = cx
++        out[1] = cy
++        out[2] = cz
++    }
++
++    /**
++     * Collects samples for [durationMs], then reports on [handler]. Rejected if no gyro data
++     * arrived (gyro off or not streaming) or the device moved: a still device's gyro noise is far
++     * below [MAX_STILL_NOISE_DPS], while holding it in your hands typically isn't.
++     */
++    fun start(durationMs: Long, handler: Handler, onDone: (Result) -> Unit) {
++        val s = Sampler()
++        sampler = s
++        handler.postDelayed({
++            sampler = null
++            val result = synchronized(s) { finish(s) }
++            if (result.ok) setBias(result.x, result.y, result.z)
++            onDone(result)
++        }, durationMs)
++    }
++
++    private fun finish(s: Sampler): Result {
++        if (s.n < MIN_SAMPLES) {
++            return Result(false, "No gyro data. Turn gyro on in V+ and try again.", 0f, 0f, 0f)
++        }
++        // The samples include the current offset's input, so this is the raw average.
++        val mx = s.sx / s.n
++        val my = s.sy / s.n
++        val mz = s.sz / s.n
++        val noise = max(max(sd(s.qx, mx, s.n), sd(s.qy, my, s.n)), sd(s.qz, mz, s.n))
++        if (noise > MAX_STILL_NOISE_DPS) {
++            return Result(false, "Moved during calibration. Set it down flat and try again.", 0f, 0f, 0f)
++        }
++        val x = mx.toFloat()
++        val y = my.toFloat()
++        val z = mz.toFloat()
++        val size = max(max(abs(x), abs(y)), abs(z))
++        return Result(true, "Gyro calibrated (offset %.2f°/s)".format(size), x, y, z)
++    }
++
++    private fun sd(sumSq: Double, mean: Double, n: Int): Double =
++        sqrt(max(0.0, sumSq / n - mean * mean))
++
++    private const val MIN_SAMPLES = 20
++    const val MAX_STILL_NOISE_DPS = 2.0
++}
