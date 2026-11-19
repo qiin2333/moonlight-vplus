@@ -81,7 +81,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/layout_page_wheel_pad_text_c814c"
                         android:textSize="12sp"
-                        android:paddingBottom="4dp"/>
+                        android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                     <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                         android:id="@+id/page_wheel_pad_center_text"
                         android:layout_width="match_parent"
@@ -111,7 +112,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/layout_page_wheel_pad_text_43868"
-                            android:textSize="13sp"/>
+                            android:textSize="13sp"
+                    android:textColor="@color/crown_text_secondary" />
                         <com.limelight.utils.AppSwitchView
                             style="@style/AppSwitchWidget"
                             android:id="@+id/page_wheel_pad_popup_at_center_switch"/>
@@ -127,7 +129,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/layout_page_wheel_pad_text_91286"
-                            android:textSize="13sp"/>
+                            android:textSize="13sp"
+                    android:textColor="@color/crown_text_secondary" />
                         <com.limelight.utils.AppSwitchView
                             style="@style/AppSwitchWidget"
                             android:id="@+id/page_wheel_pad_preview_group_switch"/>
@@ -215,6 +218,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/layout_page_wheel_pad_text_cfb46"
                     android:textSize="12sp"
+                    android:textColor="@color/crown_text_secondary"
                     android:paddingBottom="8dp"/>
                 
                 <LinearLayout
@@ -305,7 +309,8 @@
                             android:layout_height="wrap_content"
                             android:text="@string/layout_page_analog_stick_text_9b4ba"
                             android:textSize="12sp"
-                            android:paddingBottom="4dp"/>
+                            android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                         <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                             android:id="@+id/page_wheel_pad_normal_color"
                             android:layout_width="match_parent"
@@ -325,7 +330,8 @@
                             android:layout_height="wrap_content"
                             android:text="@string/layout_page_wheel_pad_text_97f5a"
                             android:textSize="12sp"
-                            android:paddingBottom="4dp"/>
+                            android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                         <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                             android:id="@+id/page_wheel_pad_pressed_color"
                             android:layout_width="match_parent"
@@ -345,7 +351,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/layout_page_analog_stick_text_4573a"
                         android:textSize="12sp"
-                        android:paddingBottom="4dp"/>
+                        android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                     <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                         android:id="@+id/page_wheel_pad_background_color"
                         android:layout_width="match_parent"
@@ -389,7 +396,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/layout_page_wheel_pad_text_3ed82"
                         android:textSize="12sp"
-                        android:paddingBottom="4dp"/>
+                        android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                     <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                         android:id="@+id/page_wheel_pad_normal_text_color"
                         android:layout_width="match_parent"
@@ -410,7 +418,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/layout_page_wheel_pad_text_pressed_text_color"
                         android:textSize="12sp"
-                        android:paddingBottom="4dp"/>
+                        android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                     <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                         android:id="@+id/page_wheel_pad_pressed_text_color"
                         android:layout_width="match_parent"
@@ -444,7 +453,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/layout_page_wheel_pad_text_58796"
                         android:textSize="12sp"
-                        android:paddingBottom="4dp"/>
+                        android:paddingBottom="4dp"
+                    android:textColor="@color/crown_text_secondary" />
                     <com.limelight.binding.input.advance_setting.superpage.ElementEditText
                         android:id="@+id/page_wheel_pad_center_text_color"
                         android:layout_width="match_parent"
