@@ -1,196 +1,25 @@
-<!-- thor-gyro-fork:start -->
-# Moonlight V+ — AYN Thor gyro fork
+# Moonlight V+ — AYN Thor fork
 
-Personal fork of [qiin2333/moonlight-vplus](https://github.com/qiin2333/moonlight-vplus) for streaming PC games to an **AYN Thor** with **native DualShock 4 gyro** that keeps working while the Thor's own sticks and buttons are in use. No mouse emulation. Works with stock Foundation Sunshine.
+A personal fork of [Moonlight V+](https://github.com/qiin2333/moonlight-vplus) for streaming PC games to an **AYN Thor**. It adds:
 
-## The problem
+- **Native DualShock 4 gyro** that keeps working while the Thor's sticks and buttons are in use. No mouse emulation, and it works with stock Sunshine.
+- **Bottom-screen DS4 touchpad**: the Thor's second screen becomes the DS4 touchpad, with a mouse trackpad and keyboard page.
 
-While the left stick was moved or held, the Thor's gyro and accelerometer intermittently froze on the PC (measured: 25% of the time while the stick was moving, 12% while held off-centre, 0% while centred). During each freeze the game kept applying the last rotation rate, so the camera drifted.
+**Install:** download the APK from the [latest release](https://github.com/Zach200910/moonlight-vplus-aynthor-gyro/releases/latest). It installs as `com.limelight.vplus_debug`, next to the official app. After that, the app offers new builds itself (or use Settings → Check for updates).
 
-## Root cause
+For the original app's features and documentation, see the [upstream README](https://github.com/qiin2333/moonlight-vplus#readme).
 
-Moonlight sends gyro/accel samples as **unreliable** ENet packets and stick/button state as **reliable** packets. ENet's packet throttle discards unreliable packets whenever it decides the link is congested, and it re-evaluates that decision on every acknowledged reliable packet. Stick movement sends a reliable packet per change (about 60/s), so normal Wi-Fi round-trip jitter quickly drove the throttle to 0, at which point only 1 in 32 motion packets got through.
+## Timeline
 
-The freeze lengths measured on the PC matched ENet's throttle arithmetic exactly: about 149 ms at throttle 0 (1 of 32 packets passes) and 42/42/65 ms at throttle 2 (3 of 32 pass), at the measured 4.67 ms motion-packet spacing.
-
-## The fix
-
-`gyro-throttle.patch` adds one call in `startControlStream()` in `moonlight-common-c/src/ControlStream.c`, after the connection is established:
-
-```c
-enet_peer_throttle_configure(peer, ENET_PEER_PACKET_THROTTLE_INTERVAL,
-                             ENET_PEER_PACKET_THROTTLE_ACCELERATION, 0);
-```
-
-With a deceleration of 0 the throttle can never drop below its maximum, so motion packets are never discarded. Both ends use unlimited bandwidth, so ENet's bandwidth limiter cannot lower it either. No added latency, no ongoing CPU cost, no other controller behaviour changes.
-
-The patch is applied in the `build-apks` job of `.github/workflows/android-ci.yml` (right after its Checkout step), so it is compiled into the APK. Verified in build #12 and confirmed fixed on the device.
-
-## Other patch files in this repository (not applied)
-
-These are earlier experiments. The build does not use them.
-
-| Patch | What it does |
-|---|---|
-| `gyro-rate-thread-250.patch` / `gyro-rate-thread.patch` | Samples motion at 250 / 200 Hz and reads sensors on a dedicated thread |
-| `gyro-raw-sensor.patch` | Uses the uncalibrated gyro |
-| `gyro-priority-core.patch` / `gyro-priority-app.patch` | Raises input thread priorities |
-| `second-screen-trackpad.patch` | Bottom screen as the DS4 touchpad (experimental) |
-
-## Building
-
-Actions → **Android CI** → Run workflow (or push to `master`), then install the `app-nonroot-debug-apk` artifact. It installs as `com.limelight.vplus_debug`, next to the official app, and needs to be paired again.
-
-Everything below this line is the upstream README.
-<!-- thor-gyro-fork:end -->
-
----
-
-<div align="center">
-  <img src="./app/src/main/res/drawable/vplus.webp" width="100" alt="Moonlight V+ Logo">
-
-  # Moonlight V+
-
-  [![GitHub Release](https://img.shields.io/github/v/release/qiin2333/moonlight-vplus?label=latest&style=flat-square)](https://github.com/qiin2333/moonlight-vplus/releases/latest)
-  [![Android](https://img.shields.io/badge/Android-5.0+-34A853?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/about/versions)
-  [![License](https://img.shields.io/badge/license-GPL%20v3-EF9421?style=flat-square)](LICENSE.txt)
-  [![GitHub Stars](https://img.shields.io/github/stars/qiin2333/moonlight-vplus?style=flat-square)](https://github.com/qiin2333/moonlight-vplus/stargazers)
-  [![Downloads](https://img.shields.io/github/downloads/qiin2333/moonlight-vplus/total?style=flat-square&color=blue)](https://github.com/qiin2333/moonlight-vplus/releases)
-
-  **基于 [Moonlight](https://github.com/moonlight-stream/moonlight-android) 的增强版 Android 游戏串流客户端**
-
-  [English](README_EN.md) | 中文
-
-  <a href="./assets/readme/moonlight-vplus-promo.mp4">
-    <img src="./assets/readme/moonlight-vplus-promo.gif" width="800" alt="Moonlight V+：启动应用、浏览游戏库与游戏画面预览">
-  </a>
-  <br/>
-  <sub>启动 → 游戏库 → 连接 → 游戏画面预览 · 点击观看清晰版视频</sub>
-  <br/>
-  <sub>界面为真机录屏，游戏画面由《无人深空》官方预告片合成。<a href="./assets/readme/README.md">素材说明</a></sub>
-</div>
-
----
-
-## 与上游 Moonlight 的区别
-
-Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlight-android) 的基础上增加了大量实用功能，同时保持与原版串流协议的完全兼容。
-
-| 类别 | 功能 | 说明 | 起始版本 |
-|------|------|------|:--------:|
-| **串流** | 超高刷新率 | 解锁 144 / 165 Hz，最高 800 Mbps 码率 | |
-| | HDR / HLG | 自动加载设备专属 HDR 校准文件，支持 HLG | `12.6.6` |
-| | 自定义分辨率 | 任意分辨率、宽高比、不对称分辨率 | |
-| | 多场景预设 | 一键保存/切换不同游戏串流配置 | `12.3` |
-| **输入** | 自定义按键 | 拖动/缩放/隐藏，支持组合键、连发、手柄瞄准 | `12.3.3` |
-| | 多配置档案 | 按键布局支持多配置实时切换 | |
-| | 轮盘按键 | 轮盘分区自定义按键绑定 | `12.3.7` |
-| | 增强触控 | 触控笔、手写笔、多点触控、触控板模式 | `12.3.10` |
-| | 体感辅助 | 陀螺仪体感瞄准 / 视角，灵敏度可调 | `12.3.3` |
-| | 多手柄 | Xbox / PS / Switch / 国产手柄自动识别 | `12.5.3` |
-| **界面** | 应用桌面美化 | 缩略图背景同步、自定义排序 | |
-| | 功能卡片 | 自定义快捷操作、快捷指令、性能面板 | |
-| | 实时码率调节 | 菜单内直接调节码率，无需断开连接 | `12.3.10` |
-| | 悬浮球 | 手势动作配置，快捷交互入口 | `12.7.3` |
-| | QR 配对 | 扫码快速配对主机 | `12.7.4` |
-| **串流增强** | 外接显示器 | 一键副屏通道，旋转双向同步 | `12.6.5` |
-| | 不断开连接 | 切换应用无需重新建立串流 | `12.6.6` |
-| | 多屏幕选择 | 选择主机屏幕进行串流 | `12.5.0` |
-| **监控** | 性能覆盖层 | 帧率、1% Low 帧、码率、延迟、丢包等 | `12.4.1` |
-| **音频** | 麦克风重定向 | 远程语音通话（需配合 Foundation Sunshine） | `12.3.12` |
-| | 7.1.4 环绕声 | Atmos 空间音频支持 | `12.7.4` |
-| | 音频震动 | 实时低频能量驱动触觉反馈（设备 / 手柄 / 双路） | `12.7.0` |
-| | | 三种场景模式：游戏（持续低频）、音乐（节拍脉冲）、自动识别 | |
-
-想按使用场景上手？请看 [Moonlight V+ 特色功能指引](docs/VPLUS_FEATURES.md)，从王冠配置、Foundation Sunshine 联动、显示器、触觉与插帧中选择适合自己的入口。
-
-## 快速开始
-
-### 系统要求
-
-- Android 5.0+ (API 22)
-- 支持 HEVC / AV1 硬解的设备（推荐）
-- 局域网 5 GHz Wi-Fi 或有线连接
-- 推荐运行 [Foundation Sunshine](https://github.com/AlkaidLab/foundation-sunshine) 的主机；标准串流也兼容 [Sunshine](https://github.com/LizardByte/Sunshine)，旧版 NVIDIA GameStream 可供已有设备尝试
-
-### 安装
-
-从 [Releases](https://github.com/qiin2333/moonlight-vplus/releases/latest) 下载最新 APK，安装后按应用内引导完成配对即可。
-
-首次串流建议从 1080p、60 FPS、H.264 或自动编码、关闭 HDR、10–20 Mbps 开始，主机尽量使用有线网络。确认稳定后，再逐项提高分辨率、帧率、码率并启用 HEVC / AV1、HDR 等功能。
-
-### 选择主机端
-
-- **Foundation Sunshine（首推）**：与 Moonlight V+ 配套，提供标准串流及其支持的 V+ 扩展功能，例如麦克风重定向和主机显示控制；具体功能取决于主机端版本。
-- **Sunshine**：可用于标准 Moonlight 串流；部分 V+ 扩展功能需要 Foundation Sunshine。
-- **NVIDIA GameStream**：供仍在使用旧主机的用户尝试兼容；新安装建议选择 Foundation Sunshine。
-
-### 遇到问题
-
-- 黑屏或解码崩溃：先切换 H.264、关闭 HDR、降低分辨率与帧率，再重新连接。
-- 卡顿或提示连接慢：先降低码率，再查看性能覆盖层的丢包与延迟波动，并检查 Wi-Fi。
-- Android TV / 盒子：先验证 1080p60 H.264，再尝试 HEVC、AV1、HDR 或高刷新率。
-- 外网或虚拟局域网：先确认本地局域网串流正常，再排查 EasyTier、Tailscale 等网络路径。
-
-更多步骤见 [常见问题](FAQ.md) 和 [功能使用指南](docs/USER_GUIDE.md)。
-
-从头安装请看 [Foundation Sunshine 首次连接教程](docs/GETTING_STARTED.md)；需要确认某项增强功能的主机端条件，请看 [兼容矩阵](docs/COMPATIBILITY.md)。
-
-### 从源码编译
-
-先安装 JDK 17、Android SDK 36、Build Tools 36.0.0、NDK 28.2.13676358 和 CMake 3.22.1。项目还需要两个 Git 子模块及单独的 [audio-haptics SDK](https://github.com/AlkaidLab/moonlight-audio-haptics)；其版本以 [CI 配置](.github/workflows/android-ci.yml) 为准。
-
-```bash
-git clone --recurse-submodules https://github.com/qiin2333/moonlight-vplus.git
-cd moonlight-vplus
-git clone https://github.com/AlkaidLab/moonlight-audio-haptics.git ../moonlight-audio-haptics
-git -C ../moonlight-audio-haptics checkout b3f97c3bb7500ea7b1985aea568e5c7b40308d3b
-./gradlew :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"
-```
-
-Windows PowerShell 请将最后一行改为 `.\gradlew.bat :app:assembleNonRootDebug -PaudioHapticsSdkDir="$PWD/../moonlight-audio-haptics"`。正式发布还需签名配置；缺少 `app/google-services.json` 时 Firebase 服务不会正常上报，普通本地构建不需要把该文件提交到仓库。
-
-## Foundation Sunshine 增强功能
-
-以下功能需要搭配 **[Foundation Sunshine](https://github.com/AlkaidLab/foundation-sunshine)** 使用：
-
-| 功能 | 说明 | 主机端要求 |
-|------|------|----------|
-| 麦克风重定向 | 设备麦克风音频实时传输至主机 | Foundation Sunshine 2025.0720+ |
-| 实时码率调整 | 串流中动态调节码率，网络波动自动适应 | — |
-| 超级菜单指令 | 从串流菜单向主机发送高级控制指令 | — |
-| 应用桌面美化 | 自动同步主机应用图标，自定义排序与分组 | — |
-| 主机自动优化 | 自动协商分辨率/DPI、适配触屏键盘、状态记忆 | — |
-
-未列出最低版本的功能仍需核定最早可用的发布包；版本依据与核验方法见 [兼容矩阵](docs/COMPATIBILITY.md)。备份、恢复及配置分享的边界见 [备份与迁移指南](docs/BACKUP_AND_MIGRATION.md)。
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-提交问题前请先阅读 [常见问题](FAQ.md)；有关统计和崩溃报告的数据处理见 [隐私说明](PRIVACY_POLICY.md)。
-
-### 贡献者
-
-| 贡献者 | 方向 |
-|--------|------|
-| [@cjcxj](https://github.com/cjcxj) | 按键自定义、触控菜单、无障碍 |
-| [@alonsojr1980](https://github.com/alonsojr1980) | SoC 解码优化 |
-| [@Xmqor](https://github.com/Xmqor) | 手柄瞄准 |
-| [@TrueZhuangJia](https://github.com/TrueZhuangJia) | 增强多点触控 |
-| [@WACrown](https://github.com/WACrown) | 自定义按键系统 |
-
-## 致谢
-
-- [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) — 上游项目
-- [Sunshine](https://github.com/LizardByte/Sunshine) — 开源串流主机端
-
-## 许可证
-
-本项目基于 [GPL v3](LICENSE.txt) 许可证开源。
-
----
-
-<div align="center">
-  <sub>觉得有用？给个 ⭐ 支持一下吧！</sub>
-</div>
+| Date | Change |
+| --- | --- |
+| 2026-11-18 | Disabled a flaky upstream haptics unit test that was failing CI on unrelated changes. |
+| 2026-11-18 | **In-app updates.** Every master build is published as a `thor-<version>` release (e.g. `12.15.17.28`), and the app checks this fork's releases instead of upstream's. ([#2](https://github.com/Zach200910/moonlight-vplus-aynthor-gyro/pull/2)) |
+| 2026-11-18 | **Fixed debug signing.** CI signs every build with one key, so new builds install as updates and keep pairing and settings. ([#1](https://github.com/Zach200910/moonlight-vplus-aynthor-gyro/pull/1)) |
+| 2026-11-18 | **Touchpad v8:** gyro calibration now runs on the Thor's raw (uncalibrated) gyroscope, so Android's own bias correction isn't applied on top. Adds GYRO CALIBRATE and GYRO TEST. |
+| 2026-11-18 | **Touchpad v7:** hub wheel (MENU, KEYS, COLOR, OPTIONS, ESC), an options wheel (pixel shift, mouse speed, gyro calibrate/reset), and every colour, size and timing in `bottom_screen_style.properties`. |
+| 2026-11-17 – 18 | **Bottom-screen DS4 touchpad** (v1–v6), ported from DroidDeck: two pads for the DS4's two touch halves, CLICK buttons, a keyboard page with a mouse trackpad, and OLED care (dimming, pixel shift). |
+| 2026-11-17 | Fixed the build so the ENet fix is actually compiled into the APK (it had only been applied in the test job). |
+| 2026-11-16 – 17 | Tried and parked four gyro experiments: 200 Hz sampling on a dedicated thread, raw gyro sensor, and higher input-thread priority (app and native). Not in the build. The raw-sensor change was later folded into touchpad v8. |
+| 2026-11-16 | **Gyro freeze fix.** While a stick moved, ENet's congestion throttle dropped most gyro packets (up to ~149 ms freezes). The fix stops the throttle from discarding them (`gyro-throttle.patch`). Confirmed on the Thor. |
+| 2026-11-16 | Forked from Moonlight V+ 12.15.17. |
