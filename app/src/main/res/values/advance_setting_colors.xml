@@ -1,119 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ui_control_thumb_outline">#26585B63</color>
-    <color name="advance_setting_background">#4D464A</color>
+    <color name="advance_setting_background">@color/thor_background</color>
     <!-- Splash screen colors. splash_bg MUST match advance_setting_background so any
          premature theme/window swap during the launch handoff is invisible to the user. -->
-    <color name="splash_bg">#4D464A</color>
-    <color name="splash_icon_bg">#FFFFFF</color>
-    <color name="configuration_line">#535353</color>
-    <color name="advance_setting_button_background">#404040</color>
-    <color name="window_box_background">#202020</color>
+    <color name="splash_bg">@color/thor_background</color>
+    <color name="splash_icon_bg">@color/thor_surface</color>
+    <color name="configuration_line">@color/thor_border</color>
+    <color name="advance_setting_button_background">@color/thor_surface_elevated</color>
+    <color name="window_box_background">@color/thor_surface</color>
     <color name="window_background">#C0303030</color>
 
-    <color name="control_highlight_color">#2196F3</color>
+    <color name="control_highlight_color">@color/thor_accent</color>
     <color name="scene_btn_stroke">@color/ui_shell_accent</color>
-    <color name="btn_pressed_color">#4D2196F3</color>
+    <color name="btn_pressed_color">@color/thor_accent_soft</color>
 
     <!-- GameMenu 颜色 -->
-    <color name="game_menu_card_background">#FFFFFFFF</color>
-    <color name="game_menu_text_primary">#333333</color>
-    <color name="game_menu_text_secondary">#666666</color>
-    <color name="game_menu_button_pressed">#FFFFF1F5</color>
+    <color name="game_menu_card_background">@color/thor_surface</color>
+    <color name="game_menu_text_primary">@color/thor_text_primary</color>
+    <color name="game_menu_text_secondary">@color/thor_text_secondary</color>
+    <color name="game_menu_button_pressed">@color/thor_surface_elevated</color>
     <!-- Controller diagnostics need a stronger neutral outline than menu chrome. -->
-    <color name="controller_diag_outline">#FF504953</color>
-    <color name="controller_diag_control_surface">#FFF2E8ED</color>
-    <color name="game_menu_list_item_pressed">#FFFFF3F7</color>
-    <color name="game_menu_list_item_focused">#F8F8F8</color>
-    <color name="game_menu_list_item_border">#0D1D1B20</color>
-    <color name="game_menu_dialog_background">#FFFFF8F8</color>
-    <color name="game_menu_opacity_popup_background">#E6F7F4F7</color>
-    <color name="game_menu_dialog_border">#12FFFFFF</color>
-    <color name="game_menu_list_item_normal">#FFFFFFFF</color>
-    <color name="game_menu_danger_text">#D13B3B</color>
+    <color name="controller_diag_outline">@color/thor_border_strong</color>
+    <color name="controller_diag_control_surface">@color/thor_surface_elevated</color>
+    <color name="game_menu_list_item_pressed">@color/thor_surface_elevated</color>
+    <color name="game_menu_list_item_focused">@color/thor_surface_elevated</color>
+    <color name="game_menu_list_item_border">@color/thor_border</color>
+    <color name="game_menu_dialog_background">@color/thor_surface</color>
+    <color name="game_menu_opacity_popup_background">@color/thor_surface_elevated</color>
+    <color name="game_menu_dialog_border">@color/thor_border</color>
+    <color name="game_menu_list_item_normal">@color/thor_surface</color>
+    <color name="game_menu_danger_text">@color/thor_error</color>
     <color name="custom_key_editor_scrim">#E6050A14</color>
 
     <!-- 超级菜单颜色 -->
     <color name="game_menu_super_card_background">#00000000</color>
-    <color name="game_menu_super_list_item_pressed">#FFF0F8FF</color>
-    <color name="game_menu_super_list_item_focused">#FFF0F8FF</color>
-    <color name="game_menu_super_list_item_border">#FFE0E0E0</color>
+    <color name="game_menu_super_list_item_pressed">@color/thor_pressed</color>
+    <color name="game_menu_super_list_item_focused">@color/thor_accent_soft</color>
+    <color name="game_menu_super_list_item_border">@color/thor_border</color>
 
     <!-- 主题粉色 -->
 
     <!-- 主题蓝色 -->
-    <color name="theme_blue_primary">#3CA4E0</color>
+    <color name="theme_blue_primary">@color/thor_accent</color>
 
     <!-- Shared immersive UI shell (light by default, night overrides in values-night) -->
-    <color name="ui_shell_surface">#F7FFFFFF</color>
-    <color name="ui_shell_surface_elevated">#FCFFFFFF</color>
-    <color name="ui_shell_surface_pressed">#142B2F35</color>
-    <color name="settings_drawer_background">#E6FFFFFF</color>
-    <color name="settings_group_surface">#40FFFFFF</color>
-    <color name="appview_panel_surface">#EBFFFFFF</color>
-    <color name="ui_shell_outline">#261D1B20</color>
-    <color name="ui_shell_outline_strong">#3D1D1B20</color>
-    <color name="ui_shell_text_primary">#F21F2026</color>
-    <color name="ui_shell_text_secondary">#D1242830</color>
-    <color name="ui_shell_text_disabled_primary">#661F2026</color>
-    <color name="ui_shell_text_disabled_secondary">#4D242830</color>
+    <color name="ui_shell_surface">@color/thor_surface</color>
+    <color name="ui_shell_surface_elevated">@color/thor_surface_elevated</color>
+    <color name="ui_shell_surface_pressed">@color/thor_pressed</color>
+    <color name="settings_drawer_background">@color/thor_surface</color>
+    <color name="settings_group_surface">@color/thor_surface</color>
+    <color name="appview_panel_surface">@color/thor_surface</color>
+    <color name="ui_shell_outline">@color/thor_border</color>
+    <color name="ui_shell_outline_strong">@color/thor_border_strong</color>
+    <color name="ui_shell_text_primary">@color/thor_text_primary</color>
+    <color name="ui_shell_text_secondary">@color/thor_text_secondary</color>
+    <color name="ui_shell_text_disabled_primary">@color/thor_text_disabled</color>
+    <color name="ui_shell_text_disabled_secondary">@color/thor_text_secondary_disabled</color>
     <color name="ui_shell_text_shadow">#00000000</color>
     <color name="ui_shell_text_shadow_strong">#00000000</color>
     <!-- Brand accent stays bright; dense text uses neutral foreground plus an accent marker. -->
-    <color name="ui_shell_accent">#FF6B9D</color>
-    <color name="ui_shell_accent_soft">#1AFF6B9D</color>
-    <color name="ui_shell_accent_focus">#33FF6B9D</color>
-    <color name="settings_page_background">#FFF6F3F6</color>
-    <color name="settings_background_overlay">#A6FAF7FA</color>
-    <color name="pc_toolbar_menu_surface_start">#E8FFFFFF</color>
-    <color name="pc_toolbar_menu_surface_center">#DDFCE4EC</color>
-    <color name="pc_toolbar_menu_surface_end">#CFF3E5F5</color>
+    <color name="ui_shell_accent">@color/thor_accent</color>
+    <color name="ui_shell_accent_soft">@color/thor_accent_soft</color>
+    <color name="ui_shell_accent_focus">@color/thor_accent_focus</color>
+    <color name="settings_page_background">@color/thor_background</color>
+    <color name="settings_background_overlay">@color/thor_background</color>
+    <color name="pc_toolbar_menu_surface_start">@color/thor_surface_elevated</color>
+    <color name="pc_toolbar_menu_surface_center">@color/thor_surface_elevated</color>
+    <color name="pc_toolbar_menu_surface_end">@color/thor_surface_elevated</color>
 
-    <color name="app_dialog_choice_control_normal">#59242830</color>
+    <color name="app_dialog_choice_control_normal">@color/thor_text_secondary</color>
 
     <!-- App dialog palette (light by default, night overrides in values-night) -->
-    <color name="app_dialog_surface">#FAFFFBFE</color>
-    <color name="app_dialog_surface_elevated">#FFFFFBFE</color>
-    <color name="app_dialog_surface_gradient_start">#FFFFFFFF</color>
-    <color name="app_dialog_surface_gradient_center">#FFFFFBFE</color>
-    <color name="app_dialog_surface_gradient_end">#FFFDF7FB</color>
-    <color name="app_dialog_surface_pressed">#142B2F35</color>
-    <color name="app_dialog_outline">#1F1D1B20</color>
-    <color name="app_dialog_outline_strong">#381D1B20</color>
-    <color name="app_dialog_text_primary">#DE1F2026</color>
-    <color name="app_dialog_text_secondary">#A6242830</color>
-    <color name="app_dialog_text_disabled">#66242830</color>
-    <color name="app_dialog_accent_soft">#1AFF6B9D</color>
-    <color name="app_dialog_accent_focus">#33FF6B9D</color>
-    <color name="app_action_sheet_danger">#FFB04A5A</color>
-    <color name="app_action_sheet_divider">#141D1B20</color>
-    <color name="iperf_output_surface">#FFF8F6FA</color>
-    <color name="iperf_output_text">#FF242830</color>
-    <color name="iperf_output_hint">#99242830</color>
+    <color name="app_dialog_surface">@color/thor_surface</color>
+    <color name="app_dialog_surface_elevated">@color/thor_surface_elevated</color>
+    <color name="app_dialog_surface_gradient_start">@color/thor_surface</color>
+    <color name="app_dialog_surface_gradient_center">@color/thor_surface</color>
+    <color name="app_dialog_surface_gradient_end">@color/thor_surface</color>
+    <color name="app_dialog_surface_pressed">@color/thor_pressed</color>
+    <color name="app_dialog_outline">@color/thor_border</color>
+    <color name="app_dialog_outline_strong">@color/thor_border_strong</color>
+    <color name="app_dialog_text_primary">@color/thor_text_primary</color>
+    <color name="app_dialog_text_secondary">@color/thor_text_secondary</color>
+    <color name="app_dialog_text_disabled">@color/thor_text_secondary_disabled</color>
+    <color name="app_dialog_accent_soft">@color/thor_accent_soft</color>
+    <color name="app_dialog_accent_focus">@color/thor_accent_focus</color>
+    <color name="app_action_sheet_danger">@color/thor_error</color>
+    <color name="app_action_sheet_divider">@color/thor_border</color>
+    <color name="iperf_output_surface">@color/thor_background</color>
+    <color name="iperf_output_text">@color/thor_text_secondary</color>
+    <color name="iperf_output_hint">@color/thor_text_secondary_disabled</color>
 
     <!-- About dialog keeps its own layered card treatment. -->
-    <color name="about_dialog_panel_outline">#FFE8DDE6</color>
-    <color name="about_dialog_link_surface">#FFFFF5F8</color>
-    <color name="about_dialog_links_bar_surface">#FFFFF9FC</color>
+    <color name="about_dialog_panel_outline">@color/thor_border</color>
+    <color name="about_dialog_link_surface">@color/thor_surface_elevated</color>
+    <color name="about_dialog_links_bar_surface">@color/thor_surface</color>
 
     <!-- Crown side panel -->
-    <color name="crown_panel_background">#F21B1B22</color>
-    <color name="crown_panel_border">#3DFFFFFF</color>
-    <color name="crown_section_background">#CC252833</color>
-    <color name="crown_section_border">#1FFFFFFF</color>
-    <color name="crown_input_background">#E62F3340</color>
-    <color name="crown_input_border">#2EFFFFFF</color>
-    <color name="crown_text_primary">#F7F3F7</color>
-    <color name="crown_text_secondary">#C9D0D8</color>
-    <color name="crown_button_focused">#22FFFFFF</color>
+    <color name="crown_panel_background">@color/thor_surface</color>
+    <color name="crown_panel_border">@color/thor_border</color>
+    <color name="crown_section_background">@color/thor_surface_elevated</color>
+    <color name="crown_section_border">@color/thor_border</color>
+    <color name="crown_input_background">@color/thor_background</color>
+    <color name="crown_input_border">@color/thor_border</color>
+    <color name="crown_text_primary">@color/thor_text_primary</color>
+    <color name="crown_text_secondary">@color/thor_text_secondary</color>
+    <color name="crown_button_focused">@color/thor_accent_soft</color>
 
     <!-- EasyTier 控制面板：跟随系统深浅色（暗色值与 crown 系一致） -->
-    <color name="easytier_panel_background">@color/ui_shell_surface_elevated</color>
-    <color name="easytier_section_background">#F5F6F8</color>
-    <color name="easytier_input_background">#FFFFFFFF</color>
-    <color name="easytier_text_primary">@color/ui_shell_text_primary</color>
-    <color name="easytier_text_secondary">@color/ui_shell_text_secondary</color>
-    <color name="easytier_warning">#C62828</color>
+    <color name="easytier_panel_background">@color/thor_surface</color>
+    <color name="easytier_section_background">@color/thor_surface_elevated</color>
+    <color name="easytier_input_background">@color/thor_background</color>
+    <color name="easytier_text_primary">@color/thor_text_primary</color>
+    <color name="easytier_text_secondary">@color/thor_text_secondary</color>
+    <color name="easytier_warning">@color/thor_error</color>
 
     <!-- 通用对话框颜色 -->
     <color name="app_dialog_title_color">@color/app_dialog_text_primary</color>
@@ -121,20 +121,20 @@
     <color name="app_dialog_accent_color">@color/ui_shell_accent</color>
 
     <!-- Manual add computer screen -->
-    <color name="add_pc_background">#FFF8F6FA</color>
+    <color name="add_pc_background">@color/thor_background</color>
     <color name="add_pc_panel">@color/ui_shell_surface_elevated</color>
-    <color name="add_pc_input">#FFFFFFFF</color>
+    <color name="add_pc_input">@color/thor_surface</color>
     <color name="add_pc_chip">@color/ui_shell_surface</color>
     <color name="add_pc_chip_pressed">@color/ui_shell_surface_pressed</color>
     <color name="add_pc_outline">@color/ui_shell_outline</color>
     <color name="add_pc_text_primary">@color/ui_shell_text_primary</color>
     <color name="add_pc_text_secondary">@color/ui_shell_text_secondary</color>
     <color name="add_pc_text_hint">@color/ui_shell_text_disabled_secondary</color>
-    <color name="add_pc_on_accent">#FF1F2026</color>
+    <color name="add_pc_on_accent">@color/thor_on_accent</color>
     <color name="add_pc_accent">@color/ui_shell_accent</color>
     <color name="add_pc_accent_soft">@color/ui_shell_accent_soft</color>
     <color name="add_pc_accent_focus">@color/ui_shell_accent_focus</color>
-    <color name="add_pc_badge_ring">#FFF8F6FA</color>
+    <color name="add_pc_badge_ring">@color/thor_background</color>
 
     <!-- Retro-space host discovery -->
     <color name="retro_space_moon_light">#FFF5E7D0</color>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Thor "Nintendo Minimal" design tokens. Single source of truth for colour, shape, spacing
+    and touch-target sizes. Component colours (ui_shell_*, app_dialog_*, game_menu_*, ...)
+    alias these instead of hard-coding values. The app is dark-only; values-night aliases
+    point at the same tokens so both qualifiers resolve identically.
+-->
+<resources>
+    <!-- Palette -->
+    <color name="thor_background">#FF101418</color>
+    <color name="thor_surface">#FF191F25</color>
+    <color name="thor_surface_elevated">#FF222B33</color>
+    <color name="thor_border">#FF303B44</color>
+    <color name="thor_text_primary">#FFF1F4F6</color>
+    <color name="thor_text_secondary">#FFA3AFB9</color>
+    <color name="thor_accent">#FF55B8D4</color>
+    <color name="thor_success">#FF72C99A</color>
+    <color name="thor_warning">#FFE9BB69</color>
+    <color name="thor_error">#FFE47777</color>
+
+    <!-- Derived states (alpha variants of the palette, no new hues) -->
+    <color name="thor_on_accent">#FF101418</color>
+    <color name="thor_accent_soft">#2455B8D4</color>
+    <color name="thor_accent_focus">#5255B8D4</color>
+    <color name="thor_pressed">#14F1F4F6</color>
+    <color name="thor_border_strong">#FF3E4C57</color>
+    <color name="thor_text_disabled">#61F1F4F6</color>
+    <color name="thor_text_secondary_disabled">#61A3AFB9</color>
+    <color name="thor_scrim">#CC101418</color>
+
+    <!-- Shape: restrained radii -->
+    <dimen name="thor_radius_small">6dp</dimen>
+    <dimen name="thor_radius">10dp</dimen>
+    <dimen name="thor_radius_large">14dp</dimen>
+    <dimen name="thor_border_width">1dp</dimen>
+
+    <!-- Spacing scale -->
+    <dimen name="thor_space_xs">4dp</dimen>
+    <dimen name="thor_space_s">8dp</dimen>
+    <dimen name="thor_space_m">12dp</dimen>
+    <dimen name="thor_space_l">16dp</dimen>
+    <dimen name="thor_space_xl">24dp</dimen>
+
+    <!-- Touch -->
+    <dimen name="thor_touch_target">48dp</dimen>
+    <dimen name="thor_row_height">56dp</dimen>
+
+    <!-- Motion: subtle, 120–180 ms -->
+    <integer name="thor_motion_short">120</integer>
+    <integer name="thor_motion_medium">160</integer>
+</resources>
