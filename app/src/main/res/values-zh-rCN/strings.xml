@@ -1599,6 +1599,7 @@
     <string name="wheel_alignment_title">对齐方式</string>
     <string name="wheel_alignment_center">分区中线朝上</string>
     <string name="wheel_alignment_edge">分区边线朝上</string>
+    <string name="wheel_trigger_size">触发按钮大小</string>
     <string name="page_section_key_values">🔑 按键值设置</string>
     <string name="page_label_combo_keys">组合按键</string>
     <string name="page_label_coord_x">X 坐标</string>

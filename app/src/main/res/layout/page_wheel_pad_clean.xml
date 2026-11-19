@@ -110,6 +110,16 @@
                             style="@style/AppSwitchWidget"
                             android:id="@+id/page_wheel_pad_preview_group_switch"/>
                     </LinearLayout>
+
+                    <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
+                        android:id="@+id/page_wheel_pad_trigger_size"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:layout_marginTop="8dp"
+                        app:text="@string/wheel_trigger_size"
+                        app:min="60"
+                        app:max="300"
+                        app:progress="130" />
                 </LinearLayout>
             </LinearLayout>
 
