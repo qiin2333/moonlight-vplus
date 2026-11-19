@@ -85,8 +85,6 @@ import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.InputDeviceSensorPolicy
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.audio.MicrophoneButtonPositionStore
-import com.limelight.ui.FloatBallPositionStore
-import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.haptics.GameRumbleMode
 import com.limelight.binding.input.haptics.Ds5SimulationMode
 import com.limelight.binding.input.haptics.NativeAuthoredHaptics
@@ -1195,7 +1193,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             private const val MULTI_CHOICE_KEY = "settings.multiChoice.key"
             private const val MULTI_CHOICE_VALUES = "settings.multiChoice.values"
             private const val MULTI_CHOICE_CHANGED = "settings.multiChoice.changed"
-            private const val FLOAT_BALL_SCREEN_KEY = "settings_float_ball"
             private const val DETAIL_SCREEN = "settings.detail.screen"
             private const val DETAIL_FOCUS = "settings.detail.focus"
             private const val DETAIL_HARDWARE = "settings.detail.hardware"
@@ -1293,15 +1290,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         private var categoryPositions: IntArray = IntArray(0)
         private var categoryPositionsValid = false
         private var adapterDataObserver: RecyclerView.AdapterDataObserver? = null
-        @Volatile
-        private var developerUnlockVerificationRunning = false
-        @Volatile
-        private var developerPendingDeviceCode: GitHubStarVerifier.DeviceCode? = null
-        @Volatile
-        private var developerLastForegroundPollMs = 0L
-        @Volatile
-        private var developerForegroundPollRunning = false
-        private var developerDeviceCodeDialog: AlertDialog? = null
         private var customResolutionsDialog: android.app.Dialog? = null
         private var customFrameRatesDialog: android.app.Dialog? = null
         private var settingsChoiceDialog: android.app.Dialog? = null
@@ -1880,7 +1868,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         fun applySearchFilter(query: String) {
             visibilityController.applySearch(query)
             if (query.isBlank()) refreshSettingsPresentation("list_fec_mode")
-            updateFloatBallSettingsSummary()
             preferenceScreen?.let { updateSearchCategoryActions(it) }
             refreshSearchPresentation()
         }
@@ -2873,7 +2860,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
             updateConfigSyncStatusSummary()
-            resumeDeveloperUnlockVerificationIfPending()
         }
 
         override fun onPause() {
@@ -3011,7 +2997,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             mainListPadding?.let { listView.setPadding(it[0], it[1], it[2], it[3]) }
             mainListState = null
             mainListPadding = null
-            updateFloatBallSettingsSummary()
             updateFeaturePageSummaries()
             preferenceScreen?.let(::updateSearchCategoryActions)
             refreshSearchPresentation()
@@ -3170,20 +3155,12 @@ class StreamSettings : ThemedAppCompatActivity() {
             setupInputModePresetPreference()
             setupPerfOverlayPreferences()
             setupMicrophoneButtonPositionPreference()
-            setupFloatBallSettings()
             setupLegacyBackedModeSelectors()
             setupShizukuKeyboardAuthorization()
 
             // 让所有 ListPreference 在 summary 顶部显示当前选中值，
             // 避免用户必须点开才知道现值。原 summary 作为说明保留在第二行。
             applyListPreferenceCurrentValueSummary(screen)
-            findPreference<SeekBarPreference>("seekbar_float_ball_auto_hide_delay")?.summaryProvider =
-                Preference.SummaryProvider<SeekBarPreference> { item ->
-                    val delay = item.currentValue.coerceIn(0, 5000)
-                    if (delay == 0) getString(R.string.float_ball_summary_no_hide)
-                    else getString(R.string.float_ball_summary_delay,
-                        java.text.NumberFormat.getNumberInstance().format(delay / 1000.0))
-                }
             setupAdaptiveBitratePresentation()
 
             // MediaCodecList 枚举走 mediaserver binder IPC,主线程等待可能触发 ANR
@@ -3719,7 +3696,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
             DeveloperUnlockSettings.migrateLegacyPrefs(prefs)
             FramegenSettings.migrateLegacyCustomScale(prefs, getSelectedStreamWidth(prefs))
-            setupDeveloperUnlockPreference()
             setupFramegenSelfTestPreference()
             setupFramegenLosslessDllPreference()
             setupFramegenEnabledPreference()
@@ -3736,13 +3712,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             ) ?: PreferenceConfiguration.DEFAULT_RESOLUTION
             return resolution.substringBefore('x').toIntOrNull()
                 ?: PreferenceConfiguration.DEFAULT_RESOLUTION.substringBefore('x').toInt()
-        }
-
-        private fun setupDeveloperUnlockPreference() {
-            findPreference<Preference>(DeveloperUnlockSettings.PREF_ENTRY)?.setOnPreferenceClickListener {
-                showDeveloperUnlockDialog()
-                true
-            }
         }
 
         private fun setupFramegenSelfTestPreference() {
@@ -3793,10 +3762,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                     if (newValue == true) {
                         val ctx = requireContext()
                         val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                        if (!DeveloperUnlockSettings.isUnlocked(prefs)) {
-                            showDeveloperUnlockDialog()
-                            return@OnPreferenceChangeListener false
-                        }
                         if (!FramegenSettings.isLosslessDllReady(prefs)) {
                             Toast.makeText(ctx, R.string.toast_framegen_need_lossless_dll, Toast.LENGTH_LONG).show()
                             updateFramegenDllPreferenceSummary()
@@ -3818,10 +3783,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                     if (newValue == true) {
                         val ctx = requireContext()
                         val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                        if (!DeveloperUnlockSettings.isUnlocked(prefs)) {
-                            showDeveloperUnlockDialog()
-                            return@OnPreferenceChangeListener false
-                        }
                         if (!FramegenSettings.isLosslessDllReady(prefs)) {
                             Toast.makeText(ctx, R.string.toast_framegen_need_lossless_dll, Toast.LENGTH_LONG).show()
                             updateFramegenDllPreferenceSummary()
@@ -3964,9 +3925,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                     PreferenceConfiguration.GAME_RUMBLE_MODE_PREF_STRING,
                     "seekbar_vibrate_fallback_strength")) {
                 updateHapticsPreferences()
-            }
-            if (changedKey == null || changedKey.contains("float_ball")) {
-                updateFloatBallSettingsSummary()
             }
             if (changedKey == null || changedKey in LegacySettingsModeStore.modeKeys) {
                 refreshModeSelectors()
@@ -4288,46 +4246,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
         }
 
-        private fun setupFloatBallSettings() {
-            findPreference<ListPreference>(FloatBallPreferences.KEY_PRESET_POSITION)
-                ?.setOnPreferenceChangeListener { _, _ ->
-                    FloatBallPositionStore(requireContext()).clearCustomPosition()
-                    updateFloatBallSettingsSummary()
-                    true
-                }
-            findPreference<CheckBoxPreference>("checkbox_enable_float_ball")?.summaryOff =
-                getString(R.string.float_ball_settings_disabled_summary)
-            updateFloatBallSettingsSummary()
-        }
-
-        private fun updateFloatBallSettingsSummary() {
-            val screen = findPreference<PreferenceScreen>(FLOAT_BALL_SCREEN_KEY) ?: return
-            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            val status = if (!prefs.getBoolean("checkbox_enable_float_ball", true)) {
-                getString(R.string.game_menu_option_disabled)
-            } else {
-                val positionStore = FloatBallPositionStore(requireContext())
-                val position = if (positionStore.customPosition() != null || positionStore.legacyPosition() != null) {
-                    getString(R.string.float_ball_summary_custom_position)
-                } else {
-                    val value = FloatBallPreferences(requireContext()).presetPosition()
-                    val values = resources.getStringArray(R.array.float_ball_position_values)
-                    val labels = resources.getStringArray(R.array.float_ball_position_entries)
-                    labels.getOrNull(values.indexOf(value)).orEmpty()
-                }
-                val delayMs = prefs.getInt("seekbar_float_ball_auto_hide_delay", 2000).coerceIn(0, 5000)
-                val delay = if (delayMs == 0) getString(R.string.float_ball_summary_no_hide) else {
-                    val seconds = java.text.NumberFormat.getNumberInstance().format(delayMs / 1000.0)
-                    getString(R.string.float_ball_summary_delay, seconds)
-                }
-                getString(R.string.float_ball_summary_enabled, position, delay)
-            }
-            val matched = visibilityController.matchingDescendant(screen)?.title
-            screen.summary = if (matched != null) {
-                getString(R.string.float_ball_summary_search, status, matched)
-            } else status
-        }
-
         private fun setupPerfOverlayPreferences() {
             val metricsPreference = findPreference<PerfOverlayDisplayItemsPreference>(
                 "perf_overlay_display_items"
@@ -4352,15 +4270,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
             val unlocked = DeveloperUnlockSettings.isUnlocked(prefs)
             val dllReady = FramegenSettings.isLosslessDllReady(prefs)
-
-            findPreference<Preference>(DeveloperUnlockSettings.PREF_ENTRY)?.summary =
-                getString(
-                    if (unlocked) {
-                        R.string.summary_developer_unlock_unlocked
-                    } else {
-                        R.string.summary_developer_unlock_locked
-                    }
-                )
 
             findPreference<CheckBoxPreference>(FramegenSettings.PREF_ENABLED)?.let { pref ->
                 pref.isEnabled = unlocked && dllReady
@@ -4397,342 +4306,6 @@ class StreamSettings : ThemedAppCompatActivity() {
             updateRuntimeVisibility(findPreference(FramegenSettings.PREF_INTERNAL_WIDTH), showCustomWidth)
             updateRuntimeVisibility(findPreference(FramegenSettings.PREF_SLOW_THRESHOLD_MS), showCustomWidth)
             updateRuntimeVisibility(findPreference(FramegenSettings.PREF_PRESENT_REAL_FIRST), showCustomWidth)
-        }
-
-        private fun showDeveloperUnlockDialog() {
-            val ctx = requireContext()
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            val alreadyUnlocked = DeveloperUnlockSettings.isUnlocked(prefs)
-            if (!GitHubStarVerifier.isConfigured()) {
-                appDialogBuilder(ctx)
-                    .setTitle(R.string.title_developer_unlock)
-                    .setMessage(R.string.message_developer_oauth_unconfigured)
-                    .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
-                        openDeveloperProjectPage()
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .showStyled()
-                return
-            }
-
-            if (!alreadyUnlocked) {
-                val pendingDeviceCode = GitHubDeviceAuthorization.loadPendingDeviceCode(ctx.applicationContext)
-                if (pendingDeviceCode?.scope == GitHubStarVerifier.OAuthScope.STAR_VERIFICATION) {
-                    developerPendingDeviceCode = pendingDeviceCode
-                    showDeveloperDeviceCodeDialog(pendingDeviceCode)
-                    pollDeveloperPendingDeviceCode(showPendingToast = false)
-                    return
-                }
-            }
-
-            appDialogBuilder(ctx)
-                .setTitle(R.string.title_developer_unlock)
-                .setMessage(
-                    if (alreadyUnlocked) {
-                        R.string.message_developer_unlock_done
-                    } else {
-                        R.string.message_developer_unlock_required
-                    }
-                )
-                .setPositiveButton(R.string.action_developer_verify_star) { _, _ ->
-                    startDeveloperUnlockVerification()
-                }
-                .setNeutralButton(R.string.action_developer_open_project) { _, _ ->
-                    openDeveloperProjectPage()
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .showStyled()
-        }
-
-        private fun startDeveloperUnlockVerification(
-            scope: GitHubStarVerifier.OAuthScope = GitHubStarVerifier.OAuthScope.STAR_VERIFICATION
-        ) {
-            val ctx = requireContext().applicationContext
-            if (developerUnlockVerificationRunning) {
-                Toast.makeText(ctx, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
-                return
-            }
-            if (!GitHubStarVerifier.isConfigured()) {
-                Toast.makeText(ctx, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
-                return
-            }
-
-            GitHubDeviceAuthorization.pendingDeviceCode(ctx, scope)?.let { pendingDeviceCode ->
-                if (GitHubDeviceAuthorization.accessToken(ctx, scope) == null) {
-                    developerPendingDeviceCode = pendingDeviceCode
-                    showDeveloperDeviceCodeDialog(pendingDeviceCode)
-                    pollDeveloperPendingDeviceCode(showPendingToast = false)
-                    return
-                }
-            }
-
-            developerUnlockVerificationRunning = true
-            Toast.makeText(ctx, R.string.toast_developer_verification_started, Toast.LENGTH_LONG).show()
-            thread(name = "DeveloperGitHubStarVerify") {
-                try {
-                    val savedToken = GitHubDeviceAuthorization.accessToken(ctx, scope)
-                    val starCheck = try {
-                        savedToken?.let(GitHubStarVerifier::checkStar)
-                    } catch (_: GitHubStarVerifier.AuthorizationExpiredException) {
-                        GitHubDeviceAuthorization.clearCredentials(ctx, savedToken)
-                        null
-                    }
-                    if (savedToken != null && starCheck != null) {
-                        completeDeveloperUnlockVerification(
-                            ctx, savedToken, starCheck, scope
-                        )
-                    } else {
-                        val deviceCode = GitHubDeviceAuthorization.pendingDeviceCode(ctx, scope)
-                            ?: GitHubStarVerifier.requestDeviceCode(scope).also {
-                                GitHubDeviceAuthorization.savePendingDeviceCode(ctx, it)
-                            }
-                        developerPendingDeviceCode = deviceCode
-                        activity?.runOnUiThread {
-                            if (isAdded) showDeveloperDeviceCodeDialog(deviceCode)
-                        }
-                        developerUnlockVerificationRunning = false
-                    }
-                } catch (e: Exception) {
-                    Log.e("DeveloperUnlock", "GitHub star verification failed", e)
-                    failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
-                }
-            }
-        }
-
-        private fun resumeDeveloperUnlockVerificationIfPending() {
-            pollDeveloperPendingDeviceCode(showPendingToast = false)
-        }
-
-        private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean) {
-            val ctx = requireContext().applicationContext
-            val deviceCode = developerPendingDeviceCode
-                ?: GitHubDeviceAuthorization.loadPendingDeviceCode(ctx)
-            if (deviceCode == null) {
-                if (showPendingToast) {
-                    Toast.makeText(ctx, R.string.toast_developer_verification_expired, Toast.LENGTH_LONG).show()
-                }
-                return
-            }
-            developerPendingDeviceCode = deviceCode
-            if (developerForegroundPollRunning) {
-                if (showPendingToast) {
-                    Toast.makeText(ctx, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
-                }
-                return
-            }
-
-            val nowMs = SystemClock.elapsedRealtime()
-            if (nowMs - developerLastForegroundPollMs < deviceCode.intervalSeconds * 1000L) {
-                if (showPendingToast) {
-                    Toast.makeText(ctx, R.string.toast_developer_authorization_pending, Toast.LENGTH_LONG).show()
-                }
-                return
-            }
-            developerLastForegroundPollMs = nowMs
-            developerForegroundPollRunning = true
-            developerUnlockVerificationRunning = true
-
-            thread(name = "DeveloperGitHubStarVerifyResume") {
-                try {
-                    Log.i("DeveloperUnlock", "GitHub star verification foreground poll, manual=$showPendingToast")
-                    when (val poll = GitHubStarVerifier.pollAccessToken(deviceCode)) {
-                        is GitHubStarVerifier.TokenPollResult.Authorized -> {
-                            Log.i("DeveloperUnlock", "GitHub star device flow authorized from foreground poll")
-                            val starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
-                            runIfDeveloperAttemptActive(deviceCode) {
-                                completeDeveloperUnlockVerification(
-                                    ctx = ctx,
-                                    accessToken = poll.accessToken,
-                                    starCheck = starCheck,
-                                    scope = deviceCode.scope
-                                )
-                            }
-                        }
-                        GitHubStarVerifier.TokenPollResult.Pending -> {
-                            Log.i("DeveloperUnlock", "GitHub star verification still pending")
-                            if (showPendingToast) {
-                                showDeveloperUnlockToastIfActive(deviceCode)
-                            }
-                        }
-                        is GitHubStarVerifier.TokenPollResult.SlowDown -> {
-                            GitHubDeviceAuthorization.updatePendingPollInterval(ctx, deviceCode, poll.intervalSeconds)
-                            runIfDeveloperAttemptActive(deviceCode) {
-                                developerPendingDeviceCode = deviceCode.copy(intervalSeconds = poll.intervalSeconds)
-                            }
-                            if (showPendingToast) showDeveloperUnlockToastIfActive(deviceCode)
-                        }
-                        is GitHubStarVerifier.TokenPollResult.Failed -> {
-                            runIfDeveloperAttemptActive(deviceCode) {
-                                failDeveloperUnlockVerification(ctx, poll.message)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("DeveloperUnlock", "GitHub star foreground verification failed", e)
-                    runIfDeveloperAttemptActive(deviceCode) {
-                        failDeveloperUnlockVerification(ctx, e.message ?: e.javaClass.simpleName)
-                    }
-                } finally {
-                    activity?.runOnUiThread {
-                        developerForegroundPollRunning = false
-                        if (developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
-                            developerUnlockVerificationRunning = false
-                        }
-                    }
-                }
-            }
-        }
-
-        private fun runIfDeveloperAttemptActive(
-            deviceCode: GitHubStarVerifier.DeviceCode,
-            action: () -> Unit
-        ) {
-            activity?.runOnUiThread {
-                if (isAdded && developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
-                    action()
-                }
-            }
-        }
-
-        private fun showDeveloperUnlockToastIfActive(deviceCode: GitHubStarVerifier.DeviceCode) {
-            runIfDeveloperAttemptActive(deviceCode) {
-                Toast.makeText(
-                    requireContext(),
-                    R.string.toast_developer_authorization_pending,
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-
-        private fun clearDeveloperPendingDeviceCode(ctx: Context) {
-            developerPendingDeviceCode = null
-            GitHubDeviceAuthorization.clearPendingDeviceCode(ctx)
-        }
-
-        private fun showDeveloperDeviceCodeDialog(deviceCode: GitHubStarVerifier.DeviceCode) {
-            developerDeviceCodeDialog?.dismiss()
-            GitHubDeviceAuthorization.copyDeviceCodeToClipboard(requireContext(), deviceCode)
-            val dialog = appDialogBuilder()
-                .setTitle(
-                    if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
-                        R.string.title_crown_store_github_authorization
-                    } else {
-                        R.string.title_developer_unlock
-                    }
-                )
-                .setMessage(
-                    getString(
-                        if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
-                            R.string.message_crown_store_device_code
-                        } else {
-                            R.string.message_developer_device_code
-                        },
-                        deviceCode.userCode,
-                        deviceCode.verificationUri
-                    )
-                )
-                .setPositiveButton(R.string.action_developer_open_authorization, null)
-                .setNeutralButton(R.string.action_developer_check_authorization, null)
-                .setNegativeButton(android.R.string.cancel) { _, _ ->
-                    developerUnlockVerificationRunning = false
-                    clearDeveloperPendingDeviceCode(requireContext().applicationContext)
-                }
-                .setOnCancelListener {
-                    developerUnlockVerificationRunning = false
-                    clearDeveloperPendingDeviceCode(requireContext().applicationContext)
-                }
-                .create()
-            dialog.setOnShowListener {
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                    GitHubDeviceAuthorization.copyDeviceCodeToClipboard(
-                        requireContext(),
-                        deviceCode,
-                        showToast = false
-                    )
-                    openDeveloperUrl(GitHubDeviceAuthorization.authorizationUrl(deviceCode))
-                }
-                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                    pollDeveloperPendingDeviceCode(showPendingToast = true)
-                }
-            }
-            dialog.setOnDismissListener {
-                if (developerDeviceCodeDialog === dialog) {
-                    developerDeviceCodeDialog = null
-                }
-            }
-            developerDeviceCodeDialog = dialog
-            showStyledDialog(dialog)
-        }
-
-        private fun completeDeveloperUnlockVerification(
-            ctx: Context,
-            accessToken: String,
-            starCheck: GitHubStarVerifier.StarCheck,
-            scope: GitHubStarVerifier.OAuthScope
-        ) {
-            val dialogToDismiss = developerDeviceCodeDialog
-            developerUnlockVerificationRunning = false
-            clearDeveloperPendingDeviceCode(ctx)
-            GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
-            Log.i(
-                "DeveloperUnlock",
-                "GitHub star verification completed: starred=${starCheck.starred}, login=${starCheck.login ?: "unknown"}"
-            )
-            activity?.runOnUiThread {
-                if (!isAdded) {
-                    return@runOnUiThread
-                }
-                if (developerDeviceCodeDialog === dialogToDismiss) {
-                    dialogToDismiss?.dismiss()
-                }
-                refreshDeveloperFeatureGateState()
-
-                if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
-                    Toast.makeText(requireContext(), R.string.toast_crown_store_github_connected, Toast.LENGTH_LONG).show()
-                } else if (starCheck.starred) {
-                    Toast.makeText(requireContext(), R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
-                } else {
-                    appDialogBuilder()
-                        .setTitle(R.string.title_developer_unlock)
-                        .setMessage(R.string.message_developer_star_not_found)
-                        .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
-                            openDeveloperProjectPage()
-                        }
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .showStyled()
-                }
-            }
-        }
-
-        private fun failDeveloperUnlockVerification(ctx: Context, message: String) {
-            developerUnlockVerificationRunning = false
-            clearDeveloperPendingDeviceCode(ctx)
-            Log.w("DeveloperUnlock", "GitHub star verification failed: $message")
-            activity?.runOnUiThread {
-                if (isAdded) {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.toast_developer_verification_failed, message),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
-
-        private fun openDeveloperProjectPage() {
-            openDeveloperUrl(DeveloperUnlockSettings.GITHUB_REPO_URL)
-        }
-
-        private fun openDeveloperUrl(url: String) {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-            } catch (e: Exception) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.toast_developer_open_project_failed, e.message ?: e.javaClass.simpleName),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
         }
 
         private fun updateFramegenDllPreferenceSummary() {

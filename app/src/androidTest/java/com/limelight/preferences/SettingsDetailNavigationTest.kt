@@ -381,7 +381,7 @@ class SettingsDetailNavigationTest {
         private val AUDIO_DEPENDENT_KEYS = listOf("list_audio_codec", "list_audio_passthrough_buffer", "checkbox_ac3_iec61937")
         private val SCREEN_KEYS = setOf(
             "settings_frame_generation", "settings_hdr",
-            "settings_picture_layout", "settings_performance_overlay", "settings_float_ball",
+            "settings_picture_layout", "settings_performance_overlay",
             "settings_audio_passthrough", "settings_audio_vibration", "settings_gamepad",
             "settings_input",
         )

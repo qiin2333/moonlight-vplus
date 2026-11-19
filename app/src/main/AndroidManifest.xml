@@ -72,7 +72,6 @@
         android:required="false"/>
 
     <queries>
-        <package android:name="com.tencent.mm" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
@@ -208,8 +207,8 @@
             桌面图标双入口：LAUNCHER intent-filter 必须挂在 activity-alias 上，
             才能在运行时用 PackageManager.setComponentEnabledSetting 在两种图标
             之间切换（挂在本体 activity 上则无法隐藏自身入口）。切换逻辑见
-            utils/LauncherIcon.kt，入口在 PcView 工具栏"主题"面板的"应用图标"组。
-            LauncherSaba 始终与 LauncherSabaDark 恰好一开一关，不能同时关闭。
+            utils/LauncherIcon.kt（Thor build: switcher removed; both aliases stay so
+            whichever icon an existing install enabled keeps working).
         -->
         <activity-alias
             android:name=".LauncherSaba"

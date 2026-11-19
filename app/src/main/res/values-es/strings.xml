@@ -426,7 +426,6 @@
     <string name="summary_checkbox_rotable_screen">Sincroniza automáticamente el diseño de la transmisión cuando el dispositivo cambia entre orientación vertical y horizontal.</string>
     <string name="summary_checkbox_sync_touch_event_with_display">Si está habilitado, el evento de toque se sincronizará con la tasa de refresco de la pantalla, como 60Hz.</string>
     <string name="summary_crown_super_features">Una solución de botones virtuales en pantalla. Cambia los botones en pantalla, las acciones rápidas, el modo táctil y los ajustes de vibración mediante perfiles con nombre.</string>
-    <string name="summary_enable_analytics">Ayudar a mejorar la aplicación compartiendo estadísticas de uso anónimas</string>
     <string name="summary_enable_perf_overlay">Mostrar información de rendimiento de transmisión en tiempo real mientras transmites</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">Define dónde dividir zonas de toque nativo y toque mejorado, menos del 50% significa dividir desde un punto a la izquierda, más del 50% significa derecha</string>
     <string name="summary_export_super_config">Exportar archivo de configuración de botones personalizados y configuraciones de transmisión</string>
@@ -474,12 +473,10 @@
     <string name="title_checkbox_sync_touch_event_with_display">Sincronizar evento de toque con refresco de pantalla </string>
     <string name="title_crown_super_features">Características Super Crown</string>
     <string name="title_custom_resolutions">Resoluciones personalizadas</string>
-    <string name="title_enable_analytics">Habilitar Análisis</string>
     <string name="title_enable_perf_overlay">Mostrar estadísticas de rendimiento mientras transmites</string>
     <string name="title_enhanced_touch_zone_divider">Divisor de zona de toque mejorada</string>
     <string name="title_fixed_x_velocity">Establecer velocidad X (horizontal) fija</string>
     <string name="title_import_super_config">Importar Configuración</string>
-    <string name="title_moonlight_vplus_pc_download">Descarga de Moonlight V+ PC</string>
     <string name="title_perf_overlay_display_items">Elementos de Visualización de Superposición de Rendimiento</string>
     <string name="title_perf_overlay_orientation">Orientación de Superposición de Rendimiento</string>
     <string name="title_perf_overlay_position">Posición de Superposición de Rendimiento</string>

@@ -14,7 +14,6 @@ import androidx.preference.PreferenceManager
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.input.virtual_controller.OscSettingsButtonStore
 import com.limelight.binding.input.virtual_controller.VirtualControllerConfigurationLoader
-import com.limelight.ui.FloatBallPreferences
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.binding.input.advance_setting.DirectConfigTransfer
@@ -3390,7 +3389,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "list_esc_menu_key",
             "list_float_ball_double_click_action",
             "list_float_ball_long_click_action",
-            FloatBallPreferences.KEY_PRESET_POSITION,
+            "list_float_ball_position",
             "list_float_ball_single_click_action",
             "list_float_ball_swipe_down_action",
             "list_float_ball_swipe_left_action",

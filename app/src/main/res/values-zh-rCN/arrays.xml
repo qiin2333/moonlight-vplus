@@ -29,14 +29,6 @@
     </string-array>
 
     <!-- 浮球手势动作 -->
-    <string-array name="float_ball_action_names">
-        <item>无动作</item>
-        <item>打开虚拟键盘</item>
-        <item>打开菜单</item>
-        <item>切换悬浮球显隐</item>
-        <item>显示性能监控图层</item>
-        <item>指纹解锁主机</item>
-    </string-array>
 
     <!-- 画面位置选项 -->
     <string-array name="screen_position_names">

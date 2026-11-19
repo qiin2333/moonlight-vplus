@@ -432,21 +432,8 @@
     <string name="summary_list_audio_vibration_mode">選擇根據音訊產生的振動輸出到哪裡。</string>
     <string name="title_list_audio_vibration_scene">場景模式</string>
     <string name="summary_list_audio_vibration_scene">根據內容類型最佳化振動模式</string>
-    <string name="title_checkbox_enable_float_ball">啟用懸浮球</string>
-    <string name="summary_checkbox_enable_float_ball">顯示可互動的懸浮球，用於快速操作。</string>
-    <string name="title_list_float_ball_position">懸浮球位置</string>
-    <string name="summary_list_float_ball_position">將懸浮球放到螢幕邊緣。拖曳位置會覆蓋預設，再次選擇預設即可清除。</string>
-    <string name="title_seekbar_float_ball_auto_hide_delay">自動隱藏延遲</string>
-    <string name="summary_seekbar_float_ball_auto_hide_delay">懸浮球自動隱藏到螢幕邊緣前的等待時間。</string>
-    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
 
     <!-- 懸浮球手勢動作 -->
-    <string name="title_float_ball_single_click_action">單擊動作</string>
-    <string name="summary_float_ball_single_click_action">輕點懸浮球一次時執行的動作</string>
-    <string name="title_float_ball_double_click_action">雙擊動作</string>
-    <string name="summary_float_ball_double_click_action">雙擊懸浮球時執行的動作</string>
-    <string name="title_float_ball_long_click_action">長按動作</string>
-    <string name="summary_float_ball_long_click_action">長按懸浮球時執行的動作</string>
     <string name="title_float_ball_swipe_up_action">向上滑動動作</string>
     <string name="summary_float_ball_swipe_up_action">向上滑動懸浮球時執行的動作</string>
     <string name="title_float_ball_swipe_down_action">向下滑動動作</string>
@@ -462,26 +449,6 @@
     <string name="float_ball_action_open_menu">顯示遊戲選單</string>
     <string name="perf_fps_info">Rx FPS：接收幀率\n• 從主機接收的視訊幀數\n• 理想情況下應該穩定\n\nRd FPS：渲染幀率\n• 用戶端解碼路徑實際渲染的幀數\n• 可能因裝置效能而降低\n\nFG FPS：插幀後幀率估算\n• 插幀增強啟用時顯示\n• 根據渲染幀率和目前輸出倍數估算\n\n效能指標：\n• Rx/Rd 接近表示解碼與渲染表現良好\n• FG 幀率過低可能影響插幀流暢度</string>
     <!-- 插幀增強 -->
-    <string name="title_developer_unlock">解鎖開發者功能</string>
-    <string name="summary_developer_unlock_locked">驗證你的 GitHub Star 後即可解鎖開發者功能。</string>
-    <string name="summary_developer_unlock_unlocked">本機已解鎖開發者功能，感謝你支持 Moonlight V+。</string>
-    <string name="message_developer_unlock_required">開發者功能是 Moonlight V+ 的支持者功能。請登入 GitHub，App 會驗證你的帳號是否已經給專案點 Star。</string>
-    <string name="message_developer_unlock_done">本機已解鎖開發者功能。你可以重新驗證 Star，或打開專案頁面。</string>
-    <string name="message_developer_oauth_unconfigured">目前構建沒有配置 GitHub OAuth Client ID，Moonlight V+ 還無法解鎖開發者功能。請在 local.properties 配置 githubOAuthClientId，或在構建時傳入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
-    <string name="message_developer_device_code">1. 打開授權頁並輸入代碼：%1$s\n2. 打開專案頁，給 Moonlight V+ 點 Star。\n3. 授權完成後回到本頁，點擊「已授權，檢查」。\n\n授權頁：%2$s</string>
-    <string name="message_developer_star_not_found">GitHub 授權成功，但還沒有看到這個帳號的 Star。如果你剛剛點過 Star，請稍等片刻後再次驗證。</string>
-    <string name="action_developer_open_project">打開專案</string>
-    <string name="action_developer_open_authorization">打開授權頁</string>
-    <string name="action_developer_check_authorization">已授權，檢查</string>
-    <string name="action_developer_verify_star">驗證 GitHub Star</string>
-    <string name="toast_developer_unlocked">開發者功能已解鎖，感謝你的 Star。</string>
-    <string name="toast_developer_oauth_unconfigured">目前構建未配置 GitHub OAuth Client ID。</string>
-    <string name="toast_developer_verification_started">正在開始解鎖開發者功能…</string>
-    <string name="toast_developer_verification_running">開發者功能解鎖已經在進行中。</string>
-    <string name="toast_developer_authorization_pending">還沒有收到 GitHub 授權，請稍後再試。</string>
-    <string name="toast_developer_verification_expired">GitHub 授權已過期，請重新開始驗證。</string>
-    <string name="toast_developer_verification_failed">開發者功能解鎖失敗：%1$s</string>
-    <string name="toast_developer_open_project_failed">無法打開專案頁面：%1$s</string>
     <string name="title_framegen_enabled">插幀增強</string>
     <string name="summary_framegen_enabled">在手機端生成額外幀，讓串流更順滑。想輸出 120Hz 時請把串流幀率設為 60 FPS；超過目標刷新率一半的設定不會提升插幀效果。</string>
     <string name="summary_framegen_enabled_locked">請先解鎖開發者功能，再啟用插幀增強。</string>
@@ -535,21 +502,6 @@
     <string name="title_config_sync_backup_password">備份密碼</string>
 
     <!-- 贊助 -->
-    <string name="sponsor_github_title">投餵 Moonlight V+</string>
-    <string name="sponsor_github_summary">雜魚維護組還在努力修 bug 呢，投餵一點點就能變成設備、咖啡和 token 補給。掃描 QR code 或開啟 GitHub Sponsors 即可。</string>
-    <string name="sponsor_github_action">開啟 GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">投餵 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">雜魚維護組還在努力修 bug 呢，掃碼投餵一點點，就能變成設備、咖啡和 token 補給。</string>
-    <string name="sponsor_wechat_action">使用微信支付掃碼</string>
-    <string name="sponsor_qr_content_description">贊助 QR code</string>
-    <string name="sponsor_qr_dialog_title">贊助 QR code</string>
-    <string name="sponsor_qr_long_press_hint">長按 QR code 可儲存到相簿，再用微信掃碼</string>
-    <string name="sponsor_qr_saved">QR code 已儲存到相簿</string>
-    <string name="sponsor_qr_save_failed">QR code 儲存失敗</string>
-    <string name="sponsor_qr_permission_retry">允許儲存權限後，請再次長按儲存</string>
-    <string name="sponsor_qr_saved_open_wechat_hint">QR code 已儲存，開啟微信後選擇「掃一掃 → 相簿」</string>
-    <string name="sponsor_open_wechat">開啟微信</string>
-    <string name="sponsor_wechat_not_installed">尚未安裝微信</string>
     <string name="toast_update_integrity_mismatch">更新下載內容不是有效安裝包，請切換網路或使用瀏覽器下載。</string>
     <string name="wheel_alignment_title">對齊方式</string>
     <string name="wheel_alignment_center">分區中線朝上</string>
@@ -908,8 +860,6 @@
     <string name="suffix_hdr_peak_brightness_nits">尼特</string>
     <string name="title_game_menu_cards">串流選單卡片</string>
     <string name="summary_game_menu_cards">選擇串流中遊戲選單要顯示的功能卡片。</string>
-    <string name="title_enable_analytics">傳送匿名使用統計</string>
-    <string name="summary_enable_analytics">分享匿名使用統計，協助改善應用程式。</string>
     <string name="title_enable_perf_overlay">串流時顯示效能統計</string>
     <string name="summary_enable_perf_overlay">串流期間顯示即時串流、解碼與網路資訊。</string>
     <string name="title_checkbox_enable_audio_passthrough">啟用音訊直通</string>
@@ -984,7 +934,6 @@
     <string name="summary_config_sync_import_external_snapshot">先預覽所選資料夾中的備份，再決定是否還原。</string>
     <string name="check_for_updates">檢查更新</string>
     <string name="summary_check_for_updates">檢查是否有新的 Moonlight V+ 版本。</string>
-    <string name="title_moonlight_vplus_pc_download">下載 Moonlight V+ 電腦版</string>
     <string name="suffix_seekbar_flat_region_pixels">像素</string>
     <string name="suffix_enhanced_touch_zone_divider">%</string>
     <string name="suffix_pointer_velocity_factor">%</string>
@@ -1009,7 +958,6 @@
     <string name="background_source_auto">智慧預設（建議）</string>
     <string name="background_source_api">自訂 API 網址</string>
     <string name="background_source_local">本機圖片</string>
-    <string name="float_ball_action_toggle_visibility">切換懸浮球顯示或隱藏</string>
     <string name="float_ball_action_show_perf_overlay">顯示效能監控圖層</string>
     <string name="hdr_mode_hdr10">HDR10（PQ）</string>
     <string name="hdr_mode_hdr10_plus">HDR10+（需要動態中繼資料分析）</string>
@@ -1143,15 +1091,6 @@
     <string name="custom_frame_rate_hint">常用影格率只影響遊戲選單的顯示，不會改變目前串流影格率；設定頁始終保留完整清單。</string>
     <string name="custom_frame_rate_add_favorite">加入常用</string>
     <string name="frame_rate_show_all">全部影格率…</string>
-    <string name="title_float_ball_settings">懸浮球</string>
-    <string name="float_ball_appearance">懸浮顯示</string>
-    <string name="float_ball_gestures">手勢操作</string>
-    <string name="float_ball_settings_disabled_summary">開啟懸浮球後可調整位置與操作。</string>
-    <string name="float_ball_summary_enabled">已啟用 · %1$s · %2$s</string>
-    <string name="float_ball_summary_delay">%1$s 秒後隱藏</string>
-    <string name="float_ball_summary_no_hide">始終顯示</string>
-    <string name="float_ball_summary_custom_position">已拖動定位</string>
-    <string name="float_ball_summary_search">%1$s\n包含：%2$s</string>
     <string name="display_resolution_current_not_saved">目前使用 · 未儲存在清單</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">精確同步(增強)</string>

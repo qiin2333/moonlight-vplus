@@ -585,21 +585,8 @@
     <string name="summary_osc_opacity">Make the on-screen controls more/less transparent</string>
     <string name="dialog_title_osc_opacity">On-screen control opacity</string>
     <string name="suffix_osc_opacity">%</string>
-    <string name="title_checkbox_enable_float_ball">Enable floating ball</string>
-    <string name="summary_checkbox_enable_float_ball">Show a floating ball for quick actions.</string>
-    <string name="title_list_float_ball_position">Floating ball position</string>
-    <string name="summary_list_float_ball_position">Place the floating ball at a screen edge. Dragging overrides this preset until you choose a preset again.</string>
-    <string name="title_seekbar_float_ball_auto_hide_delay">Auto-hide delay</string>
-    <string name="summary_seekbar_float_ball_auto_hide_delay">Time before the float ball automatically hides to the screen edge</string>
-    <string name="suffix_seekbar_float_ball_auto_hide_delay_ms">ms</string>
 
     <!-- Float Ball Gesture Actions -->
-    <string name="title_float_ball_single_click_action">Tap action</string>
-    <string name="summary_float_ball_single_click_action">Action performed when the floating ball is tapped once.</string>
-    <string name="title_float_ball_double_click_action">Double-tap action</string>
-    <string name="summary_float_ball_double_click_action">Action performed when the floating ball is tapped twice.</string>
-    <string name="title_float_ball_long_click_action">Long-press action</string>
-    <string name="summary_float_ball_long_click_action">Action performed when the floating ball is held down.</string>
     <string name="title_float_ball_swipe_up_action">Swipe Up Action</string>
     <string name="summary_float_ball_swipe_up_action">Action performed when swiping float ball upward</string>
     <string name="title_float_ball_swipe_down_action">Swipe Down Action</string>
@@ -613,7 +600,6 @@
     <string name="float_ball_action_none">No Action</string>
     <string name="float_ball_action_open_keyboard">Show Virtual Keyboard</string>
     <string name="float_ball_action_open_menu">Show Game Menu</string>
-    <string name="float_ball_action_toggle_visibility">Toggle Float Ball Visibility</string>
     <string name="float_ball_action_show_perf_overlay">Show Performance Overlay</string>
     <string name="float_ball_action_screenshot">Take Screenshot</string>
     <string name="float_ball_action_lock_screen">Lock Screen</string>
@@ -918,9 +904,7 @@
     <string name="crown_config_action_import_legacy">Import Legacy .mdat</string>
     <string name="crown_config_no_profiles">No Crown profiles available</string>
     <string name="title_crown_store_view">Crown</string>
-    <string name="crown_store_tab_store">Crown Market</string>
     <string name="crown_store_tab_mine">My Crowns</string>
-    <string name="crown_store_store_summary">Browse Crown layouts shared on GitHub. Pick one you like and bring it home.</string>
     <string name="crown_store_my_summary">Manage profiles, import packages, and publish layouts.</string>
     <string name="crown_store_my_workspace_title">Your Crown space</string>
     <string name="crown_store_local_profiles">Local profiles</string>
@@ -930,71 +914,23 @@
     <string name="crown_store_legacy_tool_summary">Restore a Crown profile from a legacy .mdat file.</string>
     <string name="crown_store_action_open">Open</string>
     <string name="crown_store_action_import_package">Import package</string>
-    <string name="crown_store_action_refresh">Refresh</string>
-    <string name="crown_store_search_hint">Search crowns</string>
-    <string name="crown_store_clear_search">Clear search</string>
-    <string name="crown_store_sort_by">Sort: %1$s</string>
-    <string name="crown_store_sort_store_order">Store order</string>
-    <string name="crown_store_sort_newest">Recently updated</string>
-    <string name="crown_store_sort_oldest">Oldest updated</string>
-    <string name="crown_store_sort_name_asc">Name A–Z</string>
-    <string name="crown_store_sort_name_desc">Name Z–A</string>
-    <string name="crown_store_results_count">%1$d crowns</string>
-    <string name="crown_store_card_game">Game: %1$s</string>
-    <string name="crown_store_card_author">By %1$s</string>
-    <string name="crown_store_no_search_results">No matching crowns</string>
-    <string name="crown_store_try_another_search">Try another name, game, author, or tag.</string>
-    <string name="crown_store_action_import_profile">Bring Home</string>
-    <string name="crown_store_action_report_profile">Report</string>
     <string name="crown_store_action_edit_publish">Add Details and Submit</string>
-    <string name="crown_store_action_publish_profile">Submit</string>
     <string name="crown_store_action_export_share">Pack to Share</string>
     <string name="crown_store_action_export_legacy_short">Legacy .mdat</string>
     <string name="crown_store_action_merge_short">Merge In</string>
     <string name="action_crown_store_delete_profile">Delete</string>
     <string name="crown_store_action_back">Back</string>
-    <string name="crown_store_empty_state_title">No crowns here yet</string>
-    <string name="crown_store_empty_state_message">Once a profile is merged into the GitHub Store repo, it will pop up here.</string>
     <string name="crown_store_my_empty_message">No local profiles yet. Import or create a Crown profile and it will appear here.</string>
     <string name="crown_store_local_tools">Local toolkit</string>
     <string name="crown_store_local_profile_id">Local ID: %1$s</string>
-    <string name="crown_store_layout_basis">Fit: %1$s</string>
     <string name="crown_store_layout_orientation_landscape">landscape</string>
     <string name="crown_store_layout_orientation_portrait">portrait</string>
     <string name="crown_store_layout_orientation_unknown">screen</string>
-    <string name="title_crown_store_layout_check">Check the fit</string>
     <string name="message_crown_store_layout_match">Fit: tuned for this screen (%1$s).</string>
     <string name="message_crown_store_layout_missing">Fit: this Crown has no screen info. Your screen is %1$s, so you may need a tiny button nudge after import.</string>
     <string name="message_crown_store_layout_mismatch">Fit: this Crown was tuned for %1$s. Your screen is %2$s, so buttons may need a tiny nudge after import.</string>
-    <string name="action_crown_store_continue_import">Import Anyway</string>
-    <string name="crown_store_updated_at">Last updated: %1$s</string>
-    <string name="crown_store_action_publish">Submit to Crown Store</string>
-    <string name="crown_store_source_label">Crown Store: %1$s</string>
-    <string name="title_crown_store_publish_metadata">Introduce this profile</string>
-    <string name="title_crown_store_github_authorization">Connect GitHub first</string>
-    <string name="title_crown_store_publish_success">Store PR sent</string>
     <string name="title_crown_store_delete_profile">Delete this Crown?</string>
-    <string name="label_crown_store_profile_name">Profile name</string>
-    <string name="label_crown_store_game">Game</string>
-    <string name="label_crown_store_author">Creator</string>
-    <string name="label_crown_store_tags">Tags</string>
-    <string name="label_crown_store_summary">One-line intro</string>
-    <string name="hint_crown_store_profile_name">Give this profile a name</string>
-    <string name="hint_crown_store_game">Which game is it for?</string>
-    <string name="hint_crown_store_author">Name to show</string>
-    <string name="hint_crown_store_tags">fps, racing, handheld</string>
-    <string name="hint_crown_store_summary">What makes this layout shine?</string>
-    <string name="message_crown_store_publish_metadata">These details appear in the public GitHub Store. Moonlight V+ will create a pull request from your account for review.</string>
-    <string name="message_crown_store_publish_terms">I confirm this profile is mine or shared with permission, contains no private data, tokens, passwords, pairing identity, copyrighted media, or abusive content, and may be reviewed or removed from the public GitHub Store.</string>
-    <string name="message_crown_store_github_authorization_required">Connect GitHub before submitting. Moonlight V+ will fork the Crown Store, commit the profile, and open a pull request for you.</string>
-    <string name="message_crown_store_github_reauthorization_required">Submitting needs GitHub public repository access. Reconnect GitHub, approve repository access, then send it again.</string>
-    <string name="message_crown_store_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve public repository access so Moonlight V+ can fork the Crown Store and open a pull request.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
-    <string name="message_crown_store_publish_success">Your Crown profile submission PR is ready:\n%1$s\n\n%2$s</string>
     <string name="message_crown_store_delete_profile">Delete \"%1$s\" from My Crowns? This only removes the local profile and its buttons.</string>
-    <string name="crown_store_report_issue_title">Report Crown Store profile: %1$s</string>
-    <string name="crown_store_report_issue_body">Profile: %1$s\nSource: %2$s\n\nReason:\nPlease describe what looks unsafe, private, infringing, or abusive.</string>
-    <string name="action_crown_store_authorize_github">Connect GitHub</string>
-    <string name="action_open_pull_request">Open pull request</string>
     <string name="crown_share_action_import">Import Share Package</string>
     <string name="crown_share_action_import_url">Import from Link</string>
     <string name="crown_share_install_as_new">Install as New</string>
@@ -1013,28 +949,9 @@
     <string name="toast_crown_share_url_invalid">Enter a valid HTTP or HTTPS link</string>
     <string name="toast_crown_share_url_loading">Downloading Crown share package</string>
     <string name="toast_crown_share_url_failed">Could not import the package from this link</string>
-    <string name="toast_crown_store_loading">Checking Crown Store</string>
-    <string name="toast_crown_store_empty">Crown Store is still empty</string>
-    <string name="toast_crown_store_failed">Could not open Crown Store</string>
-    <string name="toast_crown_store_profile_failed">This Crown profile did not import</string>
-    <string name="toast_crown_store_publish_started">Sending Crown profile to GitHub</string>
-    <string name="toast_crown_store_github_connected">GitHub is connected for Crown Store submissions</string>
-    <string name="toast_crown_store_publish_failed">Could not prepare this Crown profile</string>
-    <string name="toast_crown_store_publish_failed_with_error">Submission failed: %1$s</string>
-    <string name="toast_crown_store_publish_terms_required">Confirm the publishing rules before submitting</string>
-    <string name="toast_crown_store_publish_invalid_metadata">Check the Store fields: %1$s</string>
     <string name="toast_crown_store_delete_success">Deleted %1$s</string>
     <string name="toast_crown_store_delete_failed">Could not delete this Crown</string>
     <string name="toast_crown_store_delete_default_blocked">The default Crown stays as a tiny safety net</string>
-    <string name="crown_store_validation_name_too_long">profile name is too long</string>
-    <string name="crown_store_validation_game_too_long">game name is too long</string>
-    <string name="crown_store_validation_author_too_long">creator name is too long</string>
-    <string name="crown_store_validation_summary_too_long">intro is too long</string>
-    <string name="crown_store_validation_too_many_tags">too many tags</string>
-    <string name="crown_store_validation_tag_too_long">one tag is too long</string>
-    <string name="crown_store_validation_external_locator">links and email addresses cannot be published in Store fields</string>
-    <string name="crown_store_validation_sensitive_metadata">private data, tokens, passwords, or pairing identity cannot be published</string>
-    <string name="crown_store_validation_invalid_bundle">this is not a public Crown-only share package</string>
     <string name="toast_crown_config_export_success">Crown configuration exported</string>
     <string name="toast_crown_config_export_failed">Unable to export Crown configuration</string>
     <string name="toast_crown_config_import_success">Crown configuration imported</string>
@@ -1107,11 +1024,8 @@
     <string name="summary_checkbox_rotable_screen">Rotate the stream layout when this device\'s orientation changes.</string>
     
     <!-- Moonlight V+ PC download -->
-    <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC Download</string>
     
     <!-- Analytics settings -->
-    <string name="title_enable_analytics">Enable Analytics</string>
-    <string name="summary_enable_analytics">Help improve the app by sharing anonymous usage statistics</string>
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 Tip: Use the "Exit" button to quickly and completely exit the stream, restoring your screen to its pre-stream state~</string>
@@ -1463,28 +1377,6 @@
     <string name="hevc_low_latency_off">Off</string>
 
     <!-- Frame Generation -->
-    <string name="title_developer_unlock">Unlock developer features</string>
-    <string name="summary_developer_unlock_locked">Verify your GitHub Star to unlock developer features.</string>
-    <string name="summary_developer_unlock_unlocked">Developer features are unlocked on this device. Thank you for supporting Moonlight V+.</string>
-    <string name="message_developer_unlock_required">Developer features are available to Moonlight V+ supporters. Sign in with GitHub and the app will verify that your account has starred the project. The same authorization can also publish Crown Store pull requests when you choose to share a profile.</string>
-    <string name="message_developer_unlock_done">Developer features are unlocked on this device. You can recheck your Star or open the project page.</string>
-    <string name="message_developer_oauth_unconfigured">This build has not configured a GitHub OAuth client ID, so Moonlight V+ cannot unlock developer features yet. Set githubOAuthClientId in local.properties, pass -PgithubOAuthClientId=..., or set GITHUB_OAUTH_CLIENT_ID when building.</string>
-    <string name="message_developer_device_code">Code copied for you: %1$s\n\n1. Open the authorization page and paste the code.\n2. Approve GitHub access, then Star Moonlight V+.\n3. Return here after authorization, then tap I have authorized.\n\nAuthorization page: %2$s</string>
-    <string name="developer_device_code_clip_label">GitHub authorization code</string>
-    <string name="message_developer_star_not_found">GitHub authorization succeeded, but the Star is not visible for this account yet. Star Moonlight V+, wait a moment if you just starred it, then verify again.</string>
-    <string name="action_developer_open_project">Open project</string>
-    <string name="action_developer_open_authorization">Open authorization</string>
-    <string name="action_developer_check_authorization">I have authorized</string>
-    <string name="action_developer_verify_star">Verify GitHub Star</string>
-    <string name="toast_developer_unlocked">Developer features unlocked. Thanks for the star!</string>
-    <string name="toast_developer_oauth_unconfigured">GitHub OAuth client ID is not configured for this build.</string>
-    <string name="toast_developer_verification_started">Starting developer feature unlock…</string>
-    <string name="toast_developer_verification_running">Developer feature unlock is already running.</string>
-    <string name="toast_developer_device_code_copied">GitHub code copied. Paste it on the authorization page.</string>
-    <string name="toast_developer_authorization_pending">Still waiting for GitHub authorization. Try again in a few seconds.</string>
-    <string name="toast_developer_verification_expired">GitHub authorization expired. Start verification again.</string>
-    <string name="toast_developer_verification_failed">Developer feature unlock failed: %1$s</string>
-    <string name="toast_developer_open_project_failed">Unable to open project page: %1$s</string>
     <string name="title_framegen_enabled">Frame generation</string>
     <string name="summary_framegen_enabled">Generate extra frames on the phone for smoother streaming. For 120 Hz output, set stream FPS to 60; values above half of the target refresh rate will not improve frame generation.</string>
     <string name="summary_framegen_enabled_locked">Unlock developer features first to enable frame generation.</string>
@@ -2194,22 +2086,6 @@ Tap again to replace it.</string>
     <string name="seekbar_increase">Increase</string>
 
     <!-- Sponsorship -->
-    <string name="sponsor_github_url" translatable="false">https://github.com/sponsors/qiin2333</string>
-    <string name="sponsor_github_title">Feed Moonlight V+</string>
-    <string name="sponsor_github_summary">Tiny sponsor energy keeps fixes, devices, and token-fueled tinkering alive. Scan the code or open GitHub Sponsors.</string>
-    <string name="sponsor_github_action">Open GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">Feed Moonlight V+</string>
-    <string name="sponsor_wechat_summary">Scan with WeChat Pay to toss in a tiny token snack for continued development.</string>
-    <string name="sponsor_wechat_action">Scan with WeChat Pay</string>
-    <string name="sponsor_qr_content_description">Sponsor QR code</string>
-    <string name="sponsor_qr_dialog_title">Sponsor QR code</string>
-    <string name="sponsor_qr_long_press_hint">Long press the QR code to save it for scanning in WeChat</string>
-    <string name="sponsor_qr_saved">QR code saved to Pictures/Moonlight V+</string>
-    <string name="sponsor_qr_save_failed">Couldn’t save the QR code</string>
-    <string name="sponsor_qr_permission_retry">Allow storage access, then long press again to save</string>
-    <string name="sponsor_qr_saved_open_wechat_hint">Saved. In WeChat, choose Scan → Album</string>
-    <string name="sponsor_open_wechat">Open WeChat</string>
-    <string name="sponsor_wechat_not_installed">WeChat isn’t installed</string>
 
     <string name="iperf_output_title">Test output</string>
     <string name="iperf_output_empty_hint">Test results and detailed logs will appear here.</string>
@@ -2437,15 +2313,6 @@ Tap again to replace it.</string>
     <string name="custom_frame_rate_hint">Favorites only change what the in-game menu shows. They never change the current stream frame rate, and Settings always keeps the full list.</string>
     <string name="custom_frame_rate_add_favorite">Add to favorites</string>
     <string name="frame_rate_show_all">All frame rates…</string>
-    <string name="title_float_ball_settings">Floating ball</string>
-    <string name="float_ball_appearance">Display</string>
-    <string name="float_ball_gestures">Gestures</string>
-    <string name="float_ball_settings_disabled_summary">Enable the floating ball to adjust its position and actions.</string>
-    <string name="float_ball_summary_enabled">Enabled · %1$s · %2$s</string>
-    <string name="float_ball_summary_delay">Hide after %1$s s</string>
-    <string name="float_ball_summary_no_hide">Always visible</string>
-    <string name="float_ball_summary_custom_position">Dragged position</string>
-    <string name="float_ball_summary_search">%1$s\nIncludes: %2$s</string>
     <string name="display_resolution_current_not_saved">Currently in use · Not saved in list</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">Precise sync (enhanced)</string>

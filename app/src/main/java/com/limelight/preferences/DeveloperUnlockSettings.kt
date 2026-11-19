@@ -18,9 +18,7 @@ object DeveloperUnlockSettings {
     const val PREF_PENDING_EXPIRES_AT_MS = "pref_developer_features_pending_expires_at_ms"
     const val PREF_PENDING_INTERVAL_SECONDS = "pref_developer_features_pending_interval_seconds"
 
-    const val GITHUB_REPO_URL = "https://github.com/qiin2333/moonlight-vplus"
 
-    private const val VERIFICATION_MAX_AGE_MS = 30L * 24L * 60L * 60L * 1000L
 
     private const val LEGACY_PREF_STAR_UNLOCKED = "pref_framegen_star_unlocked"
     private const val LEGACY_PREF_STAR_ACCESS_TOKEN = "pref_framegen_star_access_token"
@@ -95,32 +93,12 @@ object DeveloperUnlockSettings {
         }
     }
 
+    /**
+     * The GitHub-star gate is removed in the Thor build: developer features (frame generation)
+     * are always available. Legacy keys are still migrated so old installs stay tidy.
+     */
     fun isUnlocked(prefs: SharedPreferences): Boolean {
         migrateLegacyPrefs(prefs)
-        if (!GitHubStarVerifier.isConfigured() || !prefs.getBoolean(PREF_UNLOCKED, false)) {
-            return false
-        }
-        val verifiedAtMs = prefs.getLong(PREF_VERIFIED_AT_MS, 0L)
-        val ageMs = System.currentTimeMillis() - verifiedAtMs
-        return verifiedAtMs > 0L && ageMs in 0L..VERIFICATION_MAX_AGE_MS
-    }
-
-    fun hasAccessTokenScope(
-        prefs: SharedPreferences,
-        requiredScope: GitHubStarVerifier.OAuthScope
-    ): Boolean {
-        migrateLegacyPrefs(prefs)
-        if (prefs.getString(PREF_ACCESS_TOKEN, null).isNullOrBlank()) {
-            return false
-        }
-
-        val savedScope = GitHubStarVerifier.OAuthScope.fromPreference(
-            prefs.getString(PREF_ACCESS_TOKEN_SCOPE, null)
-        )
-        if (savedScope == null) {
-            // Tokens created before scope tracking used public_repo in this branch.
-            return true
-        }
-        return savedScope.grants(requiredScope)
+        return true
     }
 }

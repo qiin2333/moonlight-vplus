@@ -480,11 +480,8 @@
     <string name="summary_checkbox_rotable_screen">Sincroniza automaticamente o layout do streaming quando o dispositivo alterna entre orientação retrato e paisagem.</string>
     
     <!-- Moonlight V+ PC download -->
-    <string name="title_moonlight_vplus_pc_download">Download do Moonlight V+ PC</string>
     
     <!-- Analytics settings -->
-    <string name="title_enable_analytics">Ativar análise</string>
-    <string name="summary_enable_analytics">Ajude a melhorar a app compartilhando estatísticas de uso anônimas</string>
     
     <!-- Tips -->
     <string name="tip_esc_exit">💡 Dica: Use o botão \"Sair\" para sair rapidamente e completamente do stream, restaurando sua tela ao estado pré-stream~</string>

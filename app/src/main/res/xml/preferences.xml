@@ -1119,72 +1119,6 @@
             android:title="@string/title_game_menu_cards"
             android:summary="@string/summary_game_menu_cards" />
         <PreferenceScreen
-            android:key="settings_float_ball"
-            android:title="@string/title_float_ball_settings"
-            android:persistent="false"
-            android:layout="@layout/preference_material_compact"
-            app:iconSpaceReserved="false"
-            android:widgetLayout="@layout/preference_widget_navigation">
-            <CheckBoxPreference
-                android:key="checkbox_enable_float_ball"
-                android:title="@string/title_checkbox_enable_float_ball"
-                android:summary="@string/summary_checkbox_enable_float_ball"
-                android:defaultValue="true" />
-            <PreferenceCategory
-                android:key="category_float_ball_appearance"
-                android:title="@string/float_ball_appearance">
-                <ListPreference
-                    android:key="list_float_ball_position"
-                    android:dependency="checkbox_enable_float_ball"
-                    android:title="@string/title_list_float_ball_position"
-                    android:summary="@string/summary_list_float_ball_position"
-                    android:entries="@array/float_ball_position_entries"
-                    android:entryValues="@array/float_ball_position_values"
-                    android:defaultValue="center_right" />
-                <com.limelight.preferences.SeekBarPreference
-                    android:key="seekbar_float_ball_auto_hide_delay"
-                    android:dependency="checkbox_enable_float_ball"
-                    android:dialogMessage="@string/summary_seekbar_float_ball_auto_hide_delay"
-                    seekbar:min="0"
-                    android:max="5000"
-                    seekbar:step="500"
-                    seekbar:keyStep="500"
-                    seekbar:divisor="1"
-                    android:defaultValue="2000"
-                    android:summary="@string/summary_seekbar_float_ball_auto_hide_delay"
-                    android:text="@string/suffix_seekbar_float_ball_auto_hide_delay_ms"
-                    android:title="@string/title_seekbar_float_ball_auto_hide_delay" />
-            </PreferenceCategory>
-            <PreferenceCategory
-                android:key="category_float_ball_gestures"
-                android:title="@string/float_ball_gestures">
-                <ListPreference
-                    android:key="list_float_ball_single_click_action"
-                    android:dependency="checkbox_enable_float_ball"
-                    android:title="@string/title_float_ball_single_click_action"
-                    android:summary="@string/summary_float_ball_single_click_action"
-                    android:entries="@array/float_ball_action_names"
-                    android:entryValues="@array/float_ball_action_values"
-                    android:defaultValue="open_keyboard" />
-                <ListPreference
-                    android:key="list_float_ball_double_click_action"
-                    android:dependency="checkbox_enable_float_ball"
-                    android:title="@string/title_float_ball_double_click_action"
-                    android:summary="@string/summary_float_ball_double_click_action"
-                    android:entries="@array/float_ball_action_names"
-                    android:entryValues="@array/float_ball_action_values"
-                    android:defaultValue="open_menu" />
-                <ListPreference
-                    android:key="list_float_ball_long_click_action"
-                    android:dependency="checkbox_enable_float_ball"
-                    android:title="@string/title_float_ball_long_click_action"
-                    android:summary="@string/summary_float_ball_long_click_action"
-                    android:entries="@array/float_ball_action_names"
-                    android:entryValues="@array/float_ball_action_values"
-                    android:defaultValue="toggle_visibility" />
-            </PreferenceCategory>
-        </PreferenceScreen>
-        <PreferenceScreen
             android:key="settings_performance_overlay"
             android:title="@string/settings_page_performance_overlay_title"
             android:summary="@string/settings_page_performance_overlay_summary"
@@ -1256,11 +1190,6 @@
             android:title="@string/title_checkbox_disable_warnings"
             android:summary="@string/summary_checkbox_disable_warnings"
             android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="checkbox_enable_analytics"
-            android:title="@string/title_enable_analytics"
-            android:summary="@string/summary_enable_analytics"
-            android:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_backup_restore"
         android:key="category_backup_restore"
@@ -1311,9 +1240,6 @@
             android:key="documentation_handbook"
             android:title="@string/title_document_handbook"
             android:summary="@string/summary_document_handbook" />
-        <com.limelight.preferences.WebLauncherPreference
-            android:title="@string/title_moonlight_vplus_pc_download"
-            url="https://github.com/qiin2333/moonlight-qt"/>
         <Preference
             android:key="check_for_updates"
             android:title="@string/check_for_updates"
@@ -1328,12 +1254,6 @@
         <com.limelight.preferences.WebLauncherPreference
             android:title="@string/title_privacy_policy"
             android:summary="@string/summary_privacy_policy"
-            url="https://github.com/qiin2333/moonlight-vplus/blob/master/PRIVACY_POLICY.md"/>
-        <Preference
-            android:key="pref_developer_unlock"
-            android:title="@string/title_developer_unlock"
-            android:summary="@string/summary_developer_unlock_locked" />
-        <com.limelight.preferences.SponsorPreference
-            android:key="sponsor_panel" />
+            url="https://github.com/Zach200910/moonlight-vplus-aynthor-gyro/blob/master/PRIVACY_POLICY_EN.md"/>
     </PreferenceCategory>
 </PreferenceScreen>

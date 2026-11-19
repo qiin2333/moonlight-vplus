@@ -22,10 +22,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,7 +35,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,12 +42,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -65,9 +58,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -76,7 +66,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,25 +90,16 @@ import com.limelight.ui.ThemedAppCompatActivity
 import com.limelight.R
 import com.limelight.binding.input.advance_setting.config.PageConfigController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
-import com.limelight.binding.input.advance_setting.share.GitHubCrownProfileStorePublisher
 import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.ui.theme.AppShapes
 import com.limelight.utils.AppDialogStyler
 import com.limelight.utils.ConfigurationSyncScheduler
-import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
-import java.text.DateFormat
-import java.text.ParsePosition
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
 import java.util.LinkedHashMap
 import java.util.Locale
-import java.util.TimeZone
 import kotlin.concurrent.thread
 import kotlin.math.abs
 import com.limelight.utils.appAccentFocusColor
@@ -127,13 +107,6 @@ import com.limelight.utils.appAccentColor
 import com.limelight.utils.UiHelper
 
 class CrownStoreActivity : ThemedAppCompatActivity() {
-    private enum class CrownTab {
-        STORE,
-        MINE
-    }
-
-    private enum class StoreSort { STORE_ORDER, NEWEST, OLDEST, NAME_ASC, NAME_DESC }
-
     private data class LocalCrownProfile(
         val id: String,
         val name: String,
@@ -141,32 +114,16 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     )
 
     private data class CrownStoreUiState(
-        val selectedTab: CrownTab = CrownTab.STORE,
-        val selectedStoreProfile: CrownProfileShareManager.StoreProfile? = null,
-        val storeProfiles: List<CrownProfileShareManager.StoreProfile>? = null,
-        val storeLoading: Boolean = false,
-        val storeError: String? = null,
         val localProfiles: List<LocalCrownProfile> = emptyList()
     )
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val helper: SuperConfigDatabaseHelper by lazy { SuperConfigDatabaseHelper(this) }
 
-    private var selectedTab = CrownTab.STORE
-    private var storeProfiles: List<CrownProfileShareManager.StoreProfile>? = null
-    private var storeLoading = false
-    private var storeError: String? = null
     private var pendingCrownShareExportString = ""
     private var exportConfigString = ""
     private var mergeTargetConfigId: String? = null
     private var pendingCrownShareImport: CrownProfileShareManager.ImportedProfile? = null
-    @Volatile
-    private var developerUnlockVerificationRunning = false
-    private var developerForegroundPollRunning = false
-    private var developerLastForegroundPollMs = 0L
-    @Volatile
-    private var developerPendingDeviceCode: GitHubStarVerifier.DeviceCode? = null
-    private var developerDeviceCodeDialog: AlertDialog? = null
     private val composeUiState = mutableStateOf(CrownStoreUiState())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -174,160 +131,22 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         setContent {
             CrownStoreScreen(composeUiState.value)
         }
-        selectTab(CrownTab.STORE)
+        renderMineTab()
     }
 
     override fun onResume() {
         super.onResume()
-        if (selectedTab == CrownTab.MINE) {
-            renderMineTab()
-        }
-    }
-
-    private fun selectTab(tab: CrownTab) {
-        selectedTab = tab
-        composeUiState.value = composeUiState.value.copy(
-            selectedTab = tab,
-            selectedStoreProfile = null
-        )
-        when (tab) {
-            CrownTab.STORE -> {
-                if (storeProfiles == null && !storeLoading && storeError == null) {
-                    loadStoreProfiles()
-                } else {
-                    renderStoreTab()
-                }
-            }
-            CrownTab.MINE -> renderMineTab()
-        }
-    }
-
-    private fun renderStoreTab() {
-        composeUiState.value = composeUiState.value.copy(
-            selectedTab = CrownTab.STORE,
-            storeProfiles = storeProfiles,
-            storeLoading = storeLoading,
-            storeError = storeError
-        )
-    }
-
-    private fun loadStoreProfiles(force: Boolean = false) {
-        if (storeLoading) return
-        if (!force && storeProfiles != null) {
-            renderStoreTab()
-            return
-        }
-
-        storeLoading = true
-        storeError = null
-        renderStoreTab()
-        thread(name = "CrownStoreIndex") {
-            val result = runCatching {
-                val indexText = downloadRemoteText(CROWN_STORE_INDEX_URL, CROWN_STORE_MAX_INDEX_BYTES)
-                CrownProfileShareManager.parseStoreIndex(indexText)
-            }
-            mainHandler.post {
-                storeLoading = false
-                result
-                    .onSuccess {
-                        storeProfiles = it
-                        storeError = null
-                    }
-                    .onFailure {
-                        Log.e("CrownStore", "Failed to load Crown profile store", it)
-                        storeProfiles = null
-                        storeError = it.message ?: it.javaClass.simpleName
-                        Toast.makeText(this, R.string.toast_crown_store_failed, Toast.LENGTH_LONG).show()
-                    }
-                if (selectedTab == CrownTab.STORE) {
-                    renderStoreTab()
-                }
-            }
-        }
-    }
-
-    private fun importStoreProfile(profile: CrownProfileShareManager.StoreProfile) {
-        if (!isLayoutBasisCompatible(profile.layoutBasis, currentLayoutBasis())) {
-            showStoreLayoutCompatibilityDialog(profile) {
-                importStoreProfileUnchecked(profile)
-            }
-            return
-        }
-        importStoreProfileUnchecked(profile)
-    }
-
-    private fun importStoreProfileUnchecked(profile: CrownProfileShareManager.StoreProfile) {
-        val profileUrl = try {
-            CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
-        } catch (e: Exception) {
-            Log.e("CrownStore", "Invalid Crown store profile URL", e)
-            Toast.makeText(this, R.string.toast_crown_store_profile_failed, Toast.LENGTH_LONG).show()
-            return
-        }
-        importCrownShareFromUrl(
-            profileUrl,
-            sourceLabelOverride = getString(R.string.crown_store_source_label, profile.name),
-            failureToastRes = R.string.toast_crown_store_profile_failed
-        )
-    }
-
-    private fun showStoreLayoutCompatibilityDialog(
-        profile: CrownProfileShareManager.StoreProfile,
-        onContinue: () -> Unit
-    ) {
-        AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.title_crown_store_layout_check)
-            .setMessage(layoutCompatibilityMessage(profile.layoutBasis))
-            .setPositiveButton(R.string.action_crown_store_continue_import) { _, _ -> onContinue() }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
-    }
-
-    private fun reportStoreProfile(profile: CrownProfileShareManager.StoreProfile) {
-        val profileUrl = runCatching {
-            CrownProfileShareManager.resolveStoreProfileUrl(CROWN_STORE_INDEX_URL, profile.url)
-        }.getOrDefault(profile.url)
-        val title = getString(R.string.crown_store_report_issue_title, profile.name)
-        val body = getString(R.string.crown_store_report_issue_body, profile.name, profileUrl)
-        openUrl(
-            "${CROWN_STORE_REPORT_URL}?template=crown_store_report.md" +
-                "&title=${urlParam(title)}&body=${urlParam(body)}"
-        )
-    }
-
-    private fun openStoreProfileDetail(profile: CrownProfileShareManager.StoreProfile) {
-        composeUiState.value = composeUiState.value.copy(selectedStoreProfile = profile)
-    }
-
-    private fun closeStoreProfileDetail() {
-        composeUiState.value = composeUiState.value.copy(selectedStoreProfile = null)
+        renderMineTab()
     }
 
     private fun renderMineTab() {
         val profiles = loadLocalProfiles()
-        composeUiState.value = composeUiState.value.copy(
-            selectedTab = CrownTab.MINE,
-            selectedStoreProfile = null,
-            localProfiles = profiles
-        )
+        composeUiState.value = composeUiState.value.copy(localProfiles = profiles)
     }
 
     @Composable
     private fun CrownStoreScreen(state: CrownStoreUiState) {
         val background = colorResource(R.color.crown_store_background)
-        val selectedProfile = state.selectedStoreProfile
-        val storeGridState = rememberLazyStaggeredGridState()
-        var storeQuery by rememberSaveable { mutableStateOf("") }
-        var storeSort by rememberSaveable { mutableStateOf(StoreSort.STORE_ORDER) }
-        var filterInitialized by remember { mutableStateOf(false) }
-        LaunchedEffect(storeQuery, storeSort) {
-            if (filterInitialized) storeGridState.scrollToItem(0)
-            filterInitialized = true
-        }
-        BackHandler(enabled = selectedProfile != null) {
-            closeStoreProfileDetail()
-        }
         MaterialTheme {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -335,39 +154,16 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             ) {
                 Scaffold(
                     containerColor = Color.Transparent,
-                    topBar = { CrownStoreTopBar(state) },
-                    bottomBar = {
-                        if (state.selectedStoreProfile == null) {
-                            CrownStoreBottomBar(state.selectedTab)
-                        }
-                    }
+                    topBar = { CrownStoreTopBar() }
                 ) { innerPadding ->
-                    if (selectedProfile != null) {
-                        CrownStoreProfileDetail(
-                            profile = selectedProfile,
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    } else {
-                        when (state.selectedTab) {
-                            CrownTab.STORE -> CrownStoreTabContent(
-                                state = state,
-                                gridState = storeGridState,
-                                query = storeQuery,
-                                onQueryChange = { storeQuery = it },
-                                sort = storeSort,
-                                onSortChange = { storeSort = it },
-                                modifier = Modifier.padding(innerPadding)
-                            )
-                            CrownTab.MINE -> Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(innerPadding)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                CrownMineTabContent(state.localProfiles)
-                            }
-                        }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        CrownMineTabContent(state.localProfiles)
                     }
                 }
             }
@@ -375,12 +171,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownStoreTopBar(state: CrownStoreUiState) {
-        val selectedProfile = state.selectedStoreProfile
-        val title = selectedProfile?.name ?: when (state.selectedTab) {
-            CrownTab.STORE -> stringResource(R.string.crown_store_tab_store)
-            CrownTab.MINE -> stringResource(R.string.crown_store_tab_mine)
-        }
+    private fun CrownStoreTopBar() {
         val textColor = colorResource(R.color.crown_store_text_primary)
         Row(
             modifier = Modifier
@@ -388,13 +179,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = {
-                if (selectedProfile != null) {
-                    closeStoreProfileDetail()
-                } else {
-                    finish()
-                }
-            }) {
+            IconButton(onClick = { finish() }) {
                 Icon(
                     painter = painterResource(R.drawable.ic_arrow_right),
                     contentDescription = stringResource(R.string.crown_store_action_back),
@@ -403,7 +188,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                 )
             }
             Text(
-                text = title,
+                text = stringResource(R.string.crown_store_tab_mine),
                 modifier = Modifier.weight(1f),
                 color = textColor,
                 fontSize = 20.sp,
@@ -415,257 +200,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             Spacer(modifier = Modifier.width(48.dp))
         }
     }
-
-    @Composable
-    private fun CrownStoreBottomBar(selectedTab: CrownTab) {
-        val container = colorResource(R.color.crown_store_panel_background)
-        val selected = appAccentColor()
-        val unselected = colorResource(R.color.crown_store_text_secondary)
-        NavigationBar(
-            containerColor = container,
-            tonalElevation = 0.dp,
-            windowInsets = WindowInsets(0, 0, 0, 0)
-        ) {
-            NavigationBarItem(
-                selected = selectedTab == CrownTab.STORE,
-                onClick = { selectTab(CrownTab.STORE) },
-                icon = {
-                    Icon(
-                        painter = painterResource(R.drawable.phc_crown),
-                        contentDescription = null
-                    )
-                },
-                label = { Text(stringResource(R.string.crown_store_tab_store)) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = selected,
-                    selectedTextColor = selected,
-                    unselectedIconColor = unselected,
-                    unselectedTextColor = unselected,
-                    indicatorColor = appAccentFocusColor()
-                )
-            )
-            NavigationBarItem(
-                selected = selectedTab == CrownTab.MINE,
-                onClick = { selectTab(CrownTab.MINE) },
-                icon = {
-                    Icon(
-                        painter = painterResource(R.drawable.phc_list),
-                        contentDescription = null
-                    )
-                },
-                label = { Text(stringResource(R.string.crown_store_tab_mine)) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = selected,
-                    selectedTextColor = selected,
-                    unselectedIconColor = unselected,
-                    unselectedTextColor = unselected,
-                    indicatorColor = appAccentFocusColor()
-                )
-            )
-        }
-    }
-
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    private fun CrownStoreTabContent(
-        state: CrownStoreUiState,
-        gridState: LazyStaggeredGridState,
-        query: String,
-        onQueryChange: (String) -> Unit,
-        sort: StoreSort,
-        onSortChange: (StoreSort) -> Unit,
-        modifier: Modifier = Modifier
-    ) {
-        val profiles = state.storeProfiles
-        val visibleProfiles = remember(profiles, query, sort) {
-            val terms = query.trim().lowercase(Locale.ROOT).split(Regex("\\s+")).filter { it.isNotEmpty() }
-            val matches = if (terms.isEmpty()) profiles.orEmpty() else profiles.orEmpty().filter { profile ->
-                val searchable = (listOf(profile.name, profile.summary, profile.author, profile.game) + profile.tags)
-                    .joinToString(" ").lowercase(Locale.ROOT)
-                terms.all(searchable::contains)
-            }
-            when (sort) {
-                StoreSort.STORE_ORDER -> matches
-                StoreSort.NEWEST, StoreSort.OLDEST -> {
-                    val dated = matches.map { it to parseStoreUpdatedAt(it.updatedAt)?.time }
-                    val sorted = if (sort == StoreSort.NEWEST) {
-                        dated.sortedByDescending { it.second ?: Long.MIN_VALUE }
-                    } else {
-                        dated.sortedBy { it.second ?: Long.MAX_VALUE }
-                    }
-                    sorted.map { it.first }
-                }
-                StoreSort.NAME_ASC -> matches.sortedBy { it.name.lowercase(Locale.ROOT) }
-                StoreSort.NAME_DESC -> matches.sortedByDescending { it.name.lowercase(Locale.ROOT) }
-            }
-        }
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(2),
-            state = gridState,
-            modifier = modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalItemSpacing = 10.dp,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            item(span = StaggeredGridItemSpan.FullLine) {
-                Column {
-                    CrownBodyText(stringResource(R.string.crown_store_store_summary))
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CrownActionButton(
-                            text = stringResource(R.string.crown_store_action_refresh),
-                            iconRes = R.drawable.phc_action_reset,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            loadStoreProfiles(force = true)
-                        }
-                        CrownActionButton(
-                            text = stringResource(R.string.crown_share_action_import_url),
-                            iconRes = R.drawable.phc_plug,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            showCrownShareUrlImportDialog()
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    var sortMenuExpanded by remember { mutableStateOf(false) }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val searchHint = stringResource(R.string.crown_store_search_hint)
-                        val searchTextColor = colorResource(R.color.crown_store_text_primary)
-                        val searchHintColor = colorResource(R.color.crown_store_text_secondary)
-                        BasicTextField(
-                            value = query,
-                            onValueChange = onQueryChange,
-                            singleLine = true,
-                            textStyle = TextStyle(color = searchTextColor, fontSize = 14.sp, lineHeight = 20.sp),
-                            cursorBrush = SolidColor(appAccentColor()),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .border(1.dp, searchHintColor, AppShapes.medium)
-                                .padding(horizontal = 12.dp),
-                            decorationBox = { innerTextField ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        painterResource(R.drawable.ic_search_stylish),
-                                        contentDescription = null,
-                                        tint = appAccentColor(),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                                        if (query.isEmpty()) {
-                                            Text(searchHint, color = searchHintColor, fontSize = 14.sp)
-                                        }
-                                        innerTextField()
-                                    }
-                                    if (query.isNotEmpty()) {
-                                        IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(40.dp)) {
-                                            Icon(
-                                                painterResource(R.drawable.ic_close_stylish),
-                                                contentDescription = stringResource(R.string.crown_store_clear_search),
-                                                tint = searchHintColor
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        )
-                        Box {
-                            IconButton(
-                                onClick = { sortMenuExpanded = true },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(colorResource(R.color.crown_store_input_background), AppShapes.medium)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_crown_sort),
-                                    contentDescription = stringResource(R.string.crown_store_sort_by, storeSortLabel(sort)),
-                                    tint = if (sort == StoreSort.STORE_ORDER) {
-                                        colorResource(R.color.crown_store_text_primary)
-                                    } else appAccentColor()
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = sortMenuExpanded,
-                                onDismissRequest = { sortMenuExpanded = false }
-                            ) {
-                                StoreSort.entries.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(storeSortLabel(option)) },
-                                        onClick = {
-                                            onSortChange(option)
-                                            sortMenuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    if (profiles != null && !state.storeLoading && state.storeError == null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CrownBodyText(stringResource(R.string.crown_store_results_count, visibleProfiles.size))
-                    }
-                }
-            }
-            when {
-                state.storeLoading -> item(span = StaggeredGridItemSpan.FullLine) {
-                    CrownLoadingState(stringResource(R.string.toast_crown_store_loading))
-                }
-                state.storeError != null -> item(span = StaggeredGridItemSpan.FullLine) {
-                    CrownStateCard(
-                        title = stringResource(R.string.toast_crown_store_failed),
-                        message = state.storeError,
-                        buttonText = stringResource(R.string.crown_store_action_refresh)
-                    ) {
-                        loadStoreProfiles(force = true)
-                    }
-                }
-                profiles == null -> item(span = StaggeredGridItemSpan.FullLine) {
-                    CrownStateCard(
-                        title = stringResource(R.string.crown_store_empty_state_title),
-                        message = stringResource(R.string.crown_store_empty_state_message),
-                        buttonText = stringResource(R.string.crown_store_action_refresh)
-                    ) {
-                        loadStoreProfiles(force = true)
-                    }
-                }
-                profiles.isEmpty() -> item(span = StaggeredGridItemSpan.FullLine) {
-                    CrownStateCard(
-                        title = stringResource(R.string.toast_crown_store_empty),
-                        message = stringResource(R.string.crown_store_empty_state_message),
-                        buttonText = stringResource(R.string.crown_store_action_refresh)
-                    ) {
-                        loadStoreProfiles(force = true)
-                    }
-                }
-                visibleProfiles.isEmpty() -> item(span = StaggeredGridItemSpan.FullLine) {
-                    CrownStateCard(
-                        title = stringResource(R.string.crown_store_no_search_results),
-                        message = stringResource(R.string.crown_store_try_another_search)
-                    )
-                }
-                else -> items(visibleProfiles) { profile ->
-                    CrownStoreProfileCard(
-                        profile = profile,
-                        modifier = Modifier.clickable { openStoreProfileDetail(profile) }
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun storeSortLabel(sort: StoreSort): String = stringResource(when (sort) {
-        StoreSort.STORE_ORDER -> R.string.crown_store_sort_store_order
-        StoreSort.NEWEST -> R.string.crown_store_sort_newest
-        StoreSort.OLDEST -> R.string.crown_store_sort_oldest
-        StoreSort.NAME_ASC -> R.string.crown_store_sort_name_asc
-        StoreSort.NAME_DESC -> R.string.crown_store_sort_name_desc
-    })
 
     @Composable
     private fun CrownMineTabContent(profiles: List<LocalCrownProfile>) {
@@ -852,133 +386,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownStoreProfileCard(
-        profile: CrownProfileShareManager.StoreProfile,
-        modifier: Modifier = Modifier
-    ) {
-        CrownProfileCard(modifier) {
-            CrownCardTitle(profile.name, maxLines = 2)
-            if (profile.game.isNotBlank() || profile.author.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    if (profile.game.isNotBlank()) {
-                        CrownMetaText(
-                            stringResource(R.string.crown_store_card_game, profile.game),
-                            strong = false,
-                            maxLines = 2
-                        )
-                    }
-                    if (profile.author.isNotBlank()) {
-                        CrownMetaText(
-                            stringResource(R.string.crown_store_card_author, profile.author),
-                            strong = false,
-                            maxLines = 2
-                        )
-                    }
-                }
-            }
-            if (profile.summary.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                CrownBodyText(profile.summary, maxLines = 2)
-            }
-            val layoutBasis = formatLayoutBasisCompact(profile.layoutBasis)
-            val updatedAt = formatStoreUpdatedAtCompact(profile.updatedAt)
-            if (!layoutBasis.isNullOrBlank() || updatedAt.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                CrownStoreCardFooter(
-                    layoutBasis = layoutBasis.orEmpty(),
-                    updatedAt = updatedAt
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_import_profile),
-                    iconRes = R.drawable.ic_add,
-                    primary = true,
-                    compact = true,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    importStoreProfile(profile)
-                }
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_report_profile),
-                    iconRes = R.drawable.phc_info,
-                    compact = true,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    reportStoreProfile(profile)
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun CrownStoreProfileDetail(
-        profile: CrownProfileShareManager.StoreProfile,
-        modifier: Modifier = Modifier
-    ) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            CrownProfileCard {
-                Text(
-                    text = profile.name,
-                    color = colorResource(R.color.crown_store_text_primary),
-                    fontSize = 20.sp,
-                    lineHeight = 25.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_game),
-                    value = profile.game
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_author),
-                    value = profile.author
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_summary),
-                    value = profile.summary
-                )
-                CrownDetailField(
-                    label = stringResource(R.string.label_crown_store_tags),
-                    value = profile.tags
-                        .filter { it.isNotBlank() }
-                        .joinToString(" · ")
-                )
-                formatLayoutBasis(profile.layoutBasis)?.let {
-                    CrownDetailMeta(stringResource(R.string.crown_store_layout_basis, it))
-                }
-                if (profile.updatedAt.isNotBlank()) {
-                    CrownDetailMeta(stringResource(R.string.crown_store_updated_at, formatStoreUpdatedAt(profile.updatedAt)))
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_import_profile),
-                    iconRes = R.drawable.ic_add,
-                    primary = true,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    importStoreProfile(profile)
-                }
-                CrownActionButton(
-                    text = stringResource(R.string.crown_store_action_report_profile),
-                    iconRes = R.drawable.phc_info,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    reportStoreProfile(profile)
-                }
-            }
-        }
-    }
-
-    @Composable
     private fun CrownLocalProfilesList(profiles: List<LocalCrownProfile>) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             profiles.forEach { profile ->
@@ -1009,24 +416,14 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             }
             Spacer(modifier = Modifier.height(10.dp))
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    CrownActionButton(
-                        text = stringResource(R.string.crown_store_action_publish_profile),
-                        iconRes = R.drawable.phc_action_check,
-                        primary = true,
-                        compact = true,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        showCrownStorePublishMetadataDialog(profile.id, profile.name)
-                    }
-                    CrownActionButton(
-                        text = stringResource(R.string.crown_store_action_export_share),
-                        iconRes = R.drawable.phc_action_copy,
-                        compact = true,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        exportCrownSharePackage(profile.id, profile.name)
-                    }
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_export_share),
+                    iconRes = R.drawable.phc_action_copy,
+                    primary = true,
+                    compact = true,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    exportCrownSharePackage(profile.id, profile.name)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     CrownActionButton(
@@ -1153,39 +550,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     @Composable
-    private fun CrownDetailField(label: String, value: String) {
-        if (value.isBlank()) return
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = label,
-            color = colorResource(R.color.crown_store_text_primary),
-            fontSize = 11.6.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.alpha(0.7f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            color = colorResource(R.color.crown_store_text_secondary),
-            fontSize = 13.5.sp,
-            lineHeight = 19.sp
-        )
-    }
-
-    @Composable
-    private fun CrownDetailMeta(text: String) {
-        if (text.isBlank()) return
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = text,
-            color = colorResource(R.color.crown_store_text_secondary),
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
-            modifier = Modifier.alpha(0.72f)
-        )
-    }
-
-    @Composable
     private fun CrownMetaText(text: String, strong: Boolean, maxLines: Int = 1) {
         Text(
             text = text,
@@ -1207,54 +571,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-    }
-
-    @Composable
-    private fun CrownStoreCardFooter(layoutBasis: String, updatedAt: String) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            if (layoutBasis.isNotBlank()) {
-                CrownFootnote(text = layoutBasis)
-            }
-            if (updatedAt.isNotBlank()) {
-                CrownFootnote(text = updatedAt)
-            }
-        }
-    }
-
-    @Composable
-    private fun CrownTags(tags: List<String>) {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            val visibleTags = tags.filter { it.isNotBlank() }.take(2)
-            visibleTags.forEach { tag ->
-                CrownTagChip(tag, Modifier.weight(1f))
-            }
-            val overflowCount = tags.size - visibleTags.size
-            if (overflowCount > 0) {
-                CrownTagChip("+$overflowCount", Modifier.width(36.dp))
-            }
-        }
-    }
-
-    @Composable
-    private fun CrownTagChip(text: String, modifier: Modifier = Modifier) {
-        Box(
-            modifier = modifier
-                .height(25.dp)
-                .background(
-                    color = colorResource(R.color.crown_store_input_background),
-                    shape = AppShapes.small
-                )
-                .padding(horizontal = 7.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                color = colorResource(R.color.crown_store_text_secondary),
-                fontSize = 10.4.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
     }
 
     @Composable
@@ -1458,570 +774,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             density = metrics.density,
             orientation = orientation
         )
-    }
-
-    private fun showCrownStorePublishMetadataDialog(configId: String, defaultName: String) {
-        if (!GitHubStarVerifier.isConfigured()) {
-            Toast.makeText(this, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
-            return
-        }
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        if (GitHubDeviceAuthorization.accessToken(
-                this, GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
-            ) == null) {
-            showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
-            return
-        }
-
-        val defaultAuthor = prefs.getString(DeveloperUnlockSettings.PREF_USER_LOGIN, null).orEmpty()
-        val nameInput = crownStorePublishInput(defaultName, R.string.hint_crown_store_profile_name)
-        val gameInput = crownStorePublishInput("", R.string.hint_crown_store_game)
-        val authorInput = crownStorePublishInput(defaultAuthor, R.string.hint_crown_store_author)
-        val tagsInput = crownStorePublishInput("", R.string.hint_crown_store_tags)
-        val summaryInput = crownStorePublishInput("", R.string.hint_crown_store_summary).apply {
-            setSingleLine(false)
-            minLines = 3
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            gravity = Gravity.START or Gravity.TOP
-        }
-        val termsCheckBox = CheckBox(this).apply {
-            text = getString(R.string.message_crown_store_publish_terms)
-            textSize = 12f
-            includeFontPadding = true
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
-            buttonTintList = ColorStateList.valueOf(
-                UiHelper.accentColor(this@CrownStoreActivity)
-            )
-        }
-
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val inset = dp(22)
-            setPadding(inset, 0, inset, 0)
-            addCrownStorePublishField(R.string.label_crown_store_profile_name, nameInput)
-            addCrownStorePublishField(R.string.label_crown_store_game, gameInput)
-            addCrownStorePublishField(R.string.label_crown_store_author, authorInput)
-            addCrownStorePublishField(R.string.label_crown_store_tags, tagsInput)
-            addCrownStorePublishField(R.string.label_crown_store_summary, summaryInput)
-            addView(termsCheckBox, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(14)
-            })
-        }
-
-        val scrollView = ScrollView(this).apply {
-            isFillViewport = false
-            addView(container)
-        }
-
-        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.title_crown_store_publish_metadata)
-            .setMessage(R.string.message_crown_store_publish_metadata)
-            .setView(scrollView)
-            .setPositiveButton(R.string.crown_store_action_publish, null)
-            .setNegativeButton(android.R.string.cancel, null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val profileName = nameInput.text?.toString().orEmpty().trim()
-                if (profileName.isBlank()) {
-                    nameInput.error = getString(R.string.hint_crown_store_profile_name)
-                    return@setOnClickListener
-                }
-                if (!termsCheckBox.isChecked) {
-                    Toast.makeText(
-                        this,
-                        R.string.toast_crown_store_publish_terms_required,
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setOnClickListener
-                }
-
-                val game = gameInput.text?.toString().orEmpty().trim()
-                val author = authorInput.text?.toString().orEmpty().trim()
-                val summary = summaryInput.text?.toString().orEmpty().trim()
-                val tags = tagsInput.text?.toString().orEmpty()
-                    .split(Regex("[,\\s\\uFF0C]+"))
-                    .map { it.trim() }
-                    .filter { it.isNotBlank() }
-                    .distinct()
-                validateCrownStoreSubmission(profileName, game, author, summary, tags)?.let { reason ->
-                    Toast.makeText(
-                        this,
-                        getString(R.string.toast_crown_store_publish_invalid_metadata, reason),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setOnClickListener
-                }
-
-                try {
-                    val payload = helper.exportConfig(configId.toLong())
-                    val bundle = CrownProfileShareManager.createBundle(
-                        profileName = profileName,
-                        payload = payload,
-                        metadata = currentCrownShareExportMetadata(),
-                        displayMetadata = CrownProfileShareManager.BundleDisplayMetadata(
-                            summary = summary,
-                            authorName = author,
-                            gameName = game,
-                            tags = tags
-                        )
-                    )
-                    validateCrownStoreBundleForPublishing(bundle)?.let { reason ->
-                        Toast.makeText(
-                            this,
-                            getString(R.string.toast_crown_store_publish_invalid_metadata, reason),
-                            Toast.LENGTH_LONG
-                        ).show()
-                        return@setOnClickListener
-                    }
-                    dialog.dismiss()
-                    publishCrownStoreProfile(
-                        GitHubCrownProfileStorePublisher.PublishRequest(
-                            profileName = profileName,
-                            summary = summary,
-                            author = author,
-                            game = game,
-                            tags = tags,
-                            bundleJson = bundle
-                        )
-                    )
-                } catch (e: Exception) {
-                    Log.e("CrownStore", "Failed to prepare Crown Store profile", e)
-                    Toast.makeText(this, R.string.toast_crown_store_publish_failed, Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-        dialog.show()
-        AppDialogStyler.installDismissKeys(dialog)
-    }
-
-    private fun validateCrownStoreSubmission(
-        profileName: String,
-        game: String,
-        author: String,
-        summary: String,
-        tags: List<String>
-    ): String? {
-        if (profileName.length > 80) return getString(R.string.crown_store_validation_name_too_long)
-        if (game.length > 80) return getString(R.string.crown_store_validation_game_too_long)
-        if (author.length > 60) return getString(R.string.crown_store_validation_author_too_long)
-        if (summary.length > 240) return getString(R.string.crown_store_validation_summary_too_long)
-        if (tags.size > 8) return getString(R.string.crown_store_validation_too_many_tags)
-        if (tags.any { it.length > 24 }) return getString(R.string.crown_store_validation_tag_too_long)
-
-        val metadataText = buildString {
-            append(profileName).append('\n')
-            append(game).append('\n')
-            append(author).append('\n')
-            append(summary).append('\n')
-            append(tags.joinToString("\n"))
-        }
-        if (CROWN_STORE_EXTERNAL_LOCATOR_PATTERN.containsMatchIn(metadataText)) {
-            return getString(R.string.crown_store_validation_external_locator)
-        }
-        if (CROWN_STORE_SENSITIVE_PATTERN.containsMatchIn(metadataText)) {
-            return getString(R.string.crown_store_validation_sensitive_metadata)
-        }
-        return null
-    }
-
-    private fun validateCrownStoreBundleForPublishing(bundle: String): String? {
-        return try {
-            CrownProfileShareManager.parseImportText(bundle)
-            val root = JSONObject(bundle)
-            if (!root.hasOnlyKeys(CROWN_STORE_PUBLIC_BUNDLE_KEYS)) {
-                return getString(R.string.crown_store_validation_invalid_bundle)
-            }
-            val profile = root.optJSONObject("profile")
-                ?: return getString(R.string.crown_store_validation_invalid_bundle)
-            if (!profile.hasOnlyKeys(CROWN_STORE_PUBLIC_PROFILE_KEYS)) {
-                return getString(R.string.crown_store_validation_invalid_bundle)
-            }
-            val profilePayload = profile.optString("payload", "")
-            if (CROWN_STORE_SENSITIVE_PATTERN.containsMatchIn(profilePayload)) {
-                return getString(R.string.crown_store_validation_sensitive_metadata)
-            }
-            null
-        } catch (e: Exception) {
-            Log.e("CrownStore", "Invalid Crown Store bundle", e)
-            getString(R.string.crown_store_validation_invalid_bundle)
-        }
-    }
-
-    private fun crownStorePublishInput(value: String, hintRes: Int): EditText {
-        return EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            setSingleLine(true)
-            setText(value)
-            hint = getString(hintRes)
-            setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
-            setHintTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_subtitle_color))
-            backgroundTintList = ColorStateList(
-                arrayOf(
-                    intArrayOf(android.R.attr.state_focused),
-                    intArrayOf()
-                ),
-                intArrayOf(
-                    UiHelper.accentColor(this@CrownStoreActivity),
-                    ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_subtitle_color)
-                )
-            )
-        }
-    }
-
-    private fun LinearLayout.addCrownStorePublishField(labelRes: Int, input: EditText) {
-        val block = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(TextView(context).apply {
-                text = getString(labelRes)
-                setTextColor(ContextCompat.getColor(this@CrownStoreActivity, R.color.app_dialog_title_color))
-                textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD
-                includeFontPadding = false
-            })
-            addView(input, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(6)
-            })
-        }
-        addView(block, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply {
-            topMargin = dp(12)
-        })
-    }
-
-    private fun publishCrownStoreProfile(request: GitHubCrownProfileStorePublisher.PublishRequest) {
-        val appContext = applicationContext
-        val accessToken = GitHubDeviceAuthorization.accessToken(
-            appContext, GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH
-        )
-        if (accessToken == null) {
-            showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken = false)
-            return
-        }
-
-        Toast.makeText(this, R.string.toast_crown_store_publish_started, Toast.LENGTH_LONG).show()
-        thread(name = "CrownStorePublish") {
-            val result = runCatching {
-                GitHubCrownProfileStorePublisher.publish(accessToken, request)
-            }
-
-            mainHandler.post {
-                result.onSuccess { publishResult ->
-                    showCrownStorePublishSuccessDialog(publishResult)
-                }.onFailure { error ->
-                    if (error is GitHubCrownProfileStorePublisher.GitHubCrownStoreException &&
-                        error.authorizationFailure) {
-                        showCrownStoreGitHubAuthorizationRequiredDialog(
-                            clearSavedToken = true,
-                            failedToken = accessToken
-                        )
-                    } else {
-                        Log.e("CrownStore", "Failed to publish Crown Store profile", error)
-                        Toast.makeText(
-                            appContext,
-                            getString(
-                                R.string.toast_crown_store_publish_failed_with_error,
-                                error.message ?: error.javaClass.simpleName
-                            ),
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun showCrownStoreGitHubAuthorizationRequiredDialog(clearSavedToken: Boolean, failedToken: String? = null) {
-        if (clearSavedToken && (failedToken == null || !GitHubDeviceAuthorization.clearCredentials(this, failedToken))) {
-            return
-        }
-
-        AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.title_crown_store_github_authorization)
-            .setMessage(
-                if (clearSavedToken) {
-                    R.string.message_crown_store_github_reauthorization_required
-                } else {
-                    R.string.message_crown_store_github_authorization_required
-                }
-            )
-            .setPositiveButton(R.string.action_crown_store_authorize_github) { _, _ ->
-                startDeveloperUnlockVerification(GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
-    }
-
-    private fun showCrownStorePublishSuccessDialog(result: GitHubCrownProfileStorePublisher.PublishResult) {
-        AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(R.string.title_crown_store_publish_success)
-            .setMessage(
-                getString(
-                    R.string.message_crown_store_publish_success,
-                    result.profilePath,
-                    result.pullRequestUrl
-                )
-            )
-            .setPositiveButton(R.string.action_open_pull_request) { _, _ ->
-                openUrl(result.pullRequestUrl)
-            }
-            .setNegativeButton(android.R.string.ok, null)
-            .show()
-            .also { AppDialogStyler.installDismissKeys(it) }
-    }
-
-    private fun startDeveloperUnlockVerification(scope: GitHubStarVerifier.OAuthScope) {
-        if (!GitHubStarVerifier.isConfigured()) {
-            Toast.makeText(this, R.string.toast_developer_oauth_unconfigured, Toast.LENGTH_LONG).show()
-            return
-        }
-        if (developerUnlockVerificationRunning) {
-            Toast.makeText(this, R.string.toast_developer_verification_running, Toast.LENGTH_LONG).show()
-            return
-        }
-
-        developerUnlockVerificationRunning = true
-        Toast.makeText(this, R.string.toast_developer_verification_started, Toast.LENGTH_LONG).show()
-        val appContext = applicationContext
-        thread(name = "CrownStoreGitHubDeviceCode") {
-            try {
-                val savedToken = GitHubDeviceAuthorization.accessToken(appContext, scope)
-                val starCheck = try {
-                    savedToken?.let(GitHubStarVerifier::checkStar)
-                } catch (_: GitHubStarVerifier.AuthorizationExpiredException) {
-                    GitHubDeviceAuthorization.clearCredentials(appContext, savedToken)
-                    null
-                }
-                if (savedToken != null && starCheck != null) {
-                    mainHandler.post {
-                        developerUnlockVerificationRunning = false
-                        completeDeveloperUnlockVerification(
-                            appContext, savedToken, starCheck, scope
-                        )
-                    }
-                } else {
-                    val deviceCode = GitHubDeviceAuthorization.pendingDeviceCode(appContext, scope)
-                        ?: GitHubStarVerifier.requestDeviceCode(scope).also {
-                            GitHubDeviceAuthorization.savePendingDeviceCode(appContext, it)
-                        }
-                    developerPendingDeviceCode = deviceCode
-                    mainHandler.post {
-                        developerUnlockVerificationRunning = false
-                        showDeveloperDeviceCodeDialog(deviceCode)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("DeveloperUnlock", "GitHub star verification failed", e)
-                failDeveloperUnlockVerification(appContext, e.message ?: e.javaClass.simpleName)
-            }
-        }
-    }
-
-    private fun showDeveloperDeviceCodeDialog(deviceCode: GitHubStarVerifier.DeviceCode) {
-        developerDeviceCodeDialog?.dismiss()
-        GitHubDeviceAuthorization.copyDeviceCodeToClipboard(this, deviceCode)
-        val dialog = AlertDialog.Builder(this, R.style.AppDialogStyle)
-            .setTitle(
-                if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
-                    R.string.title_crown_store_github_authorization
-                } else {
-                    R.string.title_developer_unlock
-                }
-            )
-            .setMessage(
-                getString(
-                    if (deviceCode.scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
-                        R.string.message_crown_store_device_code
-                    } else {
-                        R.string.message_developer_device_code
-                    },
-                    deviceCode.userCode,
-                    deviceCode.verificationUri
-                )
-            )
-            .setPositiveButton(R.string.action_developer_open_authorization, null)
-            .setNeutralButton(R.string.action_developer_check_authorization, null)
-            .setNegativeButton(android.R.string.cancel) { _, _ ->
-                developerUnlockVerificationRunning = false
-                clearDeveloperPendingDeviceCode(applicationContext)
-            }
-            .setOnCancelListener {
-                developerUnlockVerificationRunning = false
-                clearDeveloperPendingDeviceCode(applicationContext)
-            }
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                GitHubDeviceAuthorization.copyDeviceCodeToClipboard(
-                    this,
-                    deviceCode,
-                    showToast = false
-                )
-                openUrl(GitHubDeviceAuthorization.authorizationUrl(deviceCode))
-            }
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                pollDeveloperPendingDeviceCode(showPendingToast = true)
-            }
-        }
-        dialog.setOnDismissListener {
-            if (developerDeviceCodeDialog === dialog) {
-                developerDeviceCodeDialog = null
-            }
-        }
-        developerDeviceCodeDialog = dialog
-        dialog.show()
-        AppDialogStyler.installDismissKeys(dialog)
-    }
-
-    private fun pollDeveloperPendingDeviceCode(showPendingToast: Boolean) {
-        val deviceCode = developerPendingDeviceCode
-            ?: GitHubDeviceAuthorization.pendingDeviceCode(this, GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH)
-        if (deviceCode == null) {
-            developerUnlockVerificationRunning = false
-            Toast.makeText(this, R.string.toast_developer_verification_expired, Toast.LENGTH_LONG).show()
-            return
-        }
-
-        developerPendingDeviceCode = deviceCode
-        if (developerForegroundPollRunning) return
-        val nowMs = android.os.SystemClock.elapsedRealtime()
-        if (nowMs - developerLastForegroundPollMs < deviceCode.intervalSeconds * 1000L) {
-            if (showPendingToast) {
-                Toast.makeText(this, R.string.toast_developer_authorization_pending, Toast.LENGTH_LONG).show()
-            }
-            return
-        }
-        developerLastForegroundPollMs = nowMs
-        developerForegroundPollRunning = true
-        developerUnlockVerificationRunning = true
-        val appContext = applicationContext
-        thread(name = "CrownStoreGitHubDevicePoll") {
-            try {
-                when (val poll = GitHubStarVerifier.pollAccessToken(deviceCode)) {
-                    is GitHubStarVerifier.TokenPollResult.Authorized -> {
-                        val starCheck = GitHubStarVerifier.checkStar(poll.accessToken)
-                        runIfDeveloperAttemptActive(deviceCode) {
-                            completeDeveloperUnlockVerification(
-                                appContext,
-                                poll.accessToken,
-                                starCheck,
-                                deviceCode.scope
-                            )
-                        }
-                    }
-                    GitHubStarVerifier.TokenPollResult.Pending -> {
-                        runIfDeveloperAttemptActive(deviceCode) {
-                            if (showPendingToast) {
-                                Toast.makeText(
-                                    appContext,
-                                    R.string.toast_developer_authorization_pending,
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }
-                    is GitHubStarVerifier.TokenPollResult.SlowDown -> {
-                        GitHubDeviceAuthorization.updatePendingPollInterval(
-                            appContext, deviceCode, poll.intervalSeconds
-                        )
-                        runIfDeveloperAttemptActive(deviceCode) {
-                            developerPendingDeviceCode = deviceCode.copy(intervalSeconds = poll.intervalSeconds)
-                        }
-                    }
-                    is GitHubStarVerifier.TokenPollResult.Failed -> {
-                        runIfDeveloperAttemptActive(deviceCode) {
-                            failDeveloperUnlockVerification(appContext, poll.message)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("DeveloperUnlock", "GitHub star foreground verification failed", e)
-                runIfDeveloperAttemptActive(deviceCode) {
-                    failDeveloperUnlockVerification(appContext, e.message ?: e.javaClass.simpleName)
-                }
-            } finally {
-                mainHandler.post {
-                    developerForegroundPollRunning = false
-                    if (developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
-                        developerUnlockVerificationRunning = false
-                    }
-                }
-            }
-        }
-    }
-
-    private fun runIfDeveloperAttemptActive(
-        deviceCode: GitHubStarVerifier.DeviceCode,
-        action: () -> Unit
-    ) {
-        mainHandler.post {
-            if (developerPendingDeviceCode?.deviceCode == deviceCode.deviceCode) {
-                action()
-            }
-        }
-    }
-
-    private fun completeDeveloperUnlockVerification(
-        ctx: Context,
-        accessToken: String,
-        starCheck: GitHubStarVerifier.StarCheck,
-        scope: GitHubStarVerifier.OAuthScope
-    ) {
-        val dialogToDismiss = developerDeviceCodeDialog
-        developerUnlockVerificationRunning = false
-        clearDeveloperPendingDeviceCode(ctx)
-        GitHubDeviceAuthorization.saveAuthorizedAccount(ctx, accessToken, starCheck, scope)
-        mainHandler.post {
-            if (developerDeviceCodeDialog === dialogToDismiss) {
-                dialogToDismiss?.dismiss()
-            }
-            if (scope == GitHubStarVerifier.OAuthScope.CROWN_STORE_PUBLISH) {
-                Toast.makeText(this, R.string.toast_crown_store_github_connected, Toast.LENGTH_LONG).show()
-            } else if (starCheck.starred) {
-                Toast.makeText(this, R.string.toast_developer_unlocked, Toast.LENGTH_LONG).show()
-            } else {
-                AlertDialog.Builder(this, R.style.AppDialogStyle)
-                    .setTitle(R.string.title_developer_unlock)
-                    .setMessage(R.string.message_developer_star_not_found)
-                    .setPositiveButton(R.string.action_developer_open_project) { _, _ ->
-                        openUrl(DeveloperUnlockSettings.GITHUB_REPO_URL)
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-                    .also { AppDialogStyler.installDismissKeys(it) }
-            }
-        }
-    }
-
-    private fun failDeveloperUnlockVerification(ctx: Context, message: String) {
-        val dialogToDismiss = developerDeviceCodeDialog
-        developerUnlockVerificationRunning = false
-        clearDeveloperPendingDeviceCode(ctx)
-        Log.w("DeveloperUnlock", "GitHub star verification failed: $message")
-        mainHandler.post {
-            if (developerDeviceCodeDialog === dialogToDismiss) {
-                dialogToDismiss?.dismiss()
-            }
-            Toast.makeText(
-                this,
-                getString(R.string.toast_developer_verification_failed, message),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun clearDeveloperPendingDeviceCode(ctx: Context) {
-        developerPendingDeviceCode = null
-        GitHubDeviceAuthorization.clearPendingDeviceCode(ctx)
     }
 
     private fun showCrownShareUrlImportDialog() {
@@ -2261,9 +1013,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
     private fun onLocalProfilesChanged() {
         ConfigurationSyncScheduler.requestSyncSoon(this)
-        if (selectedTab == CrownTab.MINE) {
-            renderMineTab()
-        }
+        renderMineTab()
     }
 
     private fun createConfigDocument(fileName: String) {
@@ -2389,19 +1139,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         }
     }
 
-    private fun formatLayoutBasisCompact(layoutBasis: CrownProfileShareManager.LayoutBasis?): String? {
-        if (layoutBasis == null || !layoutBasis.isPresent()) return null
-        val sizeText = "${layoutBasis.widthPx}x${layoutBasis.heightPx}"
-        val dpiText = if (layoutBasis.densityDpi > 0) {
-            "${layoutBasis.densityDpi} dpi"
-        } else {
-            ""
-        }
-        return listOf(sizeText, dpiText)
-            .filter { it.isNotBlank() }
-            .joinToString(" · ")
-    }
-
     private fun isLayoutBasisCompatible(
         profileLayout: CrownProfileShareManager.LayoutBasis?,
         currentLayout: CrownProfileShareManager.LayoutBasis
@@ -2419,61 +1156,6 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         return sameSize && sameDpi && sameOrientation
     }
 
-    private fun formatStoreUpdatedAt(updatedAt: String): String {
-        val trimmed = updatedAt.trim()
-        if (trimmed.isBlank()) return trimmed
-
-        val parsedDate = parseStoreUpdatedAt(trimmed) ?: return trimmed
-        return DateFormat
-            .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
-            .format(parsedDate)
-    }
-
-    private fun formatStoreUpdatedAtCompact(updatedAt: String): String {
-        val trimmed = updatedAt.trim()
-        if (trimmed.isBlank()) return ""
-
-        val parsedDate = parseStoreUpdatedAt(trimmed) ?: return trimmed.take(10)
-        val now = Calendar.getInstance()
-        val updated = Calendar.getInstance().apply { time = parsedDate }
-        val sameYear = now.get(Calendar.YEAR) == updated.get(Calendar.YEAR)
-        val sameDay = sameYear &&
-            now.get(Calendar.DAY_OF_YEAR) == updated.get(Calendar.DAY_OF_YEAR)
-        val hasTime = trimmed.contains('T')
-        val pattern = when {
-            sameDay && hasTime -> "HH:mm"
-            sameYear -> "MMM d"
-            else -> "MMM d, yyyy"
-        }
-        return SimpleDateFormat(pattern, Locale.getDefault()).format(parsedDate)
-    }
-
-    private fun openUrl(url: String) {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-        } catch (e: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.toast_developer_open_project_failed, e.message ?: e.javaClass.simpleName),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun urlParam(value: String): String {
-        return URLEncoder.encode(value, Charsets.UTF_8.name())
-    }
-
-    private fun JSONObject.hasOnlyKeys(allowedKeys: Set<String>): Boolean {
-        val iterator = keys()
-        while (iterator.hasNext()) {
-            if (iterator.next() !in allowedKeys) {
-                return false
-            }
-        }
-        return true
-    }
-
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).toInt()
     }
@@ -2484,62 +1166,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         private const val REQUEST_CODE_OPEN_LEGACY_MERGE = 503
         private const val REQUEST_CODE_CREATE_CROWN_SHARE = 504
         private const val REQUEST_CODE_OPEN_CROWN_SHARE = 505
-        private const val CROWN_STORE_INDEX_URL =
-            "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json"
-        private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024
         private const val CROWN_SHARE_MAX_DOWNLOAD_BYTES = 512 * 1024
         private const val LAYOUT_DPI_TOLERANCE = 8
         private const val DEFAULT_CROWN_CONFIG_ID = 0L
         private const val CURRENT_CROWN_CONFIG_ID_KEY = "current_config_id"
-        private const val CROWN_STORE_REPORT_URL =
-            "https://github.com/qiin2333/crown-profiles/issues/new"
-        private val CROWN_STORE_EXTERNAL_LOCATOR_PATTERN =
-            Regex("https?://|www\\.|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", RegexOption.IGNORE_CASE)
-        private val CROWN_STORE_SENSITIVE_PATTERN =
-            Regex("ghp_|github_pat_|-----BEGIN|password|passwd|token|secret|private key|pairing|clientcert|clientkey", RegexOption.IGNORE_CASE)
-        private val CROWN_STORE_PUBLIC_BUNDLE_KEYS = setOf(
-            "kind",
-            "schemaVersion",
-            "bundleId",
-            "name",
-            "summary",
-            "compatibility",
-            "profile",
-            "createdAt",
-            "updatedAt",
-            "packageName",
-            "layoutBasis",
-            "author",
-            "game",
-            "tags",
-            "appVersionName"
-        )
-        private val CROWN_STORE_PUBLIC_PROFILE_KEYS = setOf(
-            "profileId",
-            "name",
-            "payload",
-            "payloadSha256"
-        )
     }
 }
 
-internal fun parseStoreUpdatedAt(updatedAt: String): Date? {
-    val patterns = listOf(
-        "yyyy-MM-dd'T'HH:mm:ss'Z'",
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        "yyyy-MM-dd'T'HH:mm:ssXXX",
-        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-        "yyyy-MM-dd'T'HH:mm:ssXX",
-        "yyyy-MM-dd'T'HH:mm:ss.SSSXX",
-        "yyyy-MM-dd"
-    )
-    for (pattern in patterns) {
-        val position = ParsePosition(0)
-        val date = SimpleDateFormat(pattern, Locale.US).apply {
-            if (pattern.contains("'Z'")) timeZone = TimeZone.getTimeZone("UTC")
-            isLenient = false
-        }.parse(updatedAt, position)
-        if (date != null && position.index == updatedAt.length) return date
-    }
-    return null
-}

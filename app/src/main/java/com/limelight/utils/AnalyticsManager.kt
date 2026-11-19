@@ -25,46 +25,15 @@ class AnalyticsManager private constructor(context: Context) {
     private var isSessionActive = false
 
     init {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Analytics disabled in debug build")
-        } else {
-            try {
-                applicationContext = context.applicationContext
-                firebaseAnalytics = FirebaseAnalytics.getInstance(context)
-                scheduler = Executors.newScheduledThreadPool(1)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to initialize Firebase Analytics: ${e.message}")
-            }
-        }
+        // Never initialise Firebase Analytics; see canExecuteAnalytics().
+        Log.d(TAG, "Analytics disabled in this build")
     }
 
-    private fun canExecuteAnalytics(): Boolean {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Analytics disabled in debug build")
-            return false
-        }
-
-        if (firebaseAnalytics == null) {
-            Log.w(TAG, "Firebase Analytics not initialized")
-            return false
-        }
-
-        try {
-            if (applicationContext != null) {
-                @Suppress("DEPRECATION")
-                val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
-                val analyticsEnabled = prefs.getBoolean("checkbox_enable_analytics", true)
-                if (!analyticsEnabled) {
-                    Log.d(TAG, "Analytics disabled by user preference")
-                    return false
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to check analytics preference: ${e.message}")
-        }
-
-        return true
-    }
+    /**
+     * Usage analytics are permanently off in the Thor build (the opt-out toggle was removed,
+     * so "removed" must mean "off", never "on"). Crash reporting is separate and unaffected.
+     */
+    private fun canExecuteAnalytics(): Boolean = false
 
     @SuppressLint("InvalidAnalyticsName")
     fun startUsageTracking() {

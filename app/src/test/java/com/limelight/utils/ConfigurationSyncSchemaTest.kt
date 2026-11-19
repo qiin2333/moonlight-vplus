@@ -7,7 +7,6 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.TouchPointerPresetPreferences
 import com.limelight.preferences.TouchpadInputPreferences
 import com.limelight.binding.audio.MicrophoneButtonPreferences
-import com.limelight.ui.FloatBallPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -120,7 +119,7 @@ class ConfigurationSyncSchemaTest {
     fun floatBallPresetIsPortable() {
         assertTrue(
             ConfigurationSyncManager.isPortableDefaultPreferenceKey(
-                FloatBallPreferences.KEY_PRESET_POSITION
+                "list_float_ball_position"
             )
         )
         assertFalse(

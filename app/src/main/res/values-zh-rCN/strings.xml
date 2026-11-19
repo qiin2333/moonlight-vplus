@@ -439,20 +439,8 @@
     <string name="dialog_title_reset_osc">重置虚拟手柄布局</string>
     <string name="dialog_text_reset_osc">确定要删除已保存的屏幕虚拟手柄按钮布局吗？</string>
     <string name="toast_reset_osc_success">屏幕虚拟手柄按钮布局已重置</string>
-    <string name="title_checkbox_enable_float_ball">启用悬浮球</string>
-    <string name="summary_checkbox_enable_float_ball">显示一个可交互的悬浮球，用于快速操作。</string>
-    <string name="title_list_float_ball_position">悬浮球位置</string>
-    <string name="summary_list_float_ball_position">将悬浮球放到屏幕边缘。拖动位置会覆盖预设，再次选择预设即可清除。</string>
-    <string name="title_seekbar_float_ball_auto_hide_delay">自动隐藏延迟</string>
-    <string name="summary_seekbar_float_ball_auto_hide_delay">悬浮球自动隐藏到屏幕边缘的时间。</string>
 
     <!-- 悬浮球手势动作 -->
-    <string name="title_float_ball_single_click_action">单击动作</string>
-    <string name="summary_float_ball_single_click_action">点击悬浮球一次时执行的动作。</string>
-    <string name="title_float_ball_double_click_action">双击动作</string>
-    <string name="summary_float_ball_double_click_action">双击悬浮球时执行的动作。</string>
-    <string name="title_float_ball_long_click_action">长按动作</string>
-    <string name="summary_float_ball_long_click_action">长按悬浮球时执行的动作。</string>
     <string name="title_float_ball_swipe_up_action">向上滑动动作</string>
     <string name="summary_float_ball_swipe_up_action">向上滑动悬浮球时执行的动作。</string>
     <string name="title_float_ball_swipe_down_action">向下滑动动作</string>
@@ -849,8 +837,6 @@
     <string name="summary_use_external_display">连接第二块显示器时，在外接显示器而不是本机屏幕上显示串流。</string>
 
     <!-- Analytics settings -->
-    <string name="title_enable_analytics">启用统计分析</string>
-    <string name="summary_enable_analytics">通过分享匿名使用统计数据来帮助改进应用。</string>
 
     <!-- Background image API -->
 
@@ -891,7 +877,6 @@
     <string name="summary_checkbox_rotable_screen">本机方向变化时同步旋转串流布局。</string>
 
     <!-- Moonlight V+ PC download -->
-    <string name="title_moonlight_vplus_pc_download">Moonlight V+ PC版下载</string>
 
     <!-- Tip strings -->
     <string name="tip_esc_exit">💡 串流小课堂：使用"退出"按钮可以快速完全地退出串流，让屏幕恢复到串流前的状态哦～</string>
@@ -1574,7 +1559,6 @@
     <string name="error_interrupted">操作已中断</string>
     <string name="float_ball_action_lock_screen">锁屏</string>
     <string name="float_ball_action_screenshot">截图</string>
-    <string name="float_ball_action_toggle_visibility">切换悬浮球显隐</string>
     <string name="game_menu_toggle_all_keyboard">切换电脑键盘</string>
     <string name="menu">菜单</string>
     <string name="settings_search_hint">搜索设置项…</string>
@@ -1717,28 +1701,6 @@
     <string name="seekbar_increase">增大</string>
 
     <!-- 插帧增强 -->
-    <string name="title_developer_unlock">解锁开发者功能</string>
-    <string name="summary_developer_unlock_locked">验证你的 GitHub Star 后即可解锁开发者功能。</string>
-    <string name="summary_developer_unlock_unlocked">本机已解锁开发者功能，感谢你支持 Moonlight V+。</string>
-    <string name="message_developer_unlock_required">开发者功能是 Moonlight V+ 的支持者功能。请登录 GitHub，App 会验证你的账号是否已经给项目点 Star。</string>
-    <string name="message_developer_unlock_done">本机已解锁开发者功能。你可以重新验证 Star，或打开项目页面。</string>
-    <string name="message_developer_oauth_unconfigured">当前构建没有配置 GitHub OAuth Client ID，Moonlight V+ 还无法解锁开发者功能。请在 local.properties 配置 githubOAuthClientId，或在构建时传入 -PgithubOAuthClientId=... / GITHUB_OAUTH_CLIENT_ID。</string>
-    <string name="message_developer_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 GitHub 授权后，给 Moonlight V+ 点 Star。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
-    <string name="developer_device_code_clip_label">GitHub 授权码</string>
-    <string name="message_developer_star_not_found">GitHub 授权成功，但还没有看到这个账号的 Star。如果你刚刚点过 Star，请稍等片刻后再次验证。</string>
-    <string name="action_developer_open_project">打开项目</string>
-    <string name="action_developer_open_authorization">打开授权页</string>
-    <string name="action_developer_check_authorization">已授权，检查</string>
-    <string name="action_developer_verify_star">验证 GitHub Star</string>
-    <string name="toast_developer_unlocked">开发者功能已解锁，感谢你的 Star。</string>
-    <string name="toast_developer_oauth_unconfigured">当前构建未配置 GitHub OAuth Client ID。</string>
-    <string name="toast_developer_verification_started">正在开始解锁开发者功能…</string>
-    <string name="toast_developer_verification_running">开发者功能解锁已经在进行中。</string>
-    <string name="toast_developer_device_code_copied">GitHub 授权码已复制，打开授权页后直接粘贴就好。</string>
-    <string name="toast_developer_authorization_pending">还没有收到 GitHub 授权，请稍后再试。</string>
-    <string name="toast_developer_verification_expired">GitHub 授权已过期，请重新开始验证。</string>
-    <string name="toast_developer_verification_failed">开发者功能解锁失败：%1$s</string>
-    <string name="toast_developer_open_project_failed">无法打开项目页面：%1$s</string>
     <string name="title_framegen_enabled">插帧增强</string>
     <string name="summary_framegen_enabled">在手机端生成额外帧，让串流更顺滑。想输出 120Hz 时请把串流帧率设为 60 FPS；超过目标刷新率一半的设置不会提升插帧效果。</string>
     <string name="summary_framegen_enabled_locked">请先解锁开发者功能，再启用插帧增强。</string>
@@ -1778,9 +1740,7 @@
     <!-- 王冠配置分享与 Store -->
     <string name="crown_config_action_import_legacy">导入旧版 .mdat</string>
     <string name="title_crown_store_view">王冠</string>
-    <string name="crown_store_tab_store">超市王冠</string>
     <string name="crown_store_tab_mine">我的王冠</string>
-    <string name="crown_store_store_summary">来看看大家晒在 GitHub 上的王冠配置，喜欢哪套就带回本地。</string>
     <string name="crown_store_my_summary">管理配置、导入分享包、投稿喜欢的布局。</string>
     <string name="crown_store_my_workspace_title">你的王冠空间</string>
     <string name="crown_store_local_profiles">本地配置</string>
@@ -1790,71 +1750,23 @@
     <string name="crown_store_legacy_tool_summary">从旧版 .mdat 文件恢复王冠配置。</string>
     <string name="crown_store_action_open">打开</string>
     <string name="crown_store_action_import_package">导入分享包</string>
-    <string name="crown_store_action_refresh">刷新一下</string>
-    <string name="crown_store_search_hint">搜索王冠</string>
-    <string name="crown_store_clear_search">清除搜索</string>
-    <string name="crown_store_sort_by">排序：%1$s</string>
-    <string name="crown_store_sort_store_order">超市原顺序</string>
-    <string name="crown_store_sort_newest">最近更新</string>
-    <string name="crown_store_sort_oldest">最早更新</string>
-    <string name="crown_store_sort_name_asc">名称 A–Z</string>
-    <string name="crown_store_sort_name_desc">名称 Z–A</string>
-    <string name="crown_store_results_count">%1$d 套王冠</string>
-    <string name="crown_store_card_game">游戏：%1$s</string>
-    <string name="crown_store_card_author">作者：%1$s</string>
-    <string name="crown_store_no_search_results">没有匹配的王冠</string>
-    <string name="crown_store_try_another_search">换个配置名、游戏、作者或标签试试。</string>
-    <string name="crown_store_action_import_profile">收下这套</string>
-    <string name="crown_store_action_report_profile">举报</string>
     <string name="crown_store_action_edit_publish">补充信息并投稿</string>
-    <string name="crown_store_action_publish_profile">投稿</string>
     <string name="crown_store_action_export_share">打包分享</string>
     <string name="crown_store_action_export_legacy_short">旧版 .mdat</string>
     <string name="crown_store_action_merge_short">合并进去</string>
     <string name="action_crown_store_delete_profile">删除</string>
     <string name="crown_store_action_back">返回</string>
-    <string name="crown_store_empty_state_title">这里还没有王冠</string>
-    <string name="crown_store_empty_state_message">等配置被合并进 GitHub Store 后，就会乖乖出现在这里。</string>
     <string name="crown_store_my_empty_message">还没有本地配置。导入或创建一套王冠配置后，它会显示在这里。</string>
     <string name="crown_store_local_tools">本地小工具</string>
     <string name="crown_store_local_profile_id">本地 ID：%1$s</string>
-    <string name="crown_store_layout_basis">适配：%1$s</string>
     <string name="crown_store_layout_orientation_landscape">横屏</string>
     <string name="crown_store_layout_orientation_portrait">竖屏</string>
     <string name="crown_store_layout_orientation_unknown">屏幕</string>
-    <string name="title_crown_store_layout_check">先看一下适配</string>
     <string name="message_crown_store_layout_match">适配：这套王冠刚好适合当前屏幕（%1$s）。</string>
     <string name="message_crown_store_layout_missing">适配：这套王冠没有屏幕信息。当前屏幕是 %1$s，导入后可能要轻轻挪一下按钮。</string>
     <string name="message_crown_store_layout_mismatch">适配：这套王冠来自 %1$s。当前屏幕是 %2$s，导入后可能要轻轻挪一下按钮。</string>
-    <string name="action_crown_store_continue_import">继续导入</string>
-    <string name="crown_store_updated_at">最近更新：%1$s</string>
-    <string name="crown_store_action_publish">投稿到王冠 Store</string>
-    <string name="crown_store_source_label">王冠 Store：%1$s</string>
-    <string name="title_crown_store_publish_metadata">让大家认识这套配置</string>
-    <string name="title_crown_store_github_authorization">需要连接 GitHub</string>
-    <string name="title_crown_store_publish_success">投稿 PR 已送出</string>
     <string name="title_crown_store_delete_profile">删掉这顶王冠？</string>
-    <string name="label_crown_store_profile_name">配置名</string>
-    <string name="label_crown_store_game">适配游戏</string>
-    <string name="label_crown_store_author">作者昵称</string>
-    <string name="label_crown_store_tags">小标签</string>
-    <string name="label_crown_store_summary">一句介绍</string>
-    <string name="hint_crown_store_profile_name">给这套配置起个名字</string>
-    <string name="hint_crown_store_game">适合哪款游戏？</string>
-    <string name="hint_crown_store_author">你想显示的名字</string>
-    <string name="hint_crown_store_tags">fps, racing, handheld</string>
-    <string name="hint_crown_store_summary">这套布局哪里好用？</string>
-    <string name="message_crown_store_publish_metadata">这些信息会显示在公开 GitHub Store 里。Moonlight V+ 会用你的 GitHub 账号创建 Pull Request，等待维护者确认。</string>
-    <string name="message_crown_store_publish_terms">我确认这套配置是我自己的，或已获得分享许可；里面没有隐私信息、token、密码、配对身份、受版权保护的媒体或不友好的内容，也接受它被公开审核或下架。</string>
-    <string name="message_crown_store_github_authorization_required">投稿前先连接 GitHub。Moonlight V+ 会帮你 fork 王冠 Store、提交配置，并打开一个 Pull Request。</string>
-    <string name="message_crown_store_github_reauthorization_required">投稿需要 GitHub public repository 权限。重新连接 GitHub、授权仓库访问后，再来投一次吧。</string>
-    <string name="message_crown_store_device_code">授权码已帮你复制好：%1$s\n\n1. 打开授权页，直接粘贴授权码。\n2. 同意 public repository 权限，Moonlight V+ 才能帮你 fork 王冠 Store 并创建 Pull Request。\n3. 授权完成后回到本页，点击“已授权，检查”。\n\n授权页：%2$s</string>
-    <string name="message_crown_store_publish_success">这套王冠配置的投稿 PR 已创建：\n%1$s\n\n%2$s</string>
     <string name="message_crown_store_delete_profile">要从“我的王冠”里删除“%1$s”吗？只会移除本地配置和里面的按钮。</string>
-    <string name="crown_store_report_issue_title">举报王冠 Store 配置：%1$s</string>
-    <string name="crown_store_report_issue_body">配置：%1$s\n来源：%2$s\n\n原因：\n请说明它看起来哪里不安全、包含隐私、侵权或不友好。</string>
-    <string name="action_crown_store_authorize_github">连接 GitHub</string>
-    <string name="action_open_pull_request">打开 Pull Request</string>
     <string name="crown_share_action_import">导入分享包</string>
     <string name="crown_share_action_import_url">从链接导入</string>
     <string name="crown_share_install_as_new">作为新配置安装</string>
@@ -1873,28 +1785,9 @@
     <string name="toast_crown_share_url_invalid">请输入有效的 HTTP 或 HTTPS 链接</string>
     <string name="toast_crown_share_url_loading">正在下载王冠分享包</string>
     <string name="toast_crown_share_url_failed">这个链接里的分享包没能导入</string>
-    <string name="toast_crown_store_loading">正在翻找王冠 Store</string>
-    <string name="toast_crown_store_empty">王冠 Store 现在还空空的</string>
-    <string name="toast_crown_store_failed">没能打开王冠 Store</string>
-    <string name="toast_crown_store_profile_failed">这套王冠配置导入失败了</string>
-    <string name="toast_crown_store_publish_started">正在把王冠配置送去 GitHub</string>
-    <string name="toast_crown_store_github_connected">GitHub 已准备好接收王冠投稿</string>
-    <string name="toast_crown_store_publish_failed">没能准备好这套王冠配置</string>
-    <string name="toast_crown_store_publish_failed_with_error">投稿失败：%1$s</string>
-    <string name="toast_crown_store_publish_terms_required">先确认投稿规则再发送哦</string>
-    <string name="toast_crown_store_publish_invalid_metadata">检查一下投稿信息：%1$s</string>
     <string name="toast_crown_store_delete_success">已删除 %1$s</string>
     <string name="toast_crown_store_delete_failed">这顶王冠没删掉，再试一次吧</string>
     <string name="toast_crown_store_delete_default_blocked">默认王冠先留着，它是小小的安全垫</string>
-    <string name="crown_store_validation_name_too_long">配置名太长了</string>
-    <string name="crown_store_validation_game_too_long">游戏名太长了</string>
-    <string name="crown_store_validation_author_too_long">作者昵称太长了</string>
-    <string name="crown_store_validation_summary_too_long">一句介绍太长了</string>
-    <string name="crown_store_validation_too_many_tags">小标签太多了</string>
-    <string name="crown_store_validation_tag_too_long">有个小标签太长了</string>
-    <string name="crown_store_validation_external_locator">Store 信息里先不要放链接或邮箱</string>
-    <string name="crown_store_validation_sensitive_metadata">不能公开隐私、token、密码或配对身份</string>
-    <string name="crown_store_validation_invalid_bundle">这不是公开用的纯王冠分享包</string>
     <string name="title_config_sync_backup_password">备份密码</string>
     <string name="summary_config_sync_backup_password_missing">保存到所选文件夹前，请先设置备份密码。</string>
     <string name="summary_config_sync_backup_password_set">已为所选文件夹中的备份保存密码。</string>
@@ -2103,21 +1996,6 @@
     <string name="diag_pq_transfer">PQ透传</string>
 
     <!-- 赞助 -->
-    <string name="sponsor_github_title">投喂 Moonlight V+</string>
-    <string name="sponsor_github_summary">杂鱼维护组还在努力修 bug 呢，投喂一点点就能变成设备、咖啡和 token 补给。扫码或打开 GitHub Sponsors 即可。</string>
-    <string name="sponsor_github_action">打开 GitHub Sponsors</string>
-    <string name="sponsor_wechat_title">投喂 Moonlight V+</string>
-    <string name="sponsor_wechat_summary">杂鱼维护组还在努力修 bug 呢，扫码投喂一点点，就能变成设备、咖啡和 token 补给。</string>
-    <string name="sponsor_wechat_action">使用微信支付扫码</string>
-    <string name="sponsor_qr_content_description">赞助二维码</string>
-    <string name="sponsor_qr_dialog_title">赞助二维码</string>
-    <string name="sponsor_qr_long_press_hint">长按二维码可保存到相册，再用微信扫码</string>
-    <string name="sponsor_qr_saved">二维码已保存到相册</string>
-    <string name="sponsor_qr_save_failed">二维码保存失败</string>
-    <string name="sponsor_qr_permission_retry">允许存储权限后，请再次长按保存</string>
-    <string name="sponsor_qr_saved_open_wechat_hint">二维码已保存，打开微信后选择「扫一扫 → 相册」</string>
-    <string name="sponsor_open_wechat">打开微信</string>
-    <string name="sponsor_wechat_not_installed">未安装微信</string>
     <string name="toast_update_integrity_mismatch">更新下载内容不是有效安装包，请切换网络或使用浏览器下载。</string>
     <string name="iperf_output_title">测试输出</string>
     <string name="iperf_output_empty_hint">测试结果和详细日志将在这里显示。</string>
@@ -2351,15 +2229,6 @@
     <string name="custom_frame_rate_hint">常用帧率只影响游戏菜单的展示，不会改变当前串流帧率；设置页始终保留完整列表。</string>
     <string name="custom_frame_rate_add_favorite">加入常用</string>
     <string name="frame_rate_show_all">全部帧率…</string>
-    <string name="title_float_ball_settings">悬浮球</string>
-    <string name="float_ball_appearance">悬浮显示</string>
-    <string name="float_ball_gestures">手势操作</string>
-    <string name="float_ball_settings_disabled_summary">开启悬浮球后可调整位置与操作。</string>
-    <string name="float_ball_summary_enabled">已启用 · %1$s · %2$s</string>
-    <string name="float_ball_summary_delay">%1$s 秒后隐藏</string>
-    <string name="float_ball_summary_no_hide">始终显示</string>
-    <string name="float_ball_summary_custom_position">已拖动定位</string>
-    <string name="float_ball_summary_search">%1$s\n包含：%2$s</string>
     <string name="toast_crown_config_export_failed">无法导出 Crown 配置</string>
     <string name="toast_crown_config_export_success">已导出 Crown 配置</string>
     <string name="toast_crown_config_import_failed">无法读取 Crown 配置</string>

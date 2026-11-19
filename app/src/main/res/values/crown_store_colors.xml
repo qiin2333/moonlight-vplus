@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="crown_store_background">#FF4D464A</color>
-    <color name="crown_store_panel_background">#F21B1B22</color>
-    <color name="crown_store_section_background">#CC252833</color>
-    <color name="crown_store_section_border">#1FFFFFFF</color>
-    <color name="crown_store_input_background">#E62F3340</color>
-    <color name="crown_store_input_border">#2EFFFFFF</color>
-    <color name="crown_store_text_primary">#FFF7F3F7</color>
-    <color name="crown_store_text_secondary">#FFC9D0D8</color>
+    <!-- Crown profile manager; aliases the Thor palette (values/thor_tokens.xml). -->
+    <color name="crown_store_background">@color/thor_background</color>
+    <color name="crown_store_panel_background">@color/thor_surface</color>
+    <color name="crown_store_section_background">@color/thor_surface</color>
+    <color name="crown_store_section_border">@color/thor_border</color>
+    <color name="crown_store_input_background">@color/thor_surface_elevated</color>
+    <color name="crown_store_input_border">@color/thor_border</color>
+    <color name="crown_store_text_primary">@color/thor_text_primary</color>
+    <color name="crown_store_text_secondary">@color/thor_text_secondary</color>
 </resources>

@@ -201,12 +201,10 @@ class SettingsResourceHygieneTest {
             "audio_codec_names",
             "audio_config_names",
             "audio_passthrough_buffer_names",
-            "background_source_names",
             "background_stream_behavior_names",
             "quit_behavior_names",
             "dualsense_output_mode_names",
             "decoder_input_buffer_mode_names",
-            "float_ball_action_names",
             "hdr_mode_entries",
             "mic_menu_action_mode_entries",
             "mic_initial_state_entries",
@@ -277,9 +275,6 @@ class SettingsResourceHygieneTest {
                 "checkbox_full_range", "capability_diagnostic", "pyrowave_capability_diagnostic",
             ),
             "category_display_behavior" to setOf("checkbox_reverse_resolution"),
-            "category_ui_settings" to setOf(
-                "settings_float_ball",
-            ),
             "category_microphone_settings" to setOf(
                 "checkbox_enable_mic", "list_mic_initial_state", "list_mic_menu_action_mode",
                 "checkbox_show_mic_button", "list_mic_button_position", "seekbar_mic_bitrate_kbps",
@@ -311,17 +306,6 @@ class SettingsResourceHygieneTest {
             val misplacedKeys = expectedKeys - childKeys
             assertTrue("Settings missing from $categoryKey: $misplacedKeys", misplacedKeys.isEmpty())
         }
-        val floatBallScreen = preferences.documentElement.getElementsByTagName("PreferenceScreen")
-            .asElementSequence()
-            .single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "settings_float_ball" }
-        val floatBallKeys = floatBallScreen.getElementsByTagName("*").asElementSequence()
-            .map { it.getAttributeNS(ANDROID_NAMESPACE, "key") }.toSet()
-        assertTrue("Floating ball settings must remain discoverable in their feature screen",
-            floatBallKeys.containsAll(setOf(
-                "checkbox_enable_float_ball", "list_float_ball_position", "seekbar_float_ball_auto_hide_delay",
-                "list_float_ball_single_click_action", "list_float_ball_double_click_action",
-                "list_float_ball_long_click_action",
-            )))
     }
 
     @Test
@@ -331,7 +315,7 @@ class SettingsResourceHygieneTest {
         val pages = root.getElementsByTagName("PreferenceScreen").asElementSequence().toList()
         val expectedPageKeys = setOf(
             "settings_frame_generation",
-            "settings_hdr", "settings_picture_layout", "settings_float_ball",
+            "settings_hdr", "settings_picture_layout",
             "settings_performance_overlay", "settings_audio_passthrough", "settings_audio_vibration",
             "settings_gamepad", "settings_input",
         )
@@ -398,13 +382,11 @@ class SettingsResourceHygieneTest {
             "pref_framegen_pick_lossless_dll", "checkbox_framegen_enabled", "checkbox_framegen_adaptive_enabled",
             "list_framegen_quality_preset", "pref_framegen_selftest", "checkbox_enable_hdr",
             "seekbar_output_buffer_queue_limit", "checkbox_force_mtk_max_operating_rate", "list_hevc_low_latency_mode",
-            "background_source", "background_image_url", "local_image_picker", "reset_background_image",
             "checkbox_show_onscreen_controls", "list_osc_layout", "checkbox_only_show_L3R3",
             "checkbox_show_guide_button", "checkbox_half_height_osc_portrait", "seekbar_osc_opacity", "reset_osc",
             "config_sync_export", "config_sync_import", "config_sync_select_directory",
             "checkbox_config_sync_background_sync", "config_sync_import_external_snapshot",
             "documentation_handbook", "about_us", "open_source_notices", "check_for_updates",
-            "pref_developer_unlock", "sponsor_panel",
         )
         val hiddenBehindPages = requiredMainKeys - mainKeys
         assertTrue("Settings must not require an extra navigation step: $hiddenBehindPages",
