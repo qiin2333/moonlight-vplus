@@ -677,6 +677,12 @@ public class AnalogStick extends Element {
     }
 
     @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_analog_stick_text_dedb8);
+    }
+
+
+    @Override
     public void save() {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_STRING_ELEMENT_VALUE, value);

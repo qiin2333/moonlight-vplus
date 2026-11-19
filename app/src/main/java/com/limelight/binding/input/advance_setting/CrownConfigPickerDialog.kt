@@ -147,6 +147,18 @@ class CrownConfigPickerDialog(
         /** Mirrors the dialog's pending selection so rows can highlight themselves. */
         var highlightedPosition = -1
 
+        // Cached once: getView runs for every visible row on every selection step.
+        private val rowBackground = context.resources.getDrawable(R.drawable.crown_picker_row_normal_bg)
+        private val rowBackgroundSelected = context.resources.getDrawable(R.drawable.crown_picker_row_selected_bg)
+        private val checkOn = context.resources.getDrawable(R.drawable.crown_picker_check_on_bg)
+        private val checkOff = context.resources.getDrawable(R.drawable.crown_picker_check_off_bg)
+        private val textPrimaryColor = context.resources.getColor(R.color.crown_text_primary)
+        private val textSecondaryColor = context.resources.getColor(R.color.crown_text_secondary)
+        private val onAccentColor = context.resources.getColor(R.color.crown_on_accent)
+
+        private fun dp(value: Int): Int =
+            (value * context.resources.displayMetrics.density).toInt()
+
         override fun getCount(): Int = choices.size
 
         override fun getItem(position: Int): CrownConfigChoice = choices[position]
@@ -157,10 +169,7 @@ class CrownConfigPickerDialog(
             val root = (convertView as? LinearLayout) ?: createRow()
             val choice = getItem(position)
             val selected = position == highlightedPosition
-            root.background = context.resources.getDrawable(
-                if (selected) R.drawable.crown_picker_row_selected_bg
-                else R.drawable.crown_picker_row_normal_bg
-            )
+            root.background = if (selected) rowBackgroundSelected else rowBackground
             (root.getChildAt(0) as? CrownThumbnailView)?.bind(choice.preview)
             (root.getChildAt(1) as? LinearLayout)?.apply {
                 (getChildAt(0) as? TextView)?.text = choice.name
@@ -177,11 +186,8 @@ class CrownConfigPickerDialog(
             }
             (root.getChildAt(2) as? TextView)?.apply {
                 text = if (choice.isCurrent || selected) "✓" else ""
-                setTextColor(context.resources.getColor(R.color.crown_on_accent))
-                background = context.resources.getDrawable(
-                    if (choice.isCurrent || selected) R.drawable.crown_picker_check_on_bg
-                    else R.drawable.crown_picker_check_off_bg
-                )
+                setTextColor(onAccentColor)
+                background = if (choice.isCurrent || selected) checkOn else checkOff
                 visibility = if (choice.isCurrent || selected) View.VISIBLE else View.INVISIBLE
             }
             root.alpha = if (choice.isSelectable) 1f else 0.72f
@@ -208,14 +214,14 @@ class CrownConfigPickerDialog(
                 addView(TextView(context).apply {
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
-                    setTextColor(context.resources.getColor(R.color.crown_text_primary))
+                    setTextColor(textPrimaryColor)
                     textSize = 13f
                 }, LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ))
                 addView(TextView(context).apply {
                     maxLines = 1
-                    setTextColor(context.resources.getColor(R.color.crown_text_secondary))
+                    setTextColor(textSecondaryColor)
                     textSize = 11f
                     setPadding(0, dp(2), 0, 0)
                 }, LinearLayout.LayoutParams(
@@ -229,8 +235,6 @@ class CrownConfigPickerDialog(
             }, LinearLayout.LayoutParams(dp(18), dp(18)))
         }
 
-        private fun dp(value: Int): Int =
-            (value * context.resources.displayMetrics.density).toInt()
     }
 
     private fun select(position: Int) {

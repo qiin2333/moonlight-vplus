@@ -182,6 +182,7 @@ class NumberSeekbar : LinearLayout {
 
     /** Use the same offset on every API level; native min was only added in API 26. */
     private fun updateRange(min: Int, max: Int) {
+        if (min == minimumValue && max == minimumValue + numberSeekbarSeekbar.max) return
         val previousValue = value
         val listener = onNumberSeekbarChangeListener
         onNumberSeekbarChangeListener = null

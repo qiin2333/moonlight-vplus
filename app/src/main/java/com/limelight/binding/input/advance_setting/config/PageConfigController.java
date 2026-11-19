@@ -259,13 +259,8 @@ public class PageConfigController {
         // Keep the currently active profile at the top, show its real layout
         // thumbnail, and let the shared Crown picker handle touch and controller
         // focus consistently with the in-stream direct-switch action.
-        List<Long> orderedIds = new ArrayList<>();
-        if (configIds.contains(currentConfigId)) orderedIds.add(currentConfigId);
-        for (Long id : configIds) {
-            if (!orderedIds.contains(id)) orderedIds.add(id);
-        }
         List<CrownConfigChoice> choices = CrownConfigChoiceFactory.create(
-                controllerManager.getSuperConfigDatabaseHelper(), orderedIds, currentConfigId);
+                controllerManager.getSuperConfigDatabaseHelper(), configIds, currentConfigId);
         ((Game) context).showCrownConfigPicker(choices, choice -> {
             if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {
                 return kotlin.Unit.INSTANCE;
@@ -350,12 +345,13 @@ public class PageConfigController {
         loadEnhancedTouch();
         controllerManager.getElementController().loadAllElement(currentConfigId);
         TextView headerSubtitle = pageConfig.findViewById(R.id.crown_page_subtitle);
-        headerSubtitle.setText(getCurrentConfigName());
+        String currentName = getCurrentConfigName();
+        headerSubtitle.setText(currentName);
         headerSubtitle.setVisibility(View.VISIBLE);
-        selectedProfileName.setText(getCurrentConfigName());
+        selectedProfileName.setText(currentName);
         selectedProfileSummary.setText(context.getString(
                 R.string.crown_menu_profile_summary,
-                getCurrentConfigName(),
+                currentName,
                 getCurrentElementCount()));
         if (selectedProfileThumbnail != null) {
             CrownProfileShareManager.ProfilePreview preview = null;

@@ -156,11 +156,7 @@ class PageDeviceController(
             Toast.makeText(context, R.string.crown_direct_config_no_other, Toast.LENGTH_SHORT).show()
             return
         }
-        val orderedIds = buildList {
-            add(sourceId)
-            addAll(ids.filter { it != sourceId })
-        }
-        val choices = CrownConfigChoiceFactory.create(database, orderedIds, sourceId)
+        val choices = CrownConfigChoiceFactory.create(database, ids, sourceId)
         val callback = deviceCallBack ?: return
         game.showCrownConfigPicker(choices, onSelected = { choice ->
             val selectedId = choice.configId

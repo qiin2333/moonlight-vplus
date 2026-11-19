@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared inspector header: mark tile + per-element title (set by ElementController
+     from Element.getCrownInspectorTitle). Tagged root anchors the danger delete icon. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:tag="crown_inspector_header"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:paddingBottom="12dp">
+
+    <FrameLayout
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginEnd="10dp"
+        android:background="@drawable/crown_header_mark_bg"
+        android:importantForAccessibility="no">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/phc_crown"
+            app:tint="@color/crown_section_label" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/crown_page_title_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/crown_text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+</LinearLayout>

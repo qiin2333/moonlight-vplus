@@ -601,6 +601,12 @@ public class DigitalCommonButton extends Element {
         return digitalButtonPage;
     }
 
+    @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_digital_common_button_text_02c2a);
+    }
+
+
     protected void setElementText(String text) {
         this.text = text;
         invalidate();

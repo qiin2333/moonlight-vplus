@@ -732,7 +732,8 @@ public class ElementController {
             controllerManager.getSuperPagesController().openNewPage(
                     controllerManager.getSuperPagesController().getPageNull());
         } else {
-            addCrownInspectorPreview(elementSettingPage, selectedElement);
+            bindCrownInspectorHeader(elementSettingPage, selectedElement);
+            bindCrownInspectorPreview(elementSettingPage, selectedElement);
             applyCrownDetailStyle(elementSettingPage);
             compactCrownInspector(elementSettingPage);
             promoteCrownDetailActions(elementSettingPage);
@@ -747,31 +748,25 @@ public class ElementController {
         }
     }
 
-    private void addCrownInspectorPreview(SuperPageLayout page, Element element) {
-        if (element == null || page.findViewWithTag("crown_inspector_preview") != null) {
+    private void bindCrownInspectorHeader(SuperPageLayout page, Element element) {
+        TextView title = page.findViewById(R.id.crown_page_title_text);
+        if (title != null && element != null) {
+            String titleText = element.getCrownInspectorTitle();
+            if (!titleText.isEmpty()) {
+                title.setText(titleText);
+            }
+        }
+    }
+
+    private void bindCrownInspectorPreview(SuperPageLayout page, Element element) {
+        if (element == null) {
             return;
         }
-
-        ScrollView scrollView = findCrownDetailScrollView(page);
-        if (scrollView == null || !(scrollView.getChildAt(0) instanceof ViewGroup)) {
-            return;
+        CrownInspectorPreviewView preview =
+                page.findViewById(R.id.crown_inspector_preview_view);
+        if (preview != null) {
+            preview.bind(element);
         }
-        ViewGroup content = (ViewGroup) scrollView.getChildAt(0);
-        // Design L4: a full-width 84dp dark canvas with the live element centered.
-        FrameLayout card = new FrameLayout(context);
-        card.setTag("crown_inspector_preview");
-        card.setBackgroundResource(R.drawable.crown_inspector_preview_bg);
-        card.setPadding(dp(6), dp(6), dp(6), dp(6));
-
-        CrownInspectorPreviewView preview = new CrownInspectorPreviewView(context);
-        preview.bind(element);
-        card.addView(preview, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        ViewGroup.MarginLayoutParams cardParams = new ViewGroup.MarginLayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(84));
-        cardParams.bottomMargin = dp(10);
-        content.addView(card, Math.min(1, content.getChildCount()), cardParams);
     }
 
     /**
@@ -796,7 +791,6 @@ public class ElementController {
                 Math.max(scrollView.getPaddingBottom(), dp(82))
         );
         compactNumberSeekbars((ViewGroup) scrollView.getChildAt(0));
-        normalizeCrownInspectorTypography((ViewGroup) scrollView.getChildAt(0));
         scrollView.setTag(CROWN_INSPECTOR_COMPACT_TAG);
     }
 
@@ -854,27 +848,6 @@ public class ElementController {
         }
     }
 
-    private void normalizeCrownInspectorTypography(ViewGroup parent) {
-        float scaledDensity = context.getResources().getDisplayMetrics().scaledDensity;
-        for (int i = 0; i < parent.getChildCount(); i++) {
-            View child = parent.getChildAt(i);
-            if (child instanceof TextView && !(child instanceof NumberSeekbar)) {
-                TextView text = (TextView) child;
-                float sizeSp = text.getTextSize() / Math.max(0.1f, scaledDensity);
-                if (sizeSp >= 17f) {
-                    text.setTextSize(16f);
-                } else if (text.getTypeface() != null && text.getTypeface().isBold() && sizeSp >= 13f) {
-                    text.setTextSize(12.5f);
-                } else if (sizeSp >= 12f) {
-                    text.setTextSize(11.5f);
-                }
-                text.setIncludeFontPadding(false);
-            }
-            if (child instanceof ViewGroup && !"crown_inspector_preview".equals(child.getTag())) {
-                normalizeCrownInspectorTypography((ViewGroup) child);
-            }
-        }
-    }
 
     private void positionCrownDetailPageAwayFromOwner(SuperPageLayout page) {
         Element owner = getCrownAutoColorOwner(page);
@@ -921,7 +894,7 @@ public class ElementController {
                     detailScroll.getPaddingLeft(),
                     detailScroll.getPaddingTop(),
                     detailScroll.getPaddingRight(),
-                    detailScroll.getPaddingBottom() + dp(78)
+                    Math.max(detailScroll.getPaddingBottom(), dp(160))
             );
         }
 
@@ -1758,13 +1731,8 @@ public class ElementController {
                         PageConfigController configController = controllerManager.getPageConfigController();
                         long currentConfigId = configController.getCurrentConfigId();
                         List<Long> allConfigIds = controllerManager.getSuperConfigDatabaseHelper().queryAllConfigIds();
-                        List<Long> orderedIds = new ArrayList<>();
-                        if (allConfigIds.contains(currentConfigId)) orderedIds.add(currentConfigId);
-                        for (Long id : allConfigIds) {
-                            if (!orderedIds.contains(id)) orderedIds.add(id);
-                        }
                         List<CrownConfigChoice> choices = CrownConfigChoiceFactory.create(
-                                controllerManager.getSuperConfigDatabaseHelper(), orderedIds, currentConfigId);
+                                controllerManager.getSuperConfigDatabaseHelper(), allConfigIds, currentConfigId);
                         game.showCrownConfigPicker(choices, choice -> {
                             if (!choice.isSelectable() || choice.getConfigId() == currentConfigId) {
                                 return kotlin.Unit.INSTANCE;

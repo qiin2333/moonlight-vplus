@@ -570,6 +570,12 @@ public class DigitalCombineButton extends Element {
         return digitalCombineButtonPage;
     }
 
+    @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_digital_combine_button_text_3bb27);
+    }
+
+
     private interface StringConsumer {
         void accept(String value);
     }

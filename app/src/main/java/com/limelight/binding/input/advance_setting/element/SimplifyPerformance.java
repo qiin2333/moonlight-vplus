@@ -443,6 +443,12 @@ public class SimplifyPerformance extends Element {
         return simplifyPerformancePage;
     }
 
+    @Override
+    public String getCrownInspectorTitle() {
+        return getContext().getString(R.string.layout_page_simplify_performance_text_58923);
+    }
+
+
     // --- 数据持久化和状态更新 ---
 
     private ContentValues getSaveContentValues() {
