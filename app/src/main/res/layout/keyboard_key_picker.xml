@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.limelight.binding.input.advance_setting.KeyboardKeyPickerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/keyboard_drawing"
     style="@style/VirtualKeyboardStyle"
     android:layout_width="match_parent"
@@ -28,4 +28,4 @@
             layout="@layout/layout_keyboard_numpad"
             android:visibility="gone" />
     </FrameLayout>
-</LinearLayout>
+</com.limelight.binding.input.advance_setting.KeyboardKeyPickerLayout>

@@ -143,6 +143,24 @@ class NumberSeekbar : LinearLayout {
         alpha = if (enabled) 1f else 0.5f
     }
 
+    /**
+     * Inspector rows use the design's value pill + track treatment. The +/-
+     * affordances remain available on the full configuration pages, but take
+     * too much horizontal space when two sliders share a row.
+     */
+    fun setCompactMode(compact: Boolean) {
+        val visibility = if (compact) GONE else VISIBLE
+        numberSeekbarMinus.visibility = visibility
+        numberSeekbarAdd.visibility = visibility
+        if (compact) {
+            val params = numberSeekbarNumber.layoutParams
+            params.width = (48 * resources.displayMetrics.density).toInt()
+            params.height = (28 * resources.displayMetrics.density).toInt()
+            numberSeekbarNumber.layoutParams = params
+            numberSeekbarNumber.setPadding(0, 0, 0, 0)
+        }
+    }
+
     fun setProgressMax(max: Int) {
         updateRange(minimumValue, max.coerceAtLeast(minimumValue))
     }

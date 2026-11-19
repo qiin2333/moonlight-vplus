@@ -92,6 +92,8 @@ import com.limelight.nvstream.http.AdaptiveBitrateService
 import com.limelight.ExternalDisplayManager
 import com.limelight.TargetDisplayResolver
 import com.limelight.binding.input.InputDeviceSensorPolicy
+import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.input.advance_setting.sqlite.SuperConfigDatabaseHelper
 import com.limelight.binding.audio.MicrophoneButtonPreferences
 import com.limelight.binding.audio.MicrophoneButtonPositionStore
 import com.limelight.ui.FloatBallPositionStore
@@ -2846,6 +2848,40 @@ class StreamSettings : ThemedAppCompatActivity() {
             preference.setSummary(summary)
         }
 
+        private fun refreshCrownPreferenceSummary() {
+            val enabledPreference = findPreference<Preference>("checkbox_show_onscreen_keyboard")
+                ?: return
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            val currentId = prefs.getLong("current_config_id", 0L)
+            val profile = runCatching {
+                SuperConfigDatabaseHelper(requireContext()).use { helper ->
+                    val name = helper.queryConfigAttribute(
+                        currentId,
+                        PageConfigController.COLUMN_STRING_CONFIG_NAME,
+                        null
+                    ) as? String
+                    val count = helper.queryAllElementIds(currentId).size
+                    name.orEmpty() to count
+                }
+            }.getOrNull()
+            val name = profile?.first.orEmpty()
+            val count = profile?.second ?: 0
+            enabledPreference.summary = if (name.isBlank()) {
+                getString(R.string.summary_crown_current_profile_empty)
+            } else {
+                getString(R.string.summary_crown_enabled_state, name, count)
+            }
+
+            findPreference<Preference>("crown_edit_current")?.apply {
+                isEnabled = name.isNotBlank()
+                summary = if (name.isBlank()) {
+                    getString(R.string.summary_crown_current_profile_empty)
+                } else {
+                    getString(R.string.summary_crown_edit_current, name)
+                }
+            }
+        }
+
         override fun onResume() {
             super.onResume()
             KeyboardAccessibilityEnabler.addAuthorizationListener(shizukuAuthorizationListener)
@@ -2872,6 +2908,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             updateLocalSnapshotPreferenceSummary()
             updateExternalSyncDirectorySummary()
             updateConfigSyncStatusSummary()
+            refreshCrownPreferenceSummary()
             resumeDeveloperUnlockVerificationIfPending()
         }
 
@@ -3528,6 +3565,34 @@ class StreamSettings : ThemedAppCompatActivity() {
                         startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
                         true
                     }
+            findPreference<Preference>("crown_edit_current")?.apply {
+                widgetLayoutResource = R.layout.preference_widget_navigation
+                onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                    startActivity(
+                        Intent(requireActivity(), CrownStoreActivity::class.java)
+                            .putExtra(CrownStoreActivity.EXTRA_OPEN_MY_CROWNS, true)
+                    )
+                    true
+                }
+            }
+            listOf("crown_config_management", "crown_store_view", "crown_import_package").forEach { key ->
+                findPreference<Preference>(key)?.widgetLayoutResource = R.layout.preference_widget_navigation
+            }
+            findPreference<Preference>("checkbox_show_onscreen_keyboard")?.isIconSpaceReserved = true
+            findPreference<Preference>("crown_store_view")?.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
+                        true
+                    }
+            findPreference<Preference>("crown_import_package")?.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        startActivity(
+                            Intent(requireActivity(), CrownStoreActivity::class.java)
+                                .putExtra(CrownStoreActivity.EXTRA_OPEN_IMPORT_PACKAGE, true)
+                        )
+                        true
+                    }
+            refreshCrownPreferenceSummary()
 
             findPreference<Preference>("documentation_handbook")!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {

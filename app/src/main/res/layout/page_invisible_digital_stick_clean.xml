@@ -2,12 +2,12 @@
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="280dp"
+    android:layout_width="380dp"
     android:layout_height="match_parent"
-    android:tag="280">
+    android:tag="380">
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_marginEnd="5dp"
         android:paddingTop="3dp"
         android:layout_gravity="center_vertical"
@@ -30,7 +30,7 @@
                     android:text="@string/layout_page_invisible_digital_stick_text_e60ec"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="#FFFFFF"/>
+                    android:textColor="@color/crown_text_primary"/>
             </LinearLayout>
 
             <!-- 🎮 方向键设置 -->
@@ -133,7 +133,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_central_x"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="X"
                     app:max="100"
@@ -142,7 +142,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_central_y"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="Y"
                     app:max="100"
@@ -151,7 +151,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_width"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="@string/apptext_pg_digital_combine_button_ea5a1"
                     app:max="100"
@@ -160,7 +160,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_height"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="@string/apptext_pg_digital_combine_button_4296d"
                     app:max="100"
@@ -169,7 +169,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_radius"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="@string/apptext_pg_analog_stick_b7e19"
                     app:max="100"
@@ -178,7 +178,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_layer"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="@string/apptext_pg_analog_stick_6896d"
                     app:max="140"
@@ -204,7 +204,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_sense"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="@string/apptext_pg_analog_stick_4b26d"
                     app:max="100"
@@ -213,7 +213,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/page_invisible_digital_stick_thick"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
+                    android:layout_height="40dp"
                     android:layout_marginVertical="4dp"
                     app:text="@string/apptext_pg_analog_stick_ae177"
                     app:max="10"

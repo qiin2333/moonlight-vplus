@@ -11,6 +11,7 @@ import android.widget.Toast
 import com.limelight.R
 import com.limelight.Game
 import com.limelight.binding.input.advance_setting.config.PageConfigController
+import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
 
 class PageDeviceController(
@@ -156,16 +157,35 @@ class PageDeviceController(
             Toast.makeText(context, R.string.crown_direct_config_no_other, Toast.LENGTH_SHORT).show()
             return
         }
-        val names = ids.map {
-            database.queryConfigAttribute(it, PageConfigController.COLUMN_STRING_CONFIG_NAME, "") as String
+        val orderedIds = buildList {
+            add(sourceId)
+            addAll(ids.filter { it != sourceId })
+        }
+        val choices = orderedIds.map {
+            val preview = runCatching {
+                CrownProfileShareManager.parsePreview(database.exportConfig(it))
+            }.getOrNull()
+            CrownConfigPickerDialog.ConfigChoice(
+                name = database.queryConfigAttribute(
+                    it,
+                    PageConfigController.COLUMN_STRING_CONFIG_NAME,
+                    ""
+                ) as String,
+                elementCount = database.queryAllElementIds(it).size,
+                preview = preview,
+                configId = it,
+                isCurrent = it == sourceId,
+                isSelectable = it != sourceId
+            )
         }
         val callback = deviceCallBack ?: return
-        game.showCrownConfigPicker(names, onSelected = { index ->
+        game.showCrownConfigPicker(choices, onSelected = { index ->
+            val selectedId = choices.getOrNull(index)?.configId
             if (deviceCallBack === callback && controllerManager.superPagesController?.pageNow === devicePage &&
-                configController.currentConfigId == sourceId && index in ids.indices &&
-                ids[index] in configController.directSwitchTargetIds) {
+                configController.currentConfigId == sourceId && selectedId != null &&
+                selectedId != sourceId && selectedId in configController.directSwitchTargetIds) {
                 val key = TextView(context).apply {
-                    tag = DirectConfigAction.encode(ids[index])
+                    tag = DirectConfigAction.encode(selectedId)
                     text = getKeyNameByValue(tag.toString())
                 }
                 callback.OnKeyClick(key)

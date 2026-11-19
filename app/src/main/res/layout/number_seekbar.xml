@@ -2,12 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false">
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="30dp"
-        android:layout_marginBottom="5dp"
+        android:layout_height="24dp"
         android:gravity="center_vertical">
         <TextView
             android:id="@+id/number_seekbar_title"
@@ -24,30 +25,32 @@
             android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_gravity="center_vertical"
-            android:layout_height="30dp">
+            android:layout_height="24dp">
             <View
                 android:id="@+id/number_seekbar_minus"
                 android:layout_width="40dp"
-                android:layout_height="30dp"
+                android:layout_height="24dp"
                 android:layout_marginEnd="5dp"
                 android:scaleX="0.5"
-                android:scaleY="0.67"
+                android:scaleY="1"
                 android:layout_gravity="center_vertical"
                 android:background="@drawable/minus"/>
             <TextView
                 android:id="@+id/number_seekbar_number"
                 android:layout_width="44dp"
-                android:layout_height="match_parent"
+                android:layout_height="24dp"
                 android:gravity="center"
+                android:background="@drawable/crown_config_input_bg"
                 android:textColor="@color/crown_text_primary"
+                android:textSize="11sp"
                 android:text="100"/>
             <View
                 android:id="@+id/number_seekbar_add"
                 android:layout_width="40dp"
-                android:layout_height="30dp"
+                android:layout_height="24dp"
                 android:layout_marginStart="5dp"
                 android:scaleX="0.5"
-                android:scaleY="0.67"
+                android:scaleY="1"
                 android:layout_gravity="center_vertical"
                 android:background="@drawable/add"/>
         </LinearLayout>
@@ -57,8 +60,12 @@
     <com.limelight.utils.AppSliderView
         android:id="@+id/number_seekbar_seekbar"
         android:focusable="true"
+        android:focusableInTouchMode="true"
         android:layout_width="match_parent"
-        android:layout_height="25dp"
+        android:layout_height="16dp"
+        android:minHeight="16dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:max="500"
         android:progressBackgroundTint="@color/crown_input_border"
         android:progress="100"/>

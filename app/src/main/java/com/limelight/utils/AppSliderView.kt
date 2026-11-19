@@ -26,10 +26,15 @@ class AppSliderView @JvmOverloads constructor(context: Context, attrs: Attribute
 
     override fun onDraw(canvas: Canvas) {
         val trackHeight = (6 * resources.displayMetrics.density + 0.5f).toInt()
-        val top = (height - paddingTop - paddingBottom - trackHeight) / 2
+        val top = paddingTop + (height - paddingTop - paddingBottom - trackHeight) / 2
+        val left = paddingLeft
+        val right = (width - paddingRight).coerceAtLeast(left + 1)
         val opacity = if (isEnabled) 255 else 97
         progressDrawable?.apply {
-            setBounds(0, top, width - paddingLeft - paddingRight, top + trackHeight)
+            // Keep the custom track in the same content bounds that SeekBar uses
+            // for its thumb. Starting at zero made Crown sliders look clipped
+            // and shifted whenever they had horizontal padding.
+            setBounds(left, top, right, top + trackHeight)
             alpha = opacity
         }
         thumb?.alpha = opacity

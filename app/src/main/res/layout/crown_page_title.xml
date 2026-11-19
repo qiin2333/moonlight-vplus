@@ -2,26 +2,43 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_marginBottom="12dp"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingEnd="76dp">
+    android:paddingHorizontal="4dp">
 
     <ImageView
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginEnd="8dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="10dp"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_super_crown" />
 
-    <TextView
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="@string/game_menu_crown_function"
-        android:textColor="@color/crown_text_primary"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/crown_page_title_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/game_menu_crown_function"
+            android:textColor="@color/crown_text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/crown_page_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/crown_text_secondary"
+            android:textSize="11sp"
+            android:visibility="gone" />
+    </LinearLayout>
 </LinearLayout>

@@ -3523,10 +3523,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         activeGameMenu?.releaseControllerAxisSource(sourceId)
     }
 
-    fun showCrownConfigPicker(names: List<String>, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
-        if (isFinishing || isDestroyed || names.isEmpty() || crownConfigPicker != null) return
+    fun showCrownConfigPicker(
+        choices: List<CrownConfigPickerDialog.ConfigChoice>,
+        onSelected: (Int) -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        if (isFinishing || isDestroyed || choices.isEmpty() || crownConfigPicker != null) return
         val picker = CrownConfigPickerDialog(
-            this, names,
+            this, choices,
             readAxes = { event ->
                 (controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = false)
                     ?: emptyList()) to controllerHandler.getMenuRightStickY(event)

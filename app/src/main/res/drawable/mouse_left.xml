@@ -6,6 +6,6 @@
   <path
       android:strokeWidth="1"
       android:pathData="M12.5,0.5L30.5,0.5L30.5,50.5L0.5,50.5L0.5,12.5C0.5,5.87 5.87,0.5 12.5,0.5Z"
-      android:fillColor="#404040"
-      android:strokeColor="#535353"/>
+      android:fillColor="@color/crown_section_background"
+      android:strokeColor="@color/crown_section_border"/>
 </vector>

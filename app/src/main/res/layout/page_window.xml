@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="280dp"
+    android:layout_width="366dp"
     android:layout_height="match_parent"
-    android:tag="280">
+    android:tag="366">
     <FrameLayout
-        android:layout_width="280dp"
+    android:layout_width="366dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:background="@drawable/crown_config_panel_bg"

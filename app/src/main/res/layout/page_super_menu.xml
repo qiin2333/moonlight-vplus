@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="320dp"
+    android:layout_width="380dp"
     android:layout_height="match_parent"
-    android:tag="320">
+    android:tag="380">
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginEnd="5dp"
         android:background="@drawable/crown_config_panel_bg"
-        android:padding="10dp">
+        android:clipToPadding="false"
+        android:fillViewport="false"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
 
         <LinearLayout
             android:id="@+id/page_super_menu_list"
@@ -21,106 +25,318 @@
             <include layout="@layout/crown_page_title" />
 
             <LinearLayout
-                android:id="@+id/page_super_menu_config_page"
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:layout_marginBottom="6dp"
-                android:background="@drawable/crown_config_action_button_bg"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/crown_config_section_bg"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="10dp">
+                android:padding="12dp">
 
-                <TextView
+                <com.limelight.binding.input.advance_setting.CrownThumbnailView
+                    android:id="@+id/page_super_menu_profile_thumbnail"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="12dp"
+                    android:importantForAccessibility="no">
+                </com.limelight.binding.input.advance_setting.CrownThumbnailView>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/layout_page_super_menu_text_899a4"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/crown_menu_current_profile"
+                        android:textColor="@color/crown_text_secondary"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/page_super_menu_profile_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="default"
+                        android:textColor="@color/crown_text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/page_super_menu_profile_summary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/crown_menu_profile_hint"
+                        android:textColor="@color/crown_text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/page_super_menu_change_profile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/crown_config_action_button_bg"
+                    android:gravity="center"
+                    android:minWidth="58dp"
+                    android:paddingHorizontal="10dp"
+                    android:text="@string/crown_menu_change_profile"
                     android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp" />
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="2dp"
+                android:layout_marginBottom="5dp"
+                android:text="@string/crown_menu_quick_controls"
+                android:textColor="?attr/appAccent"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/crown_config_section_bg"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginEnd="10dp"
+                        android:background="@drawable/crown_config_input_bg"
+                        android:padding="7dp"
+                        android:src="@drawable/phc_game_controller"
+                        android:tint="?attr/appAccent" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/crown_menu_touch_input"
+                            android:textColor="@color/crown_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/crown_menu_touch_input_summary"
+                            android:textColor="@color/crown_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
+                        android:id="@+id/page_super_menu_touch_input_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/ui_shell_outline" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginEnd="10dp"
+                        android:background="@drawable/crown_config_input_bg"
+                        android:padding="7dp"
+                        android:src="@drawable/phc_audio"
+                        android:tint="@color/crown_text_secondary" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/crown_menu_vibration"
+                            android:textColor="@color/crown_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/crown_menu_vibration_summary"
+                            android:textColor="@color/crown_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <com.limelight.utils.AppSwitchView
+                        style="@style/AppSwitchWidget"
+                        android:id="@+id/page_super_menu_vibration_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="2dp"
+                android:layout_marginBottom="5dp"
+                android:text="@string/crown_menu_current_plan"
+                android:textColor="?attr/appAccent"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/page_super_menu_config_page"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/crown_config_action_button_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="12dp">
 
                 <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_arrow_right" />
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/crown_config_input_bg"
+                    android:padding="6dp"
+                    android:src="@drawable/phc_settings"
+                    android:tint="@color/crown_text_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/layout_page_super_menu_text_899a4"
+                        android:textColor="@color/crown_text_primary"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/crown_menu_settings_summary"
+                        android:textColor="@color/crown_text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:tint="@color/crown_text_secondary" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/page_super_menu_edit_mode"
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:layout_marginBottom="6dp"
-                android:background="@drawable/crown_config_action_button_bg"
-                android:gravity="center_vertical"
+                android:layout_height="50dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/crown_primary_button_bg"
+                android:gravity="center"
                 android:orientation="horizontal"
-                android:paddingHorizontal="10dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/layout_item_page_super_menu_text_ce0e8"
-                    android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp" />
+                android:paddingHorizontal="14dp">
 
                 <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_arrow_right" />
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="8dp"
+                    android:src="@drawable/phc_action_edit"
+                    android:tint="@color/crown_on_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/crown_menu_edit_layout"
+                    android:textColor="@color/crown_on_accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/page_super_menu_toggle_normal_mode"
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
+                android:layout_height="48dp"
                 android:layout_marginBottom="6dp"
                 android:background="@drawable/crown_config_action_button_bg"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="10dp">
+                android:paddingHorizontal="12dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/phc_action_exit"
+                    android:tint="@color/crown_text_secondary" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/crown_switch_to_normal"
-                    android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp" />
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_arrow_right" />
+                    android:text="@string/crown_menu_exit_crown"
+                    android:textColor="@color/crown_text_secondary"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/page_super_menu_disconnect"
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
+                android:layout_height="48dp"
                 android:background="@drawable/crown_config_action_button_bg"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="10dp">
+                android:paddingHorizontal="12dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_disconnect_cute"
+                    android:tint="@color/app_action_sheet_danger" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
                     android:text="@string/layout_page_super_menu_text_e2f14"
-                    android:textColor="@color/crown_text_primary"
-                    android:textSize="13sp" />
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_arrow_right" />
+                    android:textColor="@color/app_action_sheet_danger"
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

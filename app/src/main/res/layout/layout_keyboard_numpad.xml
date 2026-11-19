@@ -47,7 +47,7 @@
         android:layout_weight="1">
 
         <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_weight="1" android:tag="k143" android:text="Num" android:textSize="12sp"/>
+            <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_weight="1" android:tag="k143" android:text="Num" android:textSize="11sp"/>
             <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_weight="1" android:tag="k157" android:text="+"/>
         </LinearLayout>
 
@@ -56,7 +56,7 @@
             <TextView style="@style/KeyboardKeyRefined.Normal" android:tag="k158" android:text="."/>
         </LinearLayout>
 
-        <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k66" android:text="Enter" android:textSize="13sp"/>
+        <TextView style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:tag="k66" android:text="Enter" android:textSize="11sp"/>
 
     </LinearLayout>
 

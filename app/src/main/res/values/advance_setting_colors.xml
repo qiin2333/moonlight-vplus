@@ -96,16 +96,18 @@
     <color name="about_dialog_link_surface">#FFFFF5F8</color>
     <color name="about_dialog_links_bar_surface">#FFFFF9FC</color>
 
-    <!-- Crown side panel -->
-    <color name="crown_panel_background">#F21B1B22</color>
-    <color name="crown_panel_border">#3DFFFFFF</color>
-    <color name="crown_section_background">#CC252833</color>
-    <color name="crown_section_border">#1FFFFFFF</color>
-    <color name="crown_input_background">#E62F3340</color>
-    <color name="crown_input_border">#2EFFFFFF</color>
-    <color name="crown_text_primary">#F7F3F7</color>
-    <color name="crown_text_secondary">#C9D0D8</color>
-    <color name="crown_button_focused">#22FFFFFF</color>
+    <!-- Crown side panel: aliases into the shared shell roles. -->
+    <color name="crown_panel_background">@color/ui_shell_surface_elevated</color>
+    <color name="crown_panel_border">@color/ui_shell_outline_strong</color>
+    <color name="crown_section_background">@color/crown_surface_raised</color>
+    <color name="crown_section_border">@color/ui_shell_outline</color>
+    <color name="crown_input_background">@color/ui_shell_surface</color>
+    <color name="crown_input_border">@color/ui_shell_outline</color>
+    <color name="crown_text_primary">@color/ui_shell_text_primary</color>
+    <color name="crown_text_secondary">@color/ui_shell_text_secondary</color>
+    <color name="crown_button_focused">@color/ui_shell_accent_focus</color>
+    <color name="crown_on_accent">#FF1F2026</color>
+    <color name="crown_surface_raised">#FFFFFFFF</color>
 
     <!-- EasyTier 控制面板：跟随系统深浅色（暗色值与 crown 系一致） -->
     <color name="easytier_panel_background">@color/ui_shell_surface_elevated</color>

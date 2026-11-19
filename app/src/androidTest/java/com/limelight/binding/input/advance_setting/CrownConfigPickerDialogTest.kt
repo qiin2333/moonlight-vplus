@@ -32,7 +32,16 @@ class CrownConfigPickerDialogTest {
 
     private fun show() {
         activityRule.scenario.onActivity { activity ->
-            dialog = CrownConfigPickerDialog(activity, (0..39).map { "Config $it" },
+            dialog = CrownConfigPickerDialog(activity, (0..39).map {
+                CrownConfigPickerDialog.ConfigChoice(
+                    name = "Config $it",
+                    elementCount = it,
+                    preview = null,
+                    configId = it.toLong(),
+                    isCurrent = false,
+                    isSelectable = true
+                )
+            },
                 readAxes = { emptyList<Pair<Float, Float>>() to 0f },
                 onSelected = selections::add)
             dialog.show()

@@ -2,21 +2,27 @@
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="320dp"
+    android:layout_width="380dp"
     android:layout_height="match_parent"
-    android:tag="320">
+    android:tag="380">
 
-    <ScrollView
-        android:id="@+id/crown_config_scroll"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginEnd="5dp"
-        android:background="@drawable/crown_config_panel_bg"
-        android:clipToPadding="false"
-        android:fillViewport="false"
-        android:paddingHorizontal="10dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp">
+        android:orientation="vertical">
+
+        <ScrollView
+            android:id="@+id/crown_config_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/crown_config_panel_bg"
+            android:clipToPadding="true"
+            android:fillViewport="false"
+            android:paddingHorizontal="10dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -25,52 +31,168 @@
 
             <include layout="@layout/crown_page_title" />
 
-            <TextView
+            <LinearLayout
+                android:id="@+id/crown_config_segments"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="@string/page_config_section_profile"
-                android:textColor="?attr/appAccent"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:layout_height="36dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/crown_config_section_bg"
+                android:orientation="horizontal"
+                android:padding="3dp">
+
+                <TextView
+                    android:id="@+id/crown_config_segment_layout"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/crown_segment_unselected_bg"
+                    android:gravity="center"
+                    android:text="@string/crown_config_segment_layout"
+                    android:textColor="@color/crown_text_secondary"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/crown_config_segment_touch"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/crown_segment_unselected_bg"
+                    android:gravity="center"
+                    android:text="@string/crown_config_segment_touch"
+                    android:textColor="@color/crown_text_secondary"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/crown_config_segment_feedback"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/crown_segment_unselected_bg"
+                    android:gravity="center"
+                    android:text="@string/crown_config_segment_feedback"
+                    android:textColor="@color/crown_text_secondary"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/crown_config_layout_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
-                android:background="@drawable/crown_config_section_bg"
-                android:orientation="vertical"
-                android:padding="8dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="5dp"
-                    android:text="@string/layout_page_config_text_9eba2"
-                    android:textColor="@color/crown_text_secondary"
-                    android:textSize="12sp" />
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/page_config_section_profile"
+                    android:textColor="?attr/appAccent"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.13" />
 
-                <Spinner
-                    android:id="@+id/config_select_spinner"
+                <LinearLayout
+                    android:id="@+id/crown_config_profile_section"
                     android:layout_width="match_parent"
-                    android:layout_height="34dp"
-                    android:background="@drawable/crown_config_input_bg"
-                    android:max="10"
-                    android:min="1"
-                    app:progress="10" />
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/crown_config_section_bg"
+                    android:orientation="vertical"
+                    android:padding="8dp">
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="5dp"
+                        android:text="@string/layout_page_config_text_9eba2"
+                        android:textColor="@color/crown_text_secondary"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/page_config_profile_hint"
+                        android:textColor="@color/crown_text_secondary"
+                        android:textSize="10sp" />
+
+                    <LinearLayout
+                        android:id="@+id/config_profile_picker"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/crown_config_input_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp">
+
+                        <com.limelight.binding.input.advance_setting.CrownThumbnailView
+                            android:id="@+id/config_selected_profile_thumbnail"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:layout_marginEnd="10dp"
+                            android:importantForAccessibility="no">
+                        </com.limelight.binding.input.advance_setting.CrownThumbnailView>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/config_selected_profile_name"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text="default"
+                                android:textColor="@color/crown_text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/config_selected_profile_summary"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="@color/crown_text_secondary"
+                                android:textSize="10sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="›"
+                            android:textColor="@color/crown_text_secondary"
+                            android:textSize="26sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
             </LinearLayout>
 
             <TextView
+                android:id="@+id/crown_config_touch_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_touch"
                 android:textColor="?attr/appAccent"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12" />
 
             <LinearLayout
+                android:id="@+id/crown_config_touch_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
@@ -81,7 +203,7 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -103,7 +225,7 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -126,7 +248,7 @@
                 <LinearLayout
                     android:id="@+id/enhanced_touch_layout"
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -158,7 +280,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/mouse_sense_number_seekbar"
                     android:layout_width="match_parent"
-                    android:layout_height="62dp"
+                    android:layout_height="40dp"
                     android:layout_marginTop="4dp"
                     app:max="1000"
                     app:min="1"
@@ -177,7 +299,7 @@
                 <com.limelight.binding.input.advance_setting.superpage.NumberSeekbar
                     android:id="@+id/mouse_wheel_speed_number_seekbar"
                     android:layout_width="match_parent"
-                    android:layout_height="62dp"
+                    android:layout_height="40dp"
                     android:layout_marginTop="4dp"
                     app:max="100"
                     app:min="1"
@@ -186,15 +308,19 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/crown_config_feedback_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="@string/page_config_section_feedback"
                 android:textColor="?attr/appAccent"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12" />
 
             <LinearLayout
+                android:id="@+id/crown_config_feedback_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
@@ -205,7 +331,7 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -227,7 +353,7 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -248,65 +374,71 @@
                 </LinearLayout>
             </LinearLayout>
 
-        </LinearLayout>
-    </ScrollView>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="14dp"
+                android:importantForAccessibility="no" />
 
-    <LinearLayout
-        android:id="@+id/crown_config_action_bar"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:layout_gravity="top|end"
-        android:layout_marginEnd="15dp"
-        android:layout_marginTop="10dp"
-        android:gravity="end"
-        android:orientation="horizontal">
+        </LinearLayout>
+        </ScrollView>
+
+        <LinearLayout
+            android:id="@+id/crown_config_action_bar"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:background="@color/crown_panel_background"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="8dp">
 
         <ImageButton
             android:id="@+id/add_config_button"
-            android:layout_width="32dp"
+            android:layout_width="48dp"
             android:layout_height="match_parent"
             android:layout_marginEnd="4dp"
             android:background="@drawable/crown_action_icon_button_bg"
             android:contentDescription="@string/layout_page_config_text_66ab5"
-            android:padding="8dp"
+            android:padding="12dp"
             android:scaleType="centerInside"
             android:src="@drawable/phc_action_plus"
             android:tint="@color/crown_text_primary" />
 
         <ImageButton
             android:id="@+id/rename_config_button"
-            android:layout_width="32dp"
+            android:layout_width="48dp"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="2dp"
             android:background="@drawable/crown_action_icon_button_bg"
             android:contentDescription="@string/layout_config_item_text_c8ce4"
-            android:padding="8dp"
+            android:padding="12dp"
             android:scaleType="centerInside"
             android:src="@drawable/phc_action_edit"
             android:tint="@color/crown_text_primary" />
 
         <ImageButton
             android:id="@+id/delete_config_button"
-            android:layout_width="32dp"
+            android:layout_width="48dp"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="2dp"
             android:background="@drawable/crown_action_icon_button_bg"
             android:contentDescription="@string/layout_config_item_text_2f4aa"
-            android:padding="8dp"
+            android:padding="12dp"
             android:scaleType="centerInside"
             android:src="@drawable/phc_action_trash"
             android:tint="@color/crown_text_primary" />
 
         <ImageButton
             android:id="@+id/exit_crown_config_button"
-            android:layout_width="32dp"
+            android:layout_width="48dp"
             android:layout_height="match_parent"
             android:layout_marginStart="4dp"
             android:background="@drawable/crown_action_icon_button_bg"
             android:contentDescription="@string/layout_page_config_text_df603"
-            android:padding="8dp"
+            android:padding="12dp"
             android:scaleType="centerInside"
             android:src="@drawable/phc_action_check"
             android:tint="@color/crown_text_primary" />
+        </LinearLayout>
     </LinearLayout>
 </com.limelight.binding.input.advance_setting.superpage.SuperPageLayout>
