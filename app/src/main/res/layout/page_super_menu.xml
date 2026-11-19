@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="380dp"
     android:layout_height="match_parent"
     android:tag="380">
@@ -124,7 +125,7 @@
                         android:background="@drawable/crown_config_input_bg"
                         android:padding="7dp"
                         android:src="@drawable/phc_game_controller"
-                        android:tint="?attr/appAccent" />
+                        app:tint="?attr/appAccent" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -173,7 +174,7 @@
                         android:background="@drawable/crown_config_input_bg"
                         android:padding="7dp"
                         android:src="@drawable/phc_audio"
-                        android:tint="@color/crown_text_secondary" />
+                        app:tint="@color/crown_text_secondary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -232,7 +233,7 @@
                     android:background="@drawable/crown_config_input_bg"
                     android:padding="6dp"
                     android:src="@drawable/phc_settings"
-                    android:tint="@color/crown_text_primary" />
+                    app:tint="@color/crown_text_primary" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -259,7 +260,7 @@
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:src="@drawable/ic_arrow_right"
-                    android:tint="@color/crown_text_secondary" />
+                    app:tint="@color/crown_text_secondary" />
             </LinearLayout>
 
             <LinearLayout
@@ -277,7 +278,7 @@
                     android:layout_height="20dp"
                     android:layout_marginEnd="8dp"
                     android:src="@drawable/phc_action_edit"
-                    android:tint="@color/crown_on_accent" />
+                    app:tint="@color/crown_on_accent" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -303,7 +304,7 @@
                     android:layout_height="20dp"
                     android:layout_marginEnd="10dp"
                     android:src="@drawable/phc_action_exit"
-                    android:tint="@color/crown_text_secondary" />
+                    app:tint="@color/crown_text_secondary" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -328,7 +329,7 @@
                     android:layout_height="20dp"
                     android:layout_marginEnd="10dp"
                     android:src="@drawable/ic_disconnect_cute"
-                    android:tint="@color/app_action_sheet_danger" />
+                    app:tint="@color/app_action_sheet_danger" />
 
                 <TextView
                     android:layout_width="0dp"
