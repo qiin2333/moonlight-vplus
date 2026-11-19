@@ -917,7 +917,6 @@
     <string name="title_crown_edit_current">Edit current layout</string>
     <string name="summary_crown_edit_current">Open My Crowns to manage the active layout.</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d controls · ready for the current stream</string>
-    <string name="title_crown_current_profile">Current Crown</string>
     <string name="summary_crown_current_profile">The profile used when Crown input is enabled.</string>
     <string name="summary_crown_current_profile_empty">No Crown profile selected yet.</string>
     <string name="summary_crown_store_view">Browse layouts, previews, and community profiles.</string>
@@ -1809,9 +1808,6 @@ Tap again to replace it.</string>
     <string name="page_config_section_touch">Touch</string>
     <string name="page_config_section_feedback">Vibration feedback</string>
     <string name="page_config_profile_hint">Choose a profile for this stream</string>
-    <string name="page_config_touch_hint">Pointer, touchpad, and gesture input</string>
-    <string name="page_config_feedback_hint">Keep device and virtual button feedback together</string>
-    <string name="page_config_restore_default">Restore defaults</string>
     <string name="crown_profile_name_title">Profile Name</string>
     <string name="crown_profile_name_error">Profile name must be 1-10 characters</string>
     <string name="layout_page_config_text_9eba2">Current Profile</string>
@@ -1868,17 +1864,11 @@ Tap again to replace it.</string>
     <string name="crown_edit_section_buttons">Buttons and pads</string>
     <string name="crown_edit_section_sticks">Sticks and helpers</string>
     <string name="crown_edit_section_containers">Groups and wheels</string>
-    <string name="crown_edit_add_hint">Choose a control to place on the canvas</string>
-    <string name="crown_edit_add_control">Add control</string>
     <string name="crown_edit_done">Done</string>
     <string name="crown_edit_drag_summary">Drag controls directly on the stream canvas</string>
     <string name="crown_edit_snap_summary">Align controls to nearby edges and centers</string>
     <string name="crown_edit_canvas_hint">Tip: select a control on the canvas to open its inspector.</string>
     <string name="crown_edit_toolbar_hint">Drag to move · pinch to resize · snapping follows the grid</string>
-    <string name="crown_edit_toolbar_snap">Alignment snapping</string>
-    <string name="crown_edit_toolbar_grid">Show grid</string>
-    <string name="crown_edit_toolbar_undo">Undo</string>
-    <string name="crown_edit_toolbar_undo_unavailable">Undo is not available yet</string>
     <string name="layout_page_group_button_text_6db87">Type: Group Button</string>
     <string name="layout_page_group_button_text_b19b4">Hide Button (for wheel use)</string>
     <string name="layout_page_group_button_text_f57fc">Hold to move button</string>

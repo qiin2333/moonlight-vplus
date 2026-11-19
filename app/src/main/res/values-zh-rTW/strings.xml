@@ -667,7 +667,6 @@
     <string name="title_crown_edit_current">編輯目前版面</string>
     <string name="summary_crown_edit_current">開啟「我的 Crown」管理目前版面。</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d 個控制項 · 已符合目前串流</string>
-    <string name="title_crown_current_profile">目前 Crown</string>
     <string name="summary_crown_current_profile">啟用 Crown 輸入時使用的設定檔。</string>
     <string name="summary_crown_current_profile_empty">尚未選擇 Crown 設定檔。</string>
     <string name="summary_crown_store_view">瀏覽版面預覽和社群分享的設定檔。</string>
