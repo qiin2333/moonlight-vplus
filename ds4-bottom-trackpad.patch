@@ -53,10 +53,10 @@ index e1b9e0d7..a073acd1 100644
  
 diff --git a/app/src/main/java/com/limelight/SecondScreenTrackpad.kt b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
 new file mode 100644
-index 00000000..f36939c3
+index 00000000..9ee2cff2
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/SecondScreenTrackpad.kt
-@@ -0,0 +1,1570 @@
+@@ -0,0 +1,1619 @@
 +@file:Suppress("DEPRECATION")
 +package com.limelight
 +
@@ -75,7 +75,7 @@ index 00000000..f36939c3
 +//
 +// Hub wheel: MENU, KEYS, ESC, COLOR, OPTIONS. Press the hub and slide onto an item, or tap the hub
 +// and then tap an item. OPTIONS opens a second wheel: pixel shift on/off, mouse speed down/up,
-+// gyro calibrate/reset, reload style, back.
++// gyro calibrate/test/reset (see GyroCalibration), reload style, back.
 +//
 +// Keyboard page (TYPE): [ KEYBOARD | DONE ], a mouse trackpad (one finger moves, two fingers
 +// scroll), [ MIDDLE | LEFT | RIGHT ] with MIDDLE on the left for the left thumb, then Android's
@@ -255,6 +255,7 @@ index 00000000..f36939c3
 +
 +        val pixelShiftDefault = bool(p, "pixel_shift_default", true)
 +        val mouseSpeedDefault = num(p, "mouse_speed_default", 1f)
++        val gyroCalibrationMs = (num(p, "gyro_calibration_seconds", 5f) * 1000).toLong().coerceIn(1_000L, 30_000L)
 +
 +        companion object {
 +            private fun raw(p: Properties, key: String): String? =
@@ -333,16 +334,23 @@ index 00000000..f36939c3
 +    }
 +
 +    private fun loadGyroCalibration() {
-+        GyroCalibration.setBias(prefs.getFloat(PREF_GYRO_X, 0f), prefs.getFloat(PREF_GYRO_Y, 0f), prefs.getFloat(PREF_GYRO_Z, 0f))
++        if (prefs.getBoolean(PREF_GYRO_SET, false)) {
++            GyroCalibration.setCalibration(prefs.getFloat(PREF_GYRO_X, 0f), prefs.getFloat(PREF_GYRO_Y, 0f), prefs.getFloat(PREF_GYRO_Z, 0f))
++        } else {
++            GyroCalibration.clear()
++        }
 +    }
 +
 +    private fun saveGyroCalibration() {
 +        prefs.edit()
++            .putBoolean(PREF_GYRO_SET, GyroCalibration.hasCalibration)
 +            .putFloat(PREF_GYRO_X, GyroCalibration.biasX)
 +            .putFloat(PREF_GYRO_Y, GyroCalibration.biasY)
 +            .putFloat(PREF_GYRO_Z, GyroCalibration.biasZ)
 +            .apply()
 +    }
++
++    private fun dps(v: Float) = String.format(Locale.US, "%.3f°/s", v)
 +
 +    private fun speedLabel() =
 +        String.format(Locale.US, "%.2f", mouseSpeed).trimEnd('0').trimEnd('.') + "x"
@@ -538,6 +546,7 @@ index 00000000..f36939c3
 +            WheelItem({ "MOUSE −\n" + speedLabel() }, keepOpen = true) { stepMouseSpeed(false) },
 +            WheelItem({ "MOUSE +\n" + speedLabel() }, keepOpen = true) { stepMouseSpeed(true) },
 +            WheelItem({ "GYRO\nCALIBRATE" }) { calibrateGyro() },
++            WheelItem({ "GYRO\nTEST" }) { testGyro() },
 +            WheelItem({ "GYRO\nRESET" }) { resetGyro() },
 +            WheelItem({ "RELOAD\nSTYLE" }) { reloadStyle() },
 +        )
@@ -621,18 +630,55 @@ index 00000000..f36939c3
 +            startPixelShift()
 +        }
 +
++        private fun gyroRunning(): Boolean {
++            if (GyroCalibration.isLive(SystemClock.uptimeMillis())) return true
++            banner.show("Gyro isn't sending. Turn gyro on in V+ while streaming.", 4_000L)
++            return false
++        }
++
++        private fun sensorName() = if (GyroCalibration.usingRawSensor) "raw sensor" else "standard sensor"
++
++        /** Average the raw gyro while still, store it as the zero point, then measure the result. */
 +        private fun calibrateGyro() {
-+            banner.show("Hold the Thor still on a table…", CALIBRATION_MS + 500)
-+            GyroCalibration.start(CALIBRATION_MS, mainHandler) { result ->
-+                if (result.ok) saveGyroCalibration()
-+                banner.show(result.message, 3_500L)
++            if (!gyroRunning()) return
++            val ms = style.gyroCalibrationMs
++            banner.show("Calibrating: leave the Thor flat and still (${ms / 1000} s)…", ms + 1_000L)
++            GyroCalibration.calibrate(ms, mainHandler) { ok, raw ->
++                if (!ok) {
++                    banner.show(
++                        if (raw.samples < GyroCalibration.MIN_SAMPLES) "No gyro data. Turn gyro on in V+ and retry."
++                        else "It moved (noise ${dps(raw.maxSdDps)}). Set it flat and retry.",
++                        4_500L
++                    )
++                    return@calibrate
++                }
++                saveGyroCalibration()
++                LimeLog.info("Gyro calibrated (${sensorName()}): offset ${raw.meanDps.joinToString()} deg/s, " +
++                    "noise ${raw.maxSdDps} deg/s, ${raw.samples} samples")
++                // Check it applies: measure what V+ now sends while still
++                banner.show("Offset ${dps(raw.maxMeanDps)} found. Checking…", 3_000L)
++                GyroCalibration.test(VERIFY_MS, mainHandler) { out ->
++                    banner.show("Calibrated (${sensorName()}): drift ${dps(raw.maxMeanDps)} → ${dps(out.maxMeanDps)}", 6_000L)
++                    LimeLog.info("Gyro after calibration: ${out.meanDps.joinToString()} deg/s")
++                }
++            }
++        }
++
++        /** Measures the gyro output V+ is sending right now, with the Thor still. */
++        private fun testGyro() {
++            if (!gyroRunning()) return
++            banner.show("Testing: leave the Thor flat and still…", TEST_MS + 1_000L)
++            GyroCalibration.test(TEST_MS, mainHandler) { out ->
++                val source = if (GyroCalibration.hasCalibration) "your calibration" else "Android's estimate"
++                banner.show("Drift at rest ${dps(out.maxMeanDps)} (${source}, ${sensorName()})", 6_000L)
++                LimeLog.info("Gyro test: ${out.meanDps.joinToString()} deg/s, noise ${out.maxSdDps}")
 +            }
 +        }
 +
 +        private fun resetGyro() {
-+            GyroCalibration.reset()
++            GyroCalibration.clear()
 +            saveGyroCalibration()
-+            banner.show("Gyro offset cleared", 2_500L)
++            banner.show("Gyro calibration cleared (using Android's estimate)", 3_000L)
 +        }
 +
 +        private fun reloadStyle() {
@@ -1605,16 +1651,19 @@ index 00000000..f36939c3
 +        const val PREF_THEME = "accent_theme"
 +        const val PREF_PIXEL_SHIFT = "pixel_shift"
 +        const val PREF_MOUSE_SPEED = "mouse_speed"
-+        const val PREF_GYRO_X = "gyro_bias_x"
-+        const val PREF_GYRO_Y = "gyro_bias_y"
-+        const val PREF_GYRO_Z = "gyro_bias_z"
++        // Raw-sensor calibration in rad/s (v7's deg/s keys are ignored)
++        const val PREF_GYRO_SET = "gyro_raw_cal_set"
++        const val PREF_GYRO_X = "gyro_raw_cal_x"
++        const val PREF_GYRO_Y = "gyro_raw_cal_y"
++        const val PREF_GYRO_Z = "gyro_raw_cal_z"
 +
 +        const val BACK_GUARD_MS = 800L
 +        const val EXCLUSION_LIMIT_DP = 200f // Android's per-edge limit outside sticky immersive
 +        const val WHEEL_GAP_DEG = 5f
 +        const val WHEEL_TAP_MS = 250L
 +        const val FADE_MS = 400L
-+        const val CALIBRATION_MS = 2_000L
++        const val VERIFY_MS = 2_000L
++        const val TEST_MS = 3_000L
 +
 +        // Mouse
 +        const val MOUSE_GAIN = 1.6f // PC pixels per dp of finger travel at speed 1x, before acceleration
@@ -1627,8 +1676,66 @@ index 00000000..f36939c3
 +        val SHIFT_PATTERN = listOf(0f to 0f, 1f to .33f, -.33f to 1f, -1f to -.33f, .33f to -1f, .67f to .67f, -.67f to -.67f)
 +    }
 +}
+diff --git a/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt b/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
+index db160ddd..8c74937c 100644
+--- a/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
++++ b/app/src/main/java/com/limelight/binding/input/ControllerGyroManager.kt
+@@ -3,6 +3,7 @@ package com.limelight.binding.input
+ import android.hardware.Sensor
+ import android.hardware.SensorEvent
+ import android.hardware.SensorEventListener
++import android.os.SystemClock
+ import android.os.Looper
+ import android.view.KeyEvent
+ import android.view.Surface
+@@ -656,7 +657,9 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
+                 handler.defaultContext.sensorManager = handler.deviceSensorManager
+             }
+             val sensorManager = handler.defaultContext.sensorManager!!
+-            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
++            // Prefer the raw (uncalibrated) gyroscope; values[0..2] carry the rate either way.
++            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
++                ?: sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+             if (gyroSensor == null) {
+                 LimeLog.warning("No gyroscope sensor available on this device")
+                 return DeviceGyroRegistrationResult.UNAVAILABLE
+@@ -814,6 +817,8 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
+     fun createSensorListener(controllerNumber: Short, motionType: Byte, needsDeviceOrientationCorrection: Boolean,
+                              sourceActive: (SensorEventListener) -> Boolean): SensorEventListener {
+         return object : SensorEventListener {
++            private val calibrated = FloatArray(3)
++
+             override fun onSensorChanged(sensorEvent: SensorEvent) {
+                 if (handler.stopped) return
+ 
+@@ -844,9 +849,22 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
+                     }
+                 }
+ 
+-                val vx = sensorEvent.values[x] * xFactor
+-                val vy = sensorEvent.values[y] * yFactor
+-                val vz = sensorEvent.values[z] * zFactor
++                var vx = sensorEvent.values[x] * xFactor
++                var vy = sensorEvent.values[y] * yFactor
++                var vz = sensorEvent.values[z] * zFactor
++                // The handheld's own gyroscope: apply the zero-rate calibration here, before any
++                // use of the sample. From the uncalibrated sensor, values[3..5] are Android's own
++                // bias estimate, used only when no calibration is stored (see GyroCalibration).
++                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && needsDeviceOrientationCorrection) {
++                    val raw = sensorEvent.sensor.type == Sensor.TYPE_GYROSCOPE_UNCALIBRATED && sensorEvent.values.size >= 6
++                    val ax = if (raw) sensorEvent.values[3 + x] * xFactor else 0f
++                    val ay = if (raw) sensorEvent.values[3 + y] * yFactor else 0f
++                    val az = if (raw) sensorEvent.values[3 + z] * zFactor else 0f
++                    GyroCalibration.apply(vx, vy, vz, ax, ay, az, raw, SystemClock.uptimeMillis(), calibrated)
++                    vx = calibrated[0]
++                    vy = calibrated[1]
++                    vz = calibrated[2]
++                }
+                 // Conversion/display lookup stays outside the commit lock. A queued or
+                 // already-running callback must still own its listener when it takes effect.
+                 handler.withControllerInputLock {
 diff --git a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
-index 39ed1c38..691dd347 100644
+index 39ed1c38..f4839664 100644
 --- a/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
 +++ b/app/src/main/java/com/limelight/binding/input/ControllerHandler.kt
 @@ -421,6 +421,7 @@ class ControllerHandler(
@@ -1666,55 +1773,29 @@ index 39ed1c38..691dd347 100644
          }
  
          if (originalContext.mouseEmulationActive) {
-diff --git a/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt b/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt
-index 042964a7..a3bcc327 100644
---- a/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt
-+++ b/app/src/main/java/com/limelight/binding/input/ControllerMotionSender.kt
-@@ -12,11 +12,21 @@ internal class ControllerMotionSender(
-     // Platform source arbitration only. Failed frame submissions must not claim another source.
-     private var frameGyroSlots = 0
+@@ -4170,7 +4184,15 @@ class ControllerHandler(
+         backgroundThreadHandler.removeCallbacks(target.enableSensorRunnable)
  
-+    // Gyro zero-offset correction for controller 0 (bottom-screen OPTIONS > GYRO CALIBRATE)
-+    private val corrected = FloatArray(3)
-+
-     @Synchronized
-     fun submit(controller: Short, type: Byte, x: Float, y: Float, z: Float) {
-         val stop = type == MoonBridge.LI_MOTION_TYPE_GYRO && x == 0f && y == 0f && z == 0f
-         if (!closed && controller in 0..15 && canForward(controller, type, stop)) {
--            if (connection.sendControllerMotionEvent(controller.toByte(), type, x, y, z) == 0 &&
-+            var sx = x
-+            var sy = y
-+            var sz = z
-+            if (type == MoonBridge.LI_MOTION_TYPE_GYRO && controller.toInt() == 0 && !stop) {
-+                GyroCalibration.correct(x, y, z, corrected)
-+                sx = corrected[0]; sy = corrected[1]; sz = corrected[2]
-+            }
-+            if (connection.sendControllerMotionEvent(controller.toByte(), type, sx, sy, sz) == 0 &&
-                 type == MoonBridge.LI_MOTION_TYPE_GYRO) {
-                 frameGyroSlots = frameGyroSlots and (1 shl controller.toInt()).inv()
-             }
-@@ -28,7 +38,14 @@ internal class ControllerMotionSender(
-         if (closed || controller !in 0..15) return
-         if (canForward(controller, MoonBridge.LI_MOTION_TYPE_GYRO, gx == 0f && gy == 0f && gz == 0f) &&
-             canForward(controller, MoonBridge.LI_MOTION_TYPE_ACCEL, false)) {
--            if (connection.sendControllerMotionFrame(controller.toByte(), gx, gy, gz, ax, ay, az) == 0) {
-+            var cx = gx
-+            var cy = gy
-+            var cz = gz
-+            if (controller.toInt() == 0 && !(gx == 0f && gy == 0f && gz == 0f)) {
-+                GyroCalibration.correct(gx, gy, gz, corrected)
-+                cx = corrected[0]; cy = corrected[1]; cz = corrected[2]
-+            }
-+            if (connection.sendControllerMotionFrame(controller.toByte(), cx, cy, cz, ax, ay, az) == 0) {
-                 frameGyroSlots = frameGyroSlots or (1 shl controller.toInt())
-             } else if (gx == 0f && gy == 0f && gz == 0f) {
-                 pauseGyro(controller, onlyFromFrame = true)
+         val sm = target.sensorManager ?: return
+-        val sensor = sm.getDefaultSensor(sensorType) ?: return
++        // For the handheld's own gyroscope, prefer the uncalibrated sensor: it reports the
++        // raw rate in values[0..2] without Android's stepwise bias corrections. Falls back
++        // to the calibrated sensor when the device has no uncalibrated one.
++        val rawGyro = if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO && sm === deviceSensorManager) {
++            sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
++        } else {
++            null
++        }
++        val sensor = rawGyro ?: sm.getDefaultSensor(sensorType) ?: return
+         val listener = gyroManager.createSensorListener(
+             controllerNumber, motionType, sm === deviceSensorManager,
+             { current -> isContextUsable(target) &&
 diff --git a/app/src/main/java/com/limelight/binding/input/GyroCalibration.kt b/app/src/main/java/com/limelight/binding/input/GyroCalibration.kt
 new file mode 100644
-index 00000000..1b6f0123
+index 00000000..93d09879
 --- /dev/null
 +++ b/app/src/main/java/com/limelight/binding/input/GyroCalibration.kt
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,153 @@
 +package com.limelight.binding.input
 +
 +import android.os.Handler
@@ -1723,17 +1804,25 @@ index 00000000..1b6f0123
 +import kotlin.math.sqrt
 +
 +/**
-+ * Gyro zero-offset calibration for controller 0, the handheld's built-in controller.
++ * Zero-rate (bias) calibration for the handheld's own gyroscope, in the style of Steam's
++ * "Calibrate" and GamepadMotionHelpers' continuous calibration (Copyright (c) 2020-2023 Julian
++ * "Jibb" Smart, MIT): while the device is held still, average every raw gyro sample; that average
++ * is the zero point and is subtracted from every later sample.
 + *
-+ * Every gyro sample V+ sends to the PC passes through ControllerMotionSender, which calls
-+ * [correct]. While a calibration runs, those samples are also collected; when it ends, their
-+ * average (with the device held still) becomes the offset subtracted from every later sample.
-+ * Units are Moonlight's, degrees per second.
++ * Where it applies: ControllerGyroManager's device-sensor listener calls [apply] on every sample
++ * of the Thor's gyroscope, before V+ uses it for anything (DS4 motion to the PC, gyro-to-mouse,
++ * gyro-to-stick). The sensor is Android's *uncalibrated* gyroscope, so Android's own moving bias
++ * estimate (which can shift while you play and show up as drift) is not applied on top:
++ *  - with a stored calibration: output = raw - calibration (fixed, never changes on its own)
++ *  - without one: output = raw - Android's estimate (same as stock V+)
++ * If the device has no uncalibrated gyroscope, the calibration is applied to the normal one.
 + *
-+ * Started from the bottom-screen OPTIONS wheel (GYRO CALIBRATE / GYRO RESET), which also stores
-+ * the offset so it survives restarts.
++ * Units: rad/s in the device frame used by the listener. Results are reported in deg/s.
++ * Started from the bottom-screen OPTIONS wheel (GYRO CALIBRATE / GYRO TEST / GYRO RESET).
 + */
 +object GyroCalibration {
++    @Volatile var hasCalibration = false
++        private set
 +    @Volatile var biasX = 0f
 +        private set
 +    @Volatile var biasY = 0f
@@ -1741,86 +1830,122 @@ index 00000000..1b6f0123
 +    @Volatile var biasZ = 0f
 +        private set
 +
-+    /** Result of a calibration run. */
-+    class Result(val ok: Boolean, val message: String, val x: Float, val y: Float, val z: Float)
++    /** True once a sample from the uncalibrated (raw) sensor has been seen. */
++    @Volatile var usingRawSensor = false
++        private set
 +
-+    private class Sampler {
-+        var n = 0
-+        var sx = 0.0; var sy = 0.0; var sz = 0.0
-+        var qx = 0.0; var qy = 0.0; var qz = 0.0
++    @Volatile private var lastSampleUptime = 0L
++
++    class Stats(val samples: Int, val meanDps: FloatArray, val sdDps: FloatArray, val seconds: Float) {
++        val maxMeanDps: Float get() = max(max(abs(meanDps[0]), abs(meanDps[1])), abs(meanDps[2]))
++        val maxSdDps: Float get() = max(max(sdDps[0], sdDps[1]), sdDps[2])
 +    }
 +
-+    @Volatile private var sampler: Sampler? = null
++    private class Window {
++        var n = 0
++        val sum = DoubleArray(3)
++        val sq = DoubleArray(3)
++        var first = 0L
++        var last = 0L
 +
-+    fun setBias(x: Float, y: Float, z: Float) {
++        fun add(x: Float, y: Float, z: Float, now: Long) {
++            if (n == 0) first = now
++            last = now
++            n++
++            sum[0] += x; sum[1] += y; sum[2] += z
++            sq[0] += x.toDouble() * x; sq[1] += y.toDouble() * y; sq[2] += z.toDouble() * z
++        }
++
++        fun stats(): Stats {
++            val mean = FloatArray(3)
++            val sd = FloatArray(3)
++            for (i in 0..2) {
++                val m = sum[i] / max(n, 1)
++                mean[i] = (m * RAD_TO_DEG).toFloat()
++                sd[i] = (sqrt(max(0.0, sq[i] / max(n, 1) - m * m)) * RAD_TO_DEG).toFloat()
++            }
++            return Stats(n, mean, sd, (last - first) / 1000f)
++        }
++    }
++
++    // Raw samples while calibrating; corrected output samples while testing.
++    @Volatile private var rawWindow: Window? = null
++    @Volatile private var outWindow: Window? = null
++
++    fun setCalibration(x: Float, y: Float, z: Float) {
 +        biasX = x
 +        biasY = y
 +        biasZ = z
++        hasCalibration = true
 +    }
 +
-+    fun reset() = setBias(0f, 0f, 0f)
++    fun clear() {
++        hasCalibration = false
++        biasX = 0f
++        biasY = 0f
++        biasZ = 0f
++    }
 +
 +    /**
-+     * Called by ControllerMotionSender for each controller-0 gyro sample (never for the all-zero
-+     * "gyro stopped" marker). Records it if a calibration is running and returns the corrected
-+     * value in [out].
++     * Corrects one sample of the device gyroscope. [rx]..[rz] are the sensor's rate values;
++     * [ax]..[az] Android's bias estimate (values[3..5] of the uncalibrated sensor, else 0).
 +     */
-+    fun correct(x: Float, y: Float, z: Float, out: FloatArray) {
-+        sampler?.let { s ->
-+            synchronized(s) {
-+                s.n++
-+                s.sx += x; s.sy += y; s.sz += z
-+                s.qx += x.toDouble() * x; s.qy += y.toDouble() * y; s.qz += z.toDouble() * z
-+            }
++    fun apply(rx: Float, ry: Float, rz: Float, ax: Float, ay: Float, az: Float, raw: Boolean, now: Long, out: FloatArray) {
++        usingRawSensor = raw
++        lastSampleUptime = now
++        rawWindow?.let { w -> synchronized(w) { w.add(rx, ry, rz, now) } }
++        if (hasCalibration) {
++            out[0] = rx - biasX
++            out[1] = ry - biasY
++            out[2] = rz - biasZ
++        } else {
++            out[0] = rx - ax
++            out[1] = ry - ay
++            out[2] = rz - az
 +        }
-+        var cx = x - biasX
-+        var cy = y - biasY
-+        val cz = z - biasZ
-+        // All-zero means "gyro stopped" to the sender; never produce it from a real sample.
-+        if (cx == 0f && cy == 0f && cz == 0f) cx = Float.MIN_VALUE
-+        out[0] = cx
-+        out[1] = cy
-+        out[2] = cz
++        outWindow?.let { w -> synchronized(w) { w.add(out[0], out[1], out[2], now) } }
 +    }
 +
++    /** Whether the gyro has delivered a sample in the last second (gyro on and streaming). */
++    fun isLive(now: Long) = now - lastSampleUptime < 1_000L
++
 +    /**
-+     * Collects samples for [durationMs], then reports on [handler]. Rejected if no gyro data
-+     * arrived (gyro off or not streaming) or the device moved: a still device's gyro noise is far
-+     * below [MAX_STILL_NOISE_DPS], while holding it in your hands typically isn't.
++     * Averages raw samples for [durationMs] with the device still, then stores the average as
++     * the zero point. Rejected if too few samples arrived (gyro off) or the spread of the samples
++     * shows the device moved: a gyro at rest varies by a small fraction of [MAX_STILL_SD_DPS];
++     * holding it in your hands typically doesn't.
 +     */
-+    fun start(durationMs: Long, handler: Handler, onDone: (Result) -> Unit) {
-+        val s = Sampler()
-+        sampler = s
++    fun calibrate(durationMs: Long, handler: Handler, onDone: (ok: Boolean, stats: Stats) -> Unit) {
++        val w = Window()
++        rawWindow = w
 +        handler.postDelayed({
-+            sampler = null
-+            val result = synchronized(s) { finish(s) }
-+            if (result.ok) setBias(result.x, result.y, result.z)
-+            onDone(result)
++            rawWindow = null
++            val s = synchronized(w) { w.stats() }
++            val ok = s.samples >= MIN_SAMPLES && s.maxSdDps <= MAX_STILL_SD_DPS
++            if (ok) {
++                synchronized(w) {
++                    setCalibration(
++                        (w.sum[0] / w.n).toFloat(),
++                        (w.sum[1] / w.n).toFloat(),
++                        (w.sum[2] / w.n).toFloat()
++                    )
++                }
++            }
++            onDone(ok, s)
 +        }, durationMs)
 +    }
 +
-+    private fun finish(s: Sampler): Result {
-+        if (s.n < MIN_SAMPLES) {
-+            return Result(false, "No gyro data. Turn gyro on in V+ and try again.", 0f, 0f, 0f)
-+        }
-+        // The samples include the current offset's input, so this is the raw average.
-+        val mx = s.sx / s.n
-+        val my = s.sy / s.n
-+        val mz = s.sz / s.n
-+        val noise = max(max(sd(s.qx, mx, s.n), sd(s.qy, my, s.n)), sd(s.qz, mz, s.n))
-+        if (noise > MAX_STILL_NOISE_DPS) {
-+            return Result(false, "Moved during calibration. Set it down flat and try again.", 0f, 0f, 0f)
-+        }
-+        val x = mx.toFloat()
-+        val y = my.toFloat()
-+        val z = mz.toFloat()
-+        val size = max(max(abs(x), abs(y)), abs(z))
-+        return Result(true, "Gyro calibrated (offset %.2f°/s)".format(size), x, y, z)
++    /** Measures the corrected output (what V+ sends on) for [durationMs]. Hold the device still. */
++    fun test(durationMs: Long, handler: Handler, onDone: (Stats) -> Unit) {
++        val w = Window()
++        outWindow = w
++        handler.postDelayed({
++            outWindow = null
++            onDone(synchronized(w) { w.stats() })
++        }, durationMs)
 +    }
 +
-+    private fun sd(sumSq: Double, mean: Double, n: Int): Double =
-+        sqrt(max(0.0, sumSq / n - mean * mean))
-+
-+    private const val MIN_SAMPLES = 20
-+    const val MAX_STILL_NOISE_DPS = 2.0
++    const val MIN_SAMPLES = 50
++    const val MAX_STILL_SD_DPS = 1.0f
++    private const val RAD_TO_DEG = 57.29577951308232
 +}
