@@ -46,10 +46,11 @@ class CrownConfigPickerDialog(
     private val confirmKeys = mutableMapOf<Pair<Int, Int>, ConfirmTarget>()
     private val choices = ListView(context).apply {
         tag = "crown_picker_list"
-        divider = null
-        dividerHeight = 0
+        // Design L7: 9px gaps between option rows.
+        divider = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+        dividerHeight = dp(8)
         clipToPadding = false
-        setPadding(dp(12), dp(4), dp(12), dp(4))
+        setPadding(dp(16), dp(4), dp(16), dp(4))
         // Rows draw their own selection state; the default focus highlight would double-draw.
         setSelector(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         // Rows stay focusable but not clickable: ListView keeps the focus, moves
@@ -98,7 +99,7 @@ class CrownConfigPickerDialog(
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(TextView(context).apply {
-                setPadding(dp(24), dp(2), dp(24), dp(6))
+                setPadding(dp(20), dp(2), dp(20), dp(6))
                 setTextColor(context.resources.getColor(R.color.crown_text_secondary))
                 textSize = 11f
                 text = context.getString(R.string.crown_direct_config_subtitle)
@@ -192,11 +193,12 @@ class CrownConfigPickerDialog(
             gravity = android.view.Gravity.CENTER_VERTICAL
             minimumHeight = dp(50)
             setPadding(dp(8), dp(8), dp(10), dp(8))
-            // Focusable so gamepad/key navigation moves between rows (ListView
-            // reports the focused row as the selected position, also in touch
-            // mode); NOT clickable, so ListView still owns taps and forwards
-            // them to its item click listener.
-            isFocusable = true
+            // Neither focusable nor clickable: a focusable child makes ListView
+            // route taps into the focus path instead of firing the item click,
+            // and a clickable child consumes them outright. ListView itself owns
+            // both interactions - item clicks for touch, and selection movement
+            // for dpad/stick once real key input has left touch mode.
+            isFocusable = false
             isClickable = false
             addView(CrownThumbnailView(context), LinearLayout.LayoutParams(dp(34), dp(34)))
             addView(LinearLayout(context).apply {

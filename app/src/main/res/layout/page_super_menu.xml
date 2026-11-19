@@ -102,7 +102,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="2dp"
-                android:layout_marginBottom="5dp"
+                android:layout_marginBottom="8dp"
                 android:text="@string/crown_menu_quick_controls"
                 style="@style/CrownSectionLabel" />
 
@@ -213,7 +213,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="2dp"
-                android:layout_marginBottom="5dp"
+                android:layout_marginBottom="8dp"
                 android:text="@string/crown_menu_current_plan"
                 style="@style/CrownSectionLabel" />
 

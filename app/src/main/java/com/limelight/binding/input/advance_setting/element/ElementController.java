@@ -1011,12 +1011,21 @@ public class ElementController {
     }
 
     private void addCrownHeaderDeleteButton(SuperPageLayout page, Button originalDelete) {
-        View titleText = page.findViewById(R.id.crown_page_title_text);
-        if (!(titleText != null && titleText.getParent() instanceof ViewGroup)
-                || page.findViewWithTag("crown_header_delete") != null) {
+        // Inspector pages carry their own tagged header row; fall back to the
+        // shared crown_page_title structure for pages that use it.
+        ViewGroup header = null;
+        View tagged = page.findViewWithTag("crown_inspector_header");
+        if (tagged instanceof ViewGroup) {
+            header = (ViewGroup) tagged;
+        } else {
+            View titleText = page.findViewById(R.id.crown_page_title_text);
+            if (titleText != null && titleText.getParent() instanceof ViewGroup) {
+                header = (ViewGroup) titleText.getParent();
+            }
+        }
+        if (header == null || page.findViewWithTag("crown_header_delete") != null) {
             return;
         }
-        ViewGroup header = (ViewGroup) titleText.getParent();
         ImageButton deleteButton = createCrownIconActionButton(
                 R.drawable.phc_action_trash,
                 originalDelete.getContentDescription() != null

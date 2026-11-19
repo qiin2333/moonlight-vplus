@@ -18,18 +18,41 @@
             android:padding="12dp">
 
             <!-- 页面标题 -->
+                        <!-- 页面标题 -->
             <LinearLayout
-                android:orientation="vertical"
+                android:tag="crown_inspector_header"
+                android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
                 android:paddingBottom="12dp">
+
+                <FrameLayout
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/crown_header_mark_bg"
+                    android:importantForAccessibility="no">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/phc_crown"
+                        app:tint="@color/crown_section_label" />
+                </FrameLayout>
+
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:text="@string/layout_page_wheel_pad_text_57047"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/crown_text_primary"/>
+                    android:textColor="@color/crown_text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
             </LinearLayout>
 
             <!-- 🎡 基本设置 -->

@@ -19,7 +19,7 @@
             android:layout_weight="1"
             android:clipToPadding="false"
             android:fillViewport="false"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="16dp"
             android:paddingTop="12dp"
             android:paddingBottom="10dp">
 
@@ -34,7 +34,7 @@
                 android:id="@+id/crown_config_segments"
                 android:layout_width="match_parent"
                 android:layout_height="36dp"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="12dp"
                 android:background="@drawable/crown_config_section_bg"
                 android:orientation="horizontal"
                 android:padding="3dp">
@@ -88,7 +88,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginBottom="8dp"
                     android:text="@string/page_config_section_profile"
                     style="@style/CrownSectionLabel" />
 
@@ -220,7 +220,7 @@
                 android:id="@+id/crown_config_touch_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="8dp"
                 android:text="@string/page_config_section_touch"
                 style="@style/CrownSectionLabel" />
 
@@ -228,7 +228,7 @@
                 android:id="@+id/crown_config_touch_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="12dp"
                 android:background="@drawable/crown_config_section_bg"
                 android:orientation="vertical"
                 android:paddingHorizontal="8dp"
@@ -344,7 +344,7 @@
                 android:id="@+id/crown_config_feedback_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="8dp"
                 android:text="@string/page_config_section_feedback"
                 style="@style/CrownSectionLabel" />
 
@@ -352,7 +352,7 @@
                 android:id="@+id/crown_config_feedback_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="12dp"
                 android:background="@drawable/crown_config_section_bg"
                 android:orientation="vertical"
                 android:paddingHorizontal="8dp"
@@ -421,7 +421,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="16dp"
             android:paddingTop="10dp"
             android:paddingBottom="14dp">
 
