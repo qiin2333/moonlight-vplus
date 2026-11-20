@@ -1,13 +1,20 @@
 package com.limelight
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.services.KeyboardAccessibilityService
+import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.InputDeviceContext
+import com.limelight.binding.input.StartGestureReducer
+import com.limelight.nvstream.input.ControllerPacket
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,6 +86,25 @@ class KeyboardInputLifecycleTest {
     }
 
     @Test
+    fun focusLossReleasesKeysWhenTheOtherWindowCallbackArrivesLater() = withGame { scenario ->
+        lateinit var callback: ExternalDisplayManager.ExternalDisplayCallback
+        scenario.onActivity { game ->
+            connect(game)
+            callback = Game::class.java.getDeclaredMethod("createExternalDisplayCallback").apply {
+                isAccessible = true
+            }.invoke(game) as ExternalDisplayManager.ExternalDisplayCallback
+            game.keyboardInputHandler.handleKeyDown(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W))
+            game.onWindowFocusChanged(false)
+        }
+        idle()
+        scenario.onActivity { game ->
+            assertTrue(forwarded(game).isEmpty())
+            callback.onStreamWindowFocusChanged(true)
+            assertTrue(forwarded(game).isEmpty())
+        }
+    }
+
+    @Test
     fun losingFocusCancelsPendingEscapeAndGrabShortcut() = withGame { scenario ->
         scenario.onActivity { game ->
             connect(game)
@@ -139,6 +165,115 @@ class KeyboardInputLifecycleTest {
     }
 
     @Test
+    fun stoppingConnectionCancelsPendingShortcutWhileUngrabbed() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.setInputGrabState(false)
+            shortcut(game, KeyEvent.KEYCODE_Z)
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { game ->
+            assertTrue("The shortcut should regrab input while connected", game.grabbedInput)
+            game.setInputGrabState(false)
+            shortcut(game, KeyEvent.KEYCODE_Z)
+            Game::class.java.getDeclaredMethod("stopConnection", StreamStopReason::class.java).apply {
+                isAccessible = true
+            }.invoke(game, StreamStopReason.CONNECTION_TERMINATED)
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { assertFalse(it.grabbedInput) }
+    }
+
+    @Test
+    fun accessibilityCaptureLossCancelsOnlyItsHeldControllerButtons() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            withAccessibilityService(game) { service ->
+                val controller = game.controllerHandler
+                val deviceId = controllerDeviceId()
+                val bDown = controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_B, deviceId)
+                controller.handleButtonDown(bDown)
+                val context = requireNotNull(controller.existingContextForEvent(bDown))
+                val aDown = controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_A, deviceId)
+                assertTrue(ControllerHandler.isGameControllerDevice(aDown.device))
+                assertTrue(send(service, aDown))
+                assertEquals(ControllerPacket.A_FLAG or ControllerPacket.B_FLAG, context.inputMap)
+
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(ControllerPacket.B_FLAG, context.inputMap)
+                assertTrue(send(service, controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A, deviceId)))
+                assertEquals(ControllerPacket.B_FLAG, context.inputMap)
+
+                controller.handleButtonUp(controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_B, deviceId))
+                KeyboardAccessibilityService.setIntercepting(true)
+                assertTrue(send(service, controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_A, deviceId)))
+                assertEquals(ControllerPacket.A_FLAG, context.inputMap)
+                assertTrue(send(service, controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A, deviceId)))
+                assertEquals(0, context.inputMap)
+            }
+        }
+    }
+
+    @Test
+    fun accessibilityCaptureLossCancelsStartWithoutTriggeringGesturesOrExit() = withGame { scenario ->
+        lateinit var controllerContext: InputDeviceContext
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableStartKeyMenu = true
+            withAccessibilityService(game) { service ->
+                val deviceId = controllerDeviceId()
+                val startDown = controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_START, deviceId)
+                assertTrue(send(service, startDown))
+                val context = requireNotNull(game.controllerHandler.existingContextForEvent(startDown))
+                controllerContext = context
+                assertTrue(context.startGesture.state() != StartGestureReducer.State.IDLE)
+                context.pendingExit = true
+
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(StartGestureReducer.State.IDLE, context.startGesture.state())
+                assertFalse(context.pendingExit)
+                assertEquals(0, context.inputMap)
+                assertFalse(game.isFinishing)
+                assertTrue(send(service, controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_START, deviceId)))
+                assertFalse(game.isFinishing)
+            }
+        }
+        SystemClock.sleep(800)
+        scenario.onActivity {
+            assertFalse(it.isFinishing)
+            assertEquals(StartGestureReducer.State.IDLE, controllerContext.startGesture.state())
+        }
+    }
+
+    @Test
+    fun cancellingCapturedStartClearsEmulatedButtonsEvenWhenItsWheelIsOpen() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableStartKeyMenu = true
+            withAccessibilityService(game) { service ->
+                val controller = game.controllerHandler
+                val deviceId = controllerDeviceId()
+                val lbDown = controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_L1, deviceId)
+                controller.handleButtonDown(lbDown)
+                val context = requireNotNull(controller.existingContextForEvent(lbDown))
+                context.hasSelect = false
+                context.hasMode = false
+                assertTrue(send(service, controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_START, deviceId)))
+                assertEquals(ControllerPacket.BACK_FLAG, context.inputMap)
+                context.startGesture.onLongPressTimeout(SystemClock.uptimeMillis() + 1000, true)
+                context.startGesture.onSelection(1f, 0f, 0f, 0f, context.inputMap)
+                assertTrue(context.isLocalInputCaptureActive())
+
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(0, context.inputMap)
+                assertEquals(0, context.emulatingButtonFlags)
+                assertFalse(game.isFinishing)
+                controller.handleButtonUp(controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_L1, deviceId))
+            }
+        }
+    }
+
+    @Test
     fun nativeMouseShortcutStillRestoresPointerOnLegacyAndModernAndroid() = withGame { scenario ->
         scenario.onActivity { game ->
             connect(game)
@@ -184,6 +319,41 @@ class KeyboardInputLifecycleTest {
         isAccessible = true
     }.get(target)
     private fun idle() = InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+    private fun withAccessibilityService(game: Game, block: (KeyboardAccessibilityService) -> Unit) {
+        val instance = KeyboardAccessibilityService::class.java.getDeclaredField("instance").apply { isAccessible = true }
+        val previous = instance.get(null)
+        val enabled = KeyboardAccessibilityService.interceptingEnabled
+        KeyboardAccessibilityService.setIntercepting(false)
+        val service = KeyboardAccessibilityService()
+        ContextWrapper::class.java.getDeclaredMethod("attachBaseContext", Context::class.java).apply {
+            isAccessible = true
+        }.invoke(service, ApplicationProvider.getApplicationContext<Context>())
+        try {
+            instance.set(null, service)
+            service.keyEventCallback = game
+            KeyboardAccessibilityService.setIntercepting(true)
+            block(service)
+        } finally {
+            KeyboardAccessibilityService.setIntercepting(false)
+            service.keyEventCallback = null
+            instance.set(null, previous)
+            KeyboardAccessibilityService.setIntercepting(enabled)
+        }
+    }
+
+    private fun send(service: KeyboardAccessibilityService, event: KeyEvent): Boolean =
+        KeyboardAccessibilityService::class.java.getDeclaredMethod("onKeyEvent", KeyEvent::class.java).apply {
+            isAccessible = true
+        }.invoke(service, event) as Boolean
+
+    private fun controllerDeviceId(): Int {
+        if (ControllerHandler.isGameControllerDevice(InputDevice.getDevice(0))) return 0
+        return InputDevice.getDeviceIds().first { ControllerHandler.isGameControllerDevice(InputDevice.getDevice(it)) }
+    }
+
+    private fun controllerKey(action: Int, code: Int, deviceId: Int) = KeyEvent(
+        SystemClock.uptimeMillis() - 100, SystemClock.uptimeMillis(), action, code, 0, 0, deviceId, 0, 0, InputDevice.SOURCE_GAMEPAD
+    )
     private fun key(action: Int, code: Int, source: Int = InputDevice.SOURCE_KEYBOARD) = KeyEvent(
         1, SystemClock.uptimeMillis(), action, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, source
     )

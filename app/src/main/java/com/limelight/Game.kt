@@ -2009,7 +2009,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     private fun scheduleKeyboardFocusUpdate() {
         if (destroying) return
-        // Settle both window callbacks before deciding that focus left the stream.
+        // Coalesce callbacks already queued together. A later gain is treated as a new focus entry
+        // so keys are released promptly if focus actually moved to another app.
         keyboardFocusHandler.removeCallbacks(keyboardFocusUpdate)
         keyboardFocusHandler.post(keyboardFocusUpdate)
     }

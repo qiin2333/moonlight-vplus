@@ -9,6 +9,7 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.widget.Toast
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -35,6 +36,9 @@ class KeyboardInputHandler(private val game: Game) {
     }
     private val pressedKeys = HashSet<PhysicalKey>()
     private val releasedKeys = HashSet<PhysicalKey>()
+    private data class ForwardedControllerKey(val event: KeyEvent, val context: InputDeviceContext)
+    private val forwardedControllerKeys = LinkedHashMap<PhysicalKey, ForwardedControllerKey>()
+    private var releaseGeneration = 0L
     private var rightMouseButtonDown = false
     private var middleMouseButtonDown = false
     private data class ForwardedKey(val translated: Short, val flags: Byte)
@@ -143,11 +147,15 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun releaseForwardedKeys() {
+        releaseGeneration++
         handler.removeCallbacks(toggleGrab)
         escConfirmRunnable?.let { handler.removeCallbacks(it) }
         escConfirmRunnable = null
         releasedKeys.addAll(pressedKeys)
         pressedKeys.clear()
+        val controllerKeys = forwardedControllerKeys.values.toList()
+        forwardedControllerKeys.clear()
+        controllerKeys.forEach { game.controllerHandler.cancelAccessibilityButton(it.context, it.event) }
         lastEscPressTime = 0
         hasShownEscHint = false
         if (rightMouseButtonDown) {
@@ -291,8 +299,18 @@ class KeyboardInputHandler(private val game: Game) {
 
         var handled = false
 
-        if (ControllerHandler.isGameControllerDevice(event.device)) {
+        if (controller) {
+            val generation = releaseGeneration
             handled = game.controllerHandler.handleButtonDown(event) == true
+            if (handled && game.isEventFromAccessibilityService && event.repeatCount == 0) {
+                game.controllerHandler.existingContextForEvent(event)?.let { context ->
+                    if (generation != releaseGeneration) {
+                        game.controllerHandler.cancelAccessibilityButton(context, event)
+                    } else {
+                        forwardedControllerKeys[physicalKey] = ForwardedControllerKey(KeyEvent(event), context)
+                    }
+                }
+            }
         }
 
         if (!handled) {
@@ -334,6 +352,7 @@ class KeyboardInputHandler(private val game: Game) {
         if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) return false
         val physicalKey = PhysicalKey(event)
         if (releasedKeys.remove(physicalKey)) return true
+        if (game.isEventFromAccessibilityService) forwardedControllerKeys.remove(physicalKey)
         val controller = ControllerHandler.isGameControllerDevice(event.device)
         if (!controller && !game.canForwardKeyboardInput()) {
             return game.canUseKeyboardShortcuts() && handleSpecialKeys(event.keyCode, false)
