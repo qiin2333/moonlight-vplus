@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.limelight.binding.input.capture.InputCaptureProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -51,6 +52,16 @@ class NativeKeyboardCaptureTest {
                 assertFalse(game.grabbedInput)
                 assertFalse(game.window.attributes.hasKeyboardCapture())
 
+                val captureState = InputCaptureProvider::class.java.getDeclaredField("isCapturing").apply {
+                    isAccessible = true
+                }
+                game.enableNativeMousePointer(true)
+                sendCursorShortcut(game)
+                assertTrue(game.grabbedInput)
+                assertTrue(captureState.getBoolean(game.inputCaptureProvider))
+                assertFalse(game.window.attributes.hasKeyboardCapture())
+
+                game.setInputGrabState(false)
                 game.setInputGrabState(true)
                 assertFalse(game.window.attributes.hasKeyboardCapture())
 
@@ -103,30 +114,37 @@ class NativeKeyboardCaptureTest {
             )
             assertFalse(game.keyboardInputHandler.handleKeyUp(virtualBack))
 
-                // The shortcut restores grab intent; native capture still waits for a connection.
+                // The shortcut restores both pointer and keyboard capture in native mouse mode.
                 game.setInputGrabState(false)
-                listOf(
-                    KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_CTRL_LEFT,
-                    KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_ALT_LEFT,
-                    KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_SHIFT_LEFT,
-                    KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_C,
-                    KeyEvent.ACTION_UP to KeyEvent.KEYCODE_C,
-                    KeyEvent.ACTION_UP to KeyEvent.KEYCODE_SHIFT_LEFT,
-                    KeyEvent.ACTION_UP to KeyEvent.KEYCODE_ALT_LEFT,
-                    KeyEvent.ACTION_UP to KeyEvent.KEYCODE_CTRL_LEFT,
-                ).forEach { (action, keyCode) ->
-                    val event = KeyEvent(
-                        0, 0, action, keyCode, 0, 0,
-                        KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
-                    )
-                    if (action == KeyEvent.ACTION_DOWN) {
-                        game.keyboardInputHandler.handleKeyDown(event)
-                    } else {
-                        game.keyboardInputHandler.handleKeyUp(event)
-                    }
-                }
+                assertTrue(game.prefConfig.enableNativeMousePointer)
+                assertFalse(captureState.getBoolean(game.inputCaptureProvider))
+                sendCursorShortcut(game)
                 assertTrue(game.grabbedInput)
             assertTrue(game.window.attributes.hasKeyboardCapture())
+            assertTrue("Pointer capture was not restored", captureState.getBoolean(game.inputCaptureProvider))
+            }
+        }
+    }
+
+    private fun sendCursorShortcut(game: Game) {
+        listOf(
+            KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_CTRL_LEFT,
+            KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_ALT_LEFT,
+            KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_SHIFT_LEFT,
+            KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_C,
+            KeyEvent.ACTION_UP to KeyEvent.KEYCODE_C,
+            KeyEvent.ACTION_UP to KeyEvent.KEYCODE_SHIFT_LEFT,
+            KeyEvent.ACTION_UP to KeyEvent.KEYCODE_ALT_LEFT,
+            KeyEvent.ACTION_UP to KeyEvent.KEYCODE_CTRL_LEFT,
+        ).forEach { (action, keyCode) ->
+            val event = KeyEvent(
+                0, 0, action, keyCode, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
+            )
+            if (action == KeyEvent.ACTION_DOWN) {
+                game.keyboardInputHandler.handleKeyDown(event)
+            } else {
+                game.keyboardInputHandler.handleKeyUp(event)
             }
         }
     }
