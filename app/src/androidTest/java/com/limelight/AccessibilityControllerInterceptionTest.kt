@@ -209,7 +209,9 @@ class AccessibilityControllerInterceptionTest {
 
     private fun controllerDeviceId(): Int {
         if (ControllerHandler.isGameControllerDevice(InputDevice.getDevice(0))) return 0
-        return InputDevice.getDeviceIds().first { ControllerHandler.isGameControllerDevice(InputDevice.getDevice(it)) }
+        return requireNotNull(InputDevice.getDeviceIds().firstOrNull {
+            ControllerHandler.isGameControllerDevice(InputDevice.getDevice(it))
+        }) { "The test requires a controller-class input device" }
     }
 
     private fun key(action: Int, code: Int, deviceId: Int, source: Int = InputDevice.SOURCE_GAMEPAD) = KeyEvent(
