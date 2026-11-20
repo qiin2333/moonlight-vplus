@@ -2250,31 +2250,13 @@
     <string name="perf_hud_packet_loss_info" formatted="false">Потери на HUD — доля видеопакетов, потерянных сетью за последнее время.\n\nЦвета:\n• Зелёный: до 1%\n• Жёлтый: 1–5%, редкие артефакты или подтормаживания\n• Красный: от 5%, состояние сменится на 📶\n\nФакторы:\n• Сигнал и диапазон Wi‑Fi, 2,4 ГГц теряет больше всего\n• Производительность роутера\n• Битрейт выше пропускной способности сети\n\n💡 Долгое нажатие на луну запускает проверку стрима и показывает рекомендации.</string>
     <string name="perf_hud_one_percent_low_info" formatted="false">1%L на HUD — частота самых медленных 1% кадров. Ловит микрофризы, которых не видно по среднему FPS.\n\nКак считается:\n• Записывается интервал отрисовки каждого кадра\n• Берётся 99-й перцентиль, то есть самые медленные 1%\n• Перевод в FPS: 1000 ÷ этот интервал\n\nЦвета от цели:\n• Зелёный: от 85%\n• Жёлтый: 65–85%, редкие подтормаживания\n• Красный: ниже 65%, заметные фризы\n\n💡 Урок стриминга: средний FPS полный, а 1%L низкий — обычно это скачки сети или заминки на ПК~</string>
     <string name="game_menu_perf_metrics">Отображаемые показатели</string>
-    <string name="game_menu_perf_health">Индикатор состояния трансляции</string>
-    <string name="game_menu_perf_health_summary">Показывать общее состояние</string>
-    <string name="game_menu_perf_single_tap">Одно нажатие для смены стиля</string>
-    <string name="game_menu_perf_double_tap">Двойное нажатие для смены расположения</string>
-    <string name="game_menu_perf_long_press">Удерживайте для просмотра описания показателей</string>
-    <string name="game_menu_perf_metric_summary">В стиле «Мини» отображается фиксированный набор показателей.</string>
     <string name="game_menu_perf_orientation_fixed">В этом стиле расположение фиксировано. Выбранная ориентация применится при переходе на стиль «Стандарт».</string>
     <string name="game_menu_perf_orientation_docked">Выбранная ориентация применится, когда панель перестанет быть закреплённой.</string>
-    <string name="game_menu_perf_fixed_layout">Фиксированное расположение</string>
-    <string name="game_menu_perf_docked_layout">Закреплено</string>
     <string name="game_menu_perf_orientation_portrait">В портретной ориентации расположение всегда вертикальное.</string>
     <string name="perf_sheet_previous_page">Предыдущая страница</string>
     <string name="perf_sheet_next_page">Следующая страница</string>
     <string name="perf_sheet_settings">Настройки</string>
-    <string name="game_menu_perf_position">Быстрое размещение</string>
     <string name="game_menu_perf_position_reset">Сбросить положение</string>
-    <string name="perf_overlay_anchor_top_left">Сверху слева</string>
-    <string name="perf_overlay_anchor_top_center">Сверху по центру</string>
-    <string name="perf_overlay_anchor_top_right">Сверху справа</string>
-    <string name="perf_overlay_anchor_center_left">Слева по центру</string>
-    <string name="perf_overlay_anchor_center">По центру</string>
-    <string name="perf_overlay_anchor_center_right">Справа по центру</string>
-    <string name="perf_overlay_anchor_bottom_left">Снизу слева</string>
-    <string name="perf_overlay_anchor_bottom_center">Снизу по центру</string>
-    <string name="perf_overlay_anchor_bottom_right">Снизу справа</string>
     <string name="game_menu_perf_gestures">Жесты</string>
     <string name="game_menu_perf_gestures_full">Все</string>
     <string name="game_menu_perf_gestures_long_only">Только удержание</string>

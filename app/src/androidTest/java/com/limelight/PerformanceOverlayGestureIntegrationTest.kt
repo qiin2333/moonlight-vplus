@@ -162,7 +162,6 @@ class PerformanceOverlayGestureIntegrationTest {
                 config.enablePerfOverlay = false
                 manager.applyOverlayState()
                 manager.setPerfOverlayDisplayItems(setOf("decoder"))
-                manager.setPerfOverlayHealthVisible(false)
                 config.enablePerfOverlay = true
                 manager.applyOverlayState()
                 assertEquals(View.GONE, resolution.visibility)

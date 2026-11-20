@@ -6,7 +6,6 @@ import android.app.Dialog
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -35,6 +34,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
@@ -96,13 +97,6 @@ internal fun performancePageFocusKey(from: GameMenuPageLayout, to: GameMenuPageL
         to == GameMenuPageLayout.PERF_OVERLAY -> PERF_STYLE_FOCUS_KEY
         else -> null
     }
-
-internal fun performanceStyleLabel(style: PerfHudDensity): Int = when (style) {
-    PerfHudDensity.MINI -> R.string.perf_overlay_style_mini
-    PerfHudDensity.STANDARD -> R.string.perf_overlay_style_standard
-    PerfHudDensity.DETAILED -> R.string.perf_overlay_style_detailed
-    PerfHudDensity.CLASSIC -> R.string.perf_overlay_style_classic
-}
 
 internal fun performanceMetricEntries(
     names: List<CharSequence>,
@@ -630,7 +624,8 @@ class GameMenu(
         val inlineControl: InlineControl? = null,
         val selected: Boolean = false,
         val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT,
-        val focusKey: String? = null
+        val focusKey: String? = null,
+        val tintIcon: Boolean = false
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -650,7 +645,10 @@ class GameMenu(
             val checked: Boolean,
             val toggleAction: Runnable? = null
         ) : InlineControl
-        data class Segmented(val segments: List<SegmentOption>) : InlineControl
+        data class Segmented(
+            val segments: List<SegmentOption>,
+            val maxWidth: Dp? = null
+        ) : InlineControl
     }
 
     data class SegmentOption(
@@ -2634,21 +2632,6 @@ class GameMenu(
         )
     }
 
-    private fun performanceOverlaySummary(): String {
-        val style = game.perfOverlayStyle
-        val portrait = game.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-        val layout = when {
-            game.isPerfOverlayDocked -> getString(R.string.game_menu_perf_docked_layout)
-            style == PerfHudDensity.MINI || style == PerfHudDensity.DETAILED ->
-                getString(R.string.game_menu_perf_fixed_layout)
-            style == PerfHudDensity.CLASSIC && portrait -> getString(R.string.orientation_vertical)
-            game.prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL ->
-                getString(R.string.orientation_vertical)
-            else -> getString(R.string.orientation_horizontal)
-        }
-        return game.getString(R.string.network_quality_menu_summary, getString(performanceStyleLabel(style)), layout)
-    }
-
     private fun showPerformanceMetricsPage() {
         showSubMenu(
             getString(R.string.game_menu_perf_metrics),
@@ -2679,7 +2662,11 @@ class GameMenu(
                 iconKey = "game_menu_toggle_performance_overlay",
                 isShowIcon = true,
                 isKeepDialog = true,
-                inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments()),
+                tintIcon = true,
+                inlineControl = InlineControl.Segmented(
+                    buildPerformanceOverlaySegments(),
+                    maxWidth = 320.dp
+                ),
                 focusKey = PERF_MODE_FOCUS_KEY
             ),
             MenuOption(
@@ -2689,7 +2676,11 @@ class GameMenu(
                 iconKey = "game_menu_perf_overlay_style",
                 isShowIcon = true,
                 isKeepDialog = true,
-                inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments()),
+                tintIcon = true,
+                inlineControl = InlineControl.Segmented(
+                    buildPerfOverlayStyleSegments(),
+                    maxWidth = 320.dp
+                ),
                 focusKey = PERF_STYLE_FOCUS_KEY
             ),
             MenuOption(
@@ -2699,6 +2690,7 @@ class GameMenu(
                 iconKey = "game_menu_perf_gestures",
                 isShowIcon = true,
                 isKeepDialog = true,
+                tintIcon = true,
                 subtitle = if (gestureMode == com.limelight.perfhud.PerfOverlayGestures.CUSTOM)
                     getString(R.string.game_menu_perf_gestures_custom) else null,
                 inlineControl = InlineControl.Segmented(
@@ -2708,7 +2700,8 @@ class GameMenu(
                     ).map { (value, label) ->
                         SegmentOption(getString(label), value == gestureMode,
                             Runnable { game.setPerfOverlayGestureMode(value) })
-                    }
+                    },
+                    maxWidth = 320.dp
                 )
             ),
             MenuOption(
@@ -2718,7 +2711,7 @@ class GameMenu(
                 iconKey = "game_menu_perf_metrics",
                 isShowIcon = true,
                 isKeepDialog = true,
-                subtitle = getString(R.string.game_menu_perf_metric_summary),
+                tintIcon = true,
                 showChevron = true,
                 focusKey = PERF_METRICS_FOCUS_KEY
             ),
@@ -2738,6 +2731,7 @@ class GameMenu(
                 iconKey = "game_menu_perf_reset",
                 isShowIcon = true,
                 isKeepDialog = true,
+                tintIcon = true,
                 focusKey = PERF_POSITION_RESET_FOCUS_KEY
             ) else null
         )
@@ -2764,6 +2758,7 @@ class GameMenu(
                     iconKey = "perf_metric_$value",
                     isShowIcon = true,
                     isKeepDialog = true,
+                    tintIcon = true,
                     inlineControl = InlineControl.Toggle(value in selected),
                     focusKey = value
                 )
@@ -2800,7 +2795,7 @@ class GameMenu(
         private const val HAPTIC_FEEDBACK_SETTING = "haptic_feedback_enabled"
 
         private val ICON_MAP = mapOf(
-            "game_menu_perf_gestures" to R.drawable.phc_perf_gauge,
+            "game_menu_perf_gestures" to R.drawable.ic_touch_settings,
             "game_menu_perf_metrics" to R.drawable.phc_perf_monitor,
             "game_menu_perf_reset" to R.drawable.phc_action_reset,
             "perf_metric_resolution" to R.drawable.phc_perf_resolution,
@@ -2813,12 +2808,12 @@ class GameMenu(
             "perf_metric_battery" to R.drawable.phc_perf_battery,
             "perf_metric_one_percent_low" to R.drawable.phc_perf_gauge,
             "perf_metric_clock" to R.drawable.phc_perf_timer,
-            "perf_metric_health" to R.drawable.phc_perf_monitor,
+            "perf_metric_health" to R.drawable.phc_moon,
             "microphone_input" to R.drawable.ic_mic_gm,
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,
             "game_menu_toggle_performance_overlay" to R.drawable.ic_candy_performance,
-            "game_menu_perf_overlay_style" to R.drawable.phc_action_auto_color,
+            "game_menu_perf_overlay_style" to R.drawable.phc_layers,
             "game_menu_toggle_virtual_controller" to R.drawable.ic_candy_controller,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
             "game_menu_send_keys" to R.drawable.ic_candy_send_keys,

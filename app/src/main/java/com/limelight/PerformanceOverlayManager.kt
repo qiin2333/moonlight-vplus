@@ -217,12 +217,6 @@ class PerformanceOverlayManager(
     val perfOverlayDoubleTapEnabled: Boolean get() = perfOverlayGestureState.double
     val perfOverlayLongPressEnabled: Boolean get() = perfOverlayGestureState.long
 
-    fun setPerfOverlayHealthVisible(enabled: Boolean) {
-        val items = PerfOverlayDisplayItemsPreference.getSelectedItems(activity)?.toMutableSet() ?: mutableSetOf()
-        if (enabled) items.add("health") else items.remove("health")
-        setPerfOverlayDisplayItems(items)
-    }
-
     fun setPerfOverlayGestureMode(mode: String) {
         cancelOverlayInteraction()
         PerfOverlayGestures.write(activity, mode)

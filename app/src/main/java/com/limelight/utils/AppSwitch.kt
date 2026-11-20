@@ -22,13 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import com.limelight.R
 
-private val SwitchWidth = 36.dp
-private val SwitchHeight = 26.dp
-private val TrackWidth = 36.dp
-private val TrackHeight = 18.dp
-private val ThumbDiameter = 20.dp
-
-/** Shared switch: a white thumb over a slightly slimmer accent track. */
+/** Shared switch: a full-height short track with a white thumb. */
 @Composable
 fun AppSwitch(
     checked: Boolean,
@@ -48,7 +42,7 @@ fun AppSwitch(
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Canvas(
         modifier = modifier
-            .size(SwitchWidth, SwitchHeight)
+            .size(AppSwitchSpec.WIDTH_DP.dp, AppSwitchSpec.HEIGHT_DP.dp)
             .then(
                 if (onCheckedChange != null) {
                     Modifier.toggleable(
@@ -62,9 +56,9 @@ fun AppSwitch(
                 }
             )
     ) {
-        val trackW = TrackWidth.toPx()
-        val trackH = TrackHeight.toPx()
-        val thumbR = ThumbDiameter.toPx() / 2f
+        val trackW = AppSwitchSpec.TRACK_WIDTH_DP.dp.toPx()
+        val trackH = AppSwitchSpec.TRACK_HEIGHT_DP.dp.toPx()
+        val thumbR = AppSwitchSpec.THUMB_DIAMETER_DP.dp.toPx() / 2f
         drawRoundRect(
             color = when {
                 !enabled -> soft.copy(alpha = 0.10f)
@@ -80,10 +74,11 @@ fun AppSwitch(
             topLeft = Offset((size.width - trackW) / 2f, (size.height - trackH) / 2f),
             size = Size(trackW, trackH),
             cornerRadius = CornerRadius(trackH / 2f),
-            style = Stroke(width = 0.75.dp.toPx())
+            style = Stroke(width = AppSwitchSpec.STROKE_DP.dp.toPx())
         )
-        val thumbMinX = (size.width - trackW) / 2f + thumbR
-        val thumbMaxX = (size.width + trackW) / 2f - thumbR
+        val thumbInset = AppSwitchSpec.THUMB_INSET_DP.dp.toPx()
+        val thumbMinX = (size.width - trackW) / 2f + thumbInset + thumbR
+        val thumbMaxX = (size.width + trackW) / 2f - thumbInset - thumbR
         val thumbX = thumbMinX + (thumbMaxX - thumbMinX) * (if (rtl) 1f - travel else travel)
         drawCircle(
             color = when {
@@ -95,9 +90,9 @@ fun AppSwitch(
         )
         drawCircle(
             color = if (enabled) thumbOutline else thumbOutline.copy(alpha = thumbOutline.alpha * 0.38f),
-            radius = thumbR - 0.375.dp.toPx(),
+            radius = thumbR - (AppSwitchSpec.STROKE_DP / 2f).dp.toPx(),
             center = Offset(thumbX, size.height / 2f),
-            style = Stroke(width = 0.75.dp.toPx())
+            style = Stroke(width = AppSwitchSpec.STROKE_DP.dp.toPx())
         )
     }
 }

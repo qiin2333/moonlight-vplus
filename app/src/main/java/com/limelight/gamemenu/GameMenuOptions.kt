@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -197,7 +198,11 @@ private fun MenuOptionRow(
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = if (emphasizedCrownAction) appAccentColor() else Color.Unspecified,
+                tint = when {
+                    option.tintIcon -> colorResource(R.color.game_menu_text_primary)
+                    emphasizedCrownAction -> appAccentColor()
+                    else -> Color.Unspecified
+                },
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(GameMenuDimens.section))
@@ -306,16 +311,38 @@ private fun MenuOptionRow(
                         )
                     }
                 } else {
-                    InlineSegmentedControl(
-                        segments = inlineControl.segments,
-                        onSegmentClick = onSegmentClick,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(36.dp),
-                        denseLabels = option.focusKey == PERF_MODE_FOCUS_KEY,
-                        initialFocusRequester = initialFocusRequester,
-                        leftExitRequester = null
-                    )
+                    val controlMaxWidth = inlineControl.maxWidth
+                    if (controlMaxWidth != null) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            InlineSegmentedControl(
+                                segments = inlineControl.segments,
+                                onSegmentClick = onSegmentClick,
+                                modifier = Modifier
+                                    .widthIn(max = controlMaxWidth)
+                                    .fillMaxWidth()
+                                    .height(36.dp),
+                                denseLabels = option.focusKey == PERF_MODE_FOCUS_KEY,
+                                initialFocusRequester = initialFocusRequester,
+                                leftExitRequester = null
+                            )
+                        }
+                    } else {
+                        InlineSegmentedControl(
+                            segments = inlineControl.segments,
+                            onSegmentClick = onSegmentClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp),
+                            denseLabels = option.focusKey == PERF_MODE_FOCUS_KEY,
+                            initialFocusRequester = initialFocusRequester,
+                            leftExitRequester = null
+                        )
+                    }
                 }
             }
             null -> if (option.showChevron) MenuChevron()
