@@ -1741,13 +1741,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setMetaKeyCaptureState(enabled: Boolean) {
-        // Native keyboard capture is available starting in Android 16.1 (API 36.1).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
-            Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
-        ) {
-            val windowLayoutParams = window.attributes
-            windowLayoutParams.setKeyboardCaptureEnabled(enabled)
-            window.attributes = windowLayoutParams
+        externalDisplayManager?.setKeyboardCaptureEnabled(enabled)
+        if (com.limelight.binding.input.capture.NativeKeyboardCapture.apply(window, enabled)) {
             return
         }
 
