@@ -1795,7 +1795,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        keyboardInputHandler.clearModifierState()
+        if (::keyboardInputHandler.isInitialized) {
+            if (hasFocus) keyboardInputHandler.clearModifierState()
+            else keyboardInputHandler.releaseForwardedKeys()
+        }
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             // Android only delivers OnPrimaryClipChangedListener events while
@@ -2300,6 +2303,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
+        if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
         if (grab && !prefConfig.enableNativeMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
@@ -2311,7 +2317,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             inputCaptureProvider.disableCapture()
         }
-        setMetaKeyCaptureState(grab)
+        setMetaKeyCaptureState(grab && connected)
         grabbedInput = grab
     }
 
@@ -2430,13 +2436,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         prefConfig.enableNativeMousePointer = enable
 
         if (enable) {
-            if (::touchInputHandler.isInitialized) {
-                touchInputHandler.cancelNonRootTouchpad()
-            }
-            inputCaptureProvider.disableCapture()
+            setInputGrabState(true)
             cursorVisible = true
             inputCaptureProvider.showCursor()
-            setMetaKeyCaptureState(true)
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.hide()
         } else {
@@ -2522,6 +2524,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * 后台恢复保留保活服务，Surface 销毁和 onStop 的先后顺序不影响该决定。
      */
     private fun stopConnection(reason: StreamStopReason) {
+        if (::keyboardInputHandler.isInitialized) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
+        setMetaKeyCaptureState(false)
         val connection = conn
         connection?.requestStop()
 

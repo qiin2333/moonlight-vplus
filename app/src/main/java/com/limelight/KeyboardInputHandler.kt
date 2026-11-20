@@ -85,8 +85,7 @@ class KeyboardInputHandler(private val game: Game) {
                     // Toggle cursor visibility
                     KeyEvent.KEYCODE_C -> {
                         if (!game.grabbedInput) {
-                            game.inputCaptureProvider.enableCapture()
-                            game.grabbedInput = true
+                            game.setInputGrabState(true)
                         }
                         game.cursorVisible = !game.cursorVisible
                         if (game.cursorVisible) {
