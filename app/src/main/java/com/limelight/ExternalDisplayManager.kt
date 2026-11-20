@@ -42,6 +42,7 @@ class ExternalDisplayManager(
         fun onExternalDisplayConnected(display: Display)
         fun onExternalDisplayDisconnected()
         fun onStreamViewReady(streamView: StreamView)
+        fun onStreamWindowFocusChanged(hasFocus: Boolean) {}
     }
 
     var callback: ExternalDisplayCallback? = null
@@ -88,6 +89,8 @@ class ExternalDisplayManager(
     fun getStreamView(): StreamView? = externalPresentation?.findViewById(R.id.surfaceView)
 
     fun isUsingExternalDisplay(): Boolean = targetDisplayResolver.isExternalDisplaySelected()
+
+    fun hasStreamWindowFocus(): Boolean = externalPresentation?.window?.decorView?.hasWindowFocus() == true
 
     fun setKeyboardCaptureEnabled(enabled: Boolean) {
         keyboardCaptureEnabled = enabled
@@ -144,8 +147,10 @@ class ExternalDisplayManager(
     }
 
     private fun dismissExternalPresentation() {
-        externalPresentation?.dismiss()
+        val presentation = externalPresentation
         externalPresentation = null
+        presentation?.dismiss()
+        if (presentation != null) callback?.onStreamWindowFocusChanged(false)
     }
 
     private fun checkForExternalDisplay() {
@@ -198,6 +203,11 @@ class ExternalDisplayManager(
         override fun onDisplayRemoved() {
             super.onDisplayRemoved()
             activity.finish()
+        }
+
+        override fun onWindowFocusChanged(hasFocus: Boolean) {
+            super.onWindowFocusChanged(hasFocus)
+            if (externalPresentation === this) callback?.onStreamWindowFocusChanged(hasFocus)
         }
 
         fun isForDisplay(displayId: Int): Boolean = presentationDisplayId == displayId

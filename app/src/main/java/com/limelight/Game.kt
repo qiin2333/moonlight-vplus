@@ -250,6 +250,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
     private var activeGameMenu: GameMenu? = null
     private var streamInForeground = false
+    private var mainKeyboardFocus = false
+    private var externalKeyboardFocus = false
     private var bitrateCardControllerCache: Pair<NvConnection, BitrateCardController>? = null
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
@@ -719,6 +721,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Create the ExternalDisplayManager callback (shared by onCreate & prepareConnection). */
     private fun createExternalDisplayCallback(): ExternalDisplayManager.ExternalDisplayCallback {
         return object : ExternalDisplayManager.ExternalDisplayCallback {
+            override fun onStreamWindowFocusChanged(hasFocus: Boolean) {
+                externalKeyboardFocus = hasFocus
+                updateKeyboardInterception()
+            }
+
             override fun onExternalDisplayConnected(display: Display) {
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
@@ -728,6 +735,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
 
             override fun onExternalDisplayDisconnected() {
+                externalKeyboardFocus = false
+                updateKeyboardInterception()
                 externalStreamView = null
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
@@ -740,6 +749,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 externalStreamView = streamView
                 retargetTouchContexts(streamView)
                 setupStreamViewListeners(streamView)
+                externalKeyboardFocus = externalDisplayManager?.hasStreamWindowFocus() == true
+                updateKeyboardInterception()
                 LimeLog.info("External display StreamView ready: ${streamView.width}x${streamView.height}")
             }
         }
@@ -896,6 +907,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * Leave callbacks detached: Presentation.onCreate() can run synchronously in initialize().
      */
     private fun prepareExternalDisplay() {
+        externalKeyboardFocus = false
         externalDisplayManager?.cleanup()
         externalStreamView = null
         val manager = ExternalDisplayManager(this, prefConfig, targetDisplayResolver)
@@ -903,6 +915,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         // Input and Surface callbacks need the new connection and touch contexts first.
         manager.initialize()
         externalStreamView = manager.getStreamView()
+        externalKeyboardFocus = manager.hasStreamWindowFocus()
     }
 
     /** Bind the settled output after connection, touch contexts and callback handlers exist. */
@@ -1498,6 +1511,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             if (connected) audioVibrationService?.resumeAfterForeground()
         }
         streamInForeground = true
+        mainKeyboardFocus = window.decorView.hasWindowFocus()
+        externalKeyboardFocus = externalDisplayManager?.hasStreamWindowFocus() == true
         hostUnlockController?.onStreamForegroundChanged(true)
         Dialog.setVisibilityListener { updateKeyboardInterception() }
         KeyboardAccessibilityService.connectionListener = keyboardAccessibilityConnectionListener
@@ -1794,8 +1809,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        mainKeyboardFocus = hasFocus
         keyboardInputHandler.clearModifierState()
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
+        updateKeyboardInterception()
         if (hasFocus) {
             // Android only delivers OnPrimaryClipChangedListener events while
             // the app holds input focus; clips copied in another app while
@@ -1985,6 +2002,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun updateKeyboardInterception() {
+        if (!mainKeyboardFocus && !externalKeyboardFocus) {
+            if (::keyboardInputHandler.isInitialized) keyboardInputHandler.releaseForwardedKeys()
+            KeyboardAccessibilityService.setIntercepting(false)
+            return
+        }
         val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog() ||
             hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible

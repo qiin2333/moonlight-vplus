@@ -6,6 +6,7 @@ import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
+import android.view.Display
 import android.view.KeyEvent
 import android.view.Window
 import androidx.test.core.app.ActivityScenario
@@ -48,6 +49,16 @@ class ExternalKeyboardCaptureTest {
                             setKeyboardCaptureEnabled(true)
                             initialize()
                             val first = presentation(this)
+                            val focusEvents = mutableListOf<Boolean>()
+                            callback = object : ExternalDisplayManager.ExternalDisplayCallback {
+                                override fun onExternalDisplayConnected(display: Display) = Unit
+                                override fun onExternalDisplayDisconnected() = Unit
+                                override fun onStreamViewReady(streamView: StreamView) = Unit
+                                override fun onStreamWindowFocusChanged(hasFocus: Boolean) { focusEvents.add(hasFocus) }
+                            }
+                            first.onWindowFocusChanged(true)
+                            first.onWindowFocusChanged(false)
+                            assertEquals(listOf(true, false), focusEvents)
                             assertCapture(first.window!!, true)
                             setKeyboardCaptureEnabled(false)
                             assertCapture(first.window!!, false)
