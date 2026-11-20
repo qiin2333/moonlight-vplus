@@ -1,4 +1,4 @@
-package com.limelight.utils
+﻿package com.limelight.utils
 
 import android.animation.ValueAnimator
 import android.graphics.drawable.GradientDrawable
@@ -20,19 +20,22 @@ object AppSwitchStyle {
         val active = UiHelper.accentColor(palette)
         val soft = UiHelper.accentSoftColor(palette)
         val outline = ContextCompat.getColor(palette, R.color.game_menu_list_item_border)
-        val existingTrack = (switch.trackDrawable as? InsetDrawable)?.drawable as? SwitchTrackDrawable
+        val existingTrack = switch.trackDrawable as? SwitchTrackDrawable
         // Preference rows rebind after toggling; keep their in-flight animation.
         if (existingTrack?.hasPalette(active, soft, outline, density) == true) return
         switch.thumbTintList = null
         switch.trackTintList = null
-        fun thumb(alpha: Int) = requireNotNull(ContextCompat.getDrawable(palette, R.drawable.app_switch_thumb))
-            .mutate().apply { this.alpha = alpha }
+        fun thumb(alpha: Int) = InsetDrawable(
+            requireNotNull(ContextCompat.getDrawable(palette, R.drawable.app_switch_thumb))
+                .mutate().apply { this.alpha = alpha },
+            dp(3), 0, dp(3), 0
+        )
         switch.thumbDrawable = StateListDrawable().apply {
             addState(intArrayOf(-android.R.attr.state_enabled), thumb(97))
             addState(intArrayOf(), thumb(255))
         }
         switch.trackDrawable?.jumpToCurrentState()
-        switch.trackDrawable = InsetDrawable(SwitchTrackDrawable(switch, active, soft, outline), 0, dp(4), 0, dp(4))
+        switch.trackDrawable = SwitchTrackDrawable(switch, active, soft, outline)
         switch.showText = false
         switch.splitTrack = false
         switch.thumbTextPadding = 0
@@ -55,8 +58,8 @@ private class SwitchTrackDrawable(
     private var animator: ValueAnimator? = null
 
     init {
-        setSize((36 * density + 0.5f).toInt(), (18 * density + 0.5f).toInt())
-        cornerRadius = 9 * density
+        setSize((36 * density + 0.5f).toInt(), (26 * density + 0.5f).toInt())
+        cornerRadius = 13 * density
         updateColors()
     }
 

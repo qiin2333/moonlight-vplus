@@ -25,10 +25,10 @@ import com.limelight.R
 private val SwitchWidth = 36.dp
 private val SwitchHeight = 26.dp
 private val TrackWidth = 36.dp
-private val TrackHeight = 18.dp
+private val TrackHeight = 26.dp
 private val ThumbDiameter = 20.dp
 
-/** Shared switch: a white thumb over a slightly slimmer accent track. */
+/** Shared switch: a full-height short track with a white thumb. */
 @Composable
 fun AppSwitch(
     checked: Boolean,
@@ -82,8 +82,9 @@ fun AppSwitch(
             cornerRadius = CornerRadius(trackH / 2f),
             style = Stroke(width = 0.75.dp.toPx())
         )
-        val thumbMinX = (size.width - trackW) / 2f + thumbR
-        val thumbMaxX = (size.width + trackW) / 2f - thumbR
+        val thumbInset = 3.dp.toPx()
+        val thumbMinX = (size.width - trackW) / 2f + thumbInset + thumbR
+        val thumbMaxX = (size.width + trackW) / 2f - thumbInset - thumbR
         val thumbX = thumbMinX + (thumbMaxX - thumbMinX) * (if (rtl) 1f - travel else travel)
         drawCircle(
             color = when {
