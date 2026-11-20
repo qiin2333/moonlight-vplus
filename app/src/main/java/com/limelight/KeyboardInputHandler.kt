@@ -36,8 +36,11 @@ class KeyboardInputHandler(private val game: Game) {
     }
     private val pressedKeys = HashSet<PhysicalKey>()
     private val releasedKeys = HashSet<PhysicalKey>()
+    private data class AccessibilityControllerKey(val device: Int, val code: Int, val scan: Int) {
+        constructor(event: KeyEvent) : this(event.deviceId, event.keyCode, event.scanCode)
+    }
     private data class ForwardedControllerKey(val event: KeyEvent, val context: InputDeviceContext)
-    private val forwardedControllerKeys = LinkedHashMap<PhysicalKey, ForwardedControllerKey>()
+    private val forwardedControllerKeys = LinkedHashMap<AccessibilityControllerKey, ForwardedControllerKey>()
     private var releaseGeneration = 0L
     private var rightMouseButtonDown = false
     private var middleMouseButtonDown = false
@@ -307,7 +310,7 @@ class KeyboardInputHandler(private val game: Game) {
                     if (generation != releaseGeneration) {
                         game.controllerHandler.cancelAccessibilityButton(context, event)
                     } else {
-                        forwardedControllerKeys[physicalKey] = ForwardedControllerKey(KeyEvent(event), context)
+                        forwardedControllerKeys[AccessibilityControllerKey(event)] = ForwardedControllerKey(KeyEvent(event), context)
                     }
                 }
             }
@@ -352,7 +355,7 @@ class KeyboardInputHandler(private val game: Game) {
         if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) return false
         val physicalKey = PhysicalKey(event)
         if (releasedKeys.remove(physicalKey)) return true
-        if (game.isEventFromAccessibilityService) forwardedControllerKeys.remove(physicalKey)
+        if (game.isEventFromAccessibilityService) forwardedControllerKeys.remove(AccessibilityControllerKey(event))
         val controller = ControllerHandler.isGameControllerDevice(event.device)
         if (!controller && !game.canForwardKeyboardInput()) {
             return game.canUseKeyboardShortcuts() && handleSpecialKeys(event.keyCode, false)

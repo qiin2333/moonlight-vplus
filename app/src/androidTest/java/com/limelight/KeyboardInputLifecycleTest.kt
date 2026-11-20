@@ -208,8 +208,14 @@ class KeyboardInputLifecycleTest {
                 KeyboardAccessibilityService.setIntercepting(true)
                 assertTrue(send(service, controllerKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_A, deviceId)))
                 assertEquals(ControllerPacket.A_FLAG, context.inputMap)
-                assertTrue(send(service, controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A, deviceId)))
+                assertTrue(send(service, controllerKey(
+                    KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A, deviceId, InputDevice.SOURCE_KEYBOARD
+                )))
                 assertEquals(0, context.inputMap)
+                controller.handleButtonDown(aDown)
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals("A completed accessibility key must not cancel a later input", ControllerPacket.A_FLAG, context.inputMap)
+                controller.handleButtonUp(controllerKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A, deviceId))
             }
         }
     }
@@ -351,8 +357,8 @@ class KeyboardInputLifecycleTest {
         return InputDevice.getDeviceIds().first { ControllerHandler.isGameControllerDevice(InputDevice.getDevice(it)) }
     }
 
-    private fun controllerKey(action: Int, code: Int, deviceId: Int) = KeyEvent(
-        SystemClock.uptimeMillis() - 100, SystemClock.uptimeMillis(), action, code, 0, 0, deviceId, 0, 0, InputDevice.SOURCE_GAMEPAD
+    private fun controllerKey(action: Int, code: Int, deviceId: Int, source: Int = InputDevice.SOURCE_GAMEPAD) = KeyEvent(
+        SystemClock.uptimeMillis() - 100, SystemClock.uptimeMillis(), action, code, 0, 0, deviceId, 0, 0, source
     )
     private fun key(action: Int, code: Int, source: Int = InputDevice.SOURCE_KEYBOARD) = KeyEvent(
         1, SystemClock.uptimeMillis(), action, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, source
