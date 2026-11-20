@@ -85,8 +85,10 @@ class KeyboardInputHandler(private val game: Game) {
                     // Toggle cursor visibility
                     KeyEvent.KEYCODE_C -> {
                         if (!game.grabbedInput) {
+                            // This shortcut also captures the pointer in native mouse mode.
                             game.inputCaptureProvider.enableCapture()
                             game.grabbedInput = true
+                            game.setMetaKeyCaptureState(game.connected)
                         }
                         game.cursorVisible = !game.cursorVisible
                         if (game.cursorVisible) {

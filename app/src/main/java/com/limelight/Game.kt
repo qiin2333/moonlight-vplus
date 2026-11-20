@@ -1741,6 +1741,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setMetaKeyCaptureState(enabled: Boolean) {
+        // Native keyboard capture is available starting in Android 16.1 (API 36.1).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+            Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+        ) {
+            val windowLayoutParams = window.attributes
+            windowLayoutParams.setKeyboardCaptureEnabled(enabled)
+            window.attributes = windowLayoutParams
+            return
+        }
+
+        // Older Samsung devices expose a proprietary API for Meta key capture.
         try {
             val semWindowManager = Class.forName("com.samsung.android.view.SemWindowManager")
             val getInstanceMethod = semWindowManager.getMethod("getInstance")
@@ -2289,6 +2300,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
+        if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
         if (grab && !prefConfig.enableNativeMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
@@ -2300,7 +2314,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             inputCaptureProvider.disableCapture()
         }
-        setMetaKeyCaptureState(grab)
+        setMetaKeyCaptureState(grab && connected)
         grabbedInput = grab
     }
 
@@ -2419,13 +2433,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         prefConfig.enableNativeMousePointer = enable
 
         if (enable) {
-            if (::touchInputHandler.isInitialized) {
-                touchInputHandler.cancelNonRootTouchpad()
-            }
-            inputCaptureProvider.disableCapture()
+            setInputGrabState(grabbedInput)
             cursorVisible = true
             inputCaptureProvider.showCursor()
-            setMetaKeyCaptureState(true)
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.hide()
         } else {
@@ -2501,6 +2511,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Accepted on the UI thread, together with connection resources and PiP state. */
     private fun onConnectionEstablished(): Boolean {
         if (!streamSession.markConnectionEstablished()) return false
+        setMetaKeyCaptureState(grabbedInput)
         orientationManager.connected = true
         updatePipAutoEnter()
         return true
@@ -2511,6 +2522,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * 后台恢复保留保活服务，Surface 销毁和 onStop 的先后顺序不影响该决定。
      */
     private fun stopConnection(reason: StreamStopReason) {
+        if (::keyboardInputHandler.isInitialized) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
+        setMetaKeyCaptureState(false)
         val connection = conn
         connection?.requestStop()
 
