@@ -311,7 +311,7 @@ private fun MenuOptionRow(
                         )
                     }
                 } else {
-                    val controlMaxWidth = option.inlineControlMaxWidth
+                    val controlMaxWidth = inlineControl.maxWidth
                     if (controlMaxWidth != null) {
                         Box(
                             modifier = Modifier

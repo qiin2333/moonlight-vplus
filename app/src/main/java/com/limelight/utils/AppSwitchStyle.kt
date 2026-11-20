@@ -28,7 +28,7 @@ object AppSwitchStyle {
         fun thumb(alpha: Int) = InsetDrawable(
             requireNotNull(ContextCompat.getDrawable(palette, R.drawable.app_switch_thumb))
                 .mutate().apply { this.alpha = alpha },
-            dp(3), 0, dp(3), 0
+            dp(AppSwitchSpec.THUMB_INSET_DP), 0, dp(AppSwitchSpec.THUMB_INSET_DP), 0
         )
         switch.thumbDrawable = StateListDrawable().apply {
             addState(intArrayOf(-android.R.attr.state_enabled), thumb(97))
@@ -39,7 +39,7 @@ object AppSwitchStyle {
         switch.showText = false
         switch.splitTrack = false
         switch.thumbTextPadding = 0
-        switch.switchMinWidth = dp(36)
+        switch.switchMinWidth = dp(AppSwitchSpec.WIDTH_DP)
         switch.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
 }
@@ -58,8 +58,11 @@ private class SwitchTrackDrawable(
     private var animator: ValueAnimator? = null
 
     init {
-        setSize((36 * density + 0.5f).toInt(), (26 * density + 0.5f).toInt())
-        cornerRadius = 13 * density
+        setSize(
+            (AppSwitchSpec.TRACK_WIDTH_DP * density + 0.5f).toInt(),
+            (AppSwitchSpec.TRACK_HEIGHT_DP * density + 0.5f).toInt()
+        )
+        cornerRadius = AppSwitchSpec.CORNER_RADIUS_DP * density
         updateColors()
     }
 
@@ -109,6 +112,6 @@ private class SwitchTrackDrawable(
             else ColorUtils.setAlphaComponent(soft, 26))
         val border = if (enabled) ColorUtils.blendARGB(outline,
             ColorUtils.setAlphaComponent(active, 117), progress) else outline
-        setStroke((0.75f * density).toInt().coerceAtLeast(1), border)
+        setStroke((AppSwitchSpec.STROKE_DP * density).toInt().coerceAtLeast(1), border)
     }
 }

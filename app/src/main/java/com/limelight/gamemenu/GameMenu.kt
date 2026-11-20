@@ -6,7 +6,6 @@ import android.app.Dialog
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -98,13 +97,6 @@ internal fun performancePageFocusKey(from: GameMenuPageLayout, to: GameMenuPageL
         to == GameMenuPageLayout.PERF_OVERLAY -> PERF_STYLE_FOCUS_KEY
         else -> null
     }
-
-internal fun performanceStyleLabel(style: PerfHudDensity): Int = when (style) {
-    PerfHudDensity.MINI -> R.string.perf_overlay_style_mini
-    PerfHudDensity.STANDARD -> R.string.perf_overlay_style_standard
-    PerfHudDensity.DETAILED -> R.string.perf_overlay_style_detailed
-    PerfHudDensity.CLASSIC -> R.string.perf_overlay_style_classic
-}
 
 internal fun performanceMetricEntries(
     names: List<CharSequence>,
@@ -633,8 +625,7 @@ class GameMenu(
         val selected: Boolean = false,
         val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT,
         val focusKey: String? = null,
-        val tintIcon: Boolean = false,
-        val inlineControlMaxWidth: Dp? = null
+        val tintIcon: Boolean = false
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -654,7 +645,10 @@ class GameMenu(
             val checked: Boolean,
             val toggleAction: Runnable? = null
         ) : InlineControl
-        data class Segmented(val segments: List<SegmentOption>) : InlineControl
+        data class Segmented(
+            val segments: List<SegmentOption>,
+            val maxWidth: Dp? = null
+        ) : InlineControl
     }
 
     data class SegmentOption(
@@ -2638,21 +2632,6 @@ class GameMenu(
         )
     }
 
-    private fun performanceOverlaySummary(): String {
-        val style = game.perfOverlayStyle
-        val portrait = game.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-        val layout = when {
-            game.isPerfOverlayDocked -> getString(R.string.game_menu_perf_docked_layout)
-            style == PerfHudDensity.MINI || style == PerfHudDensity.DETAILED ->
-                getString(R.string.game_menu_perf_fixed_layout)
-            style == PerfHudDensity.CLASSIC && portrait -> getString(R.string.orientation_vertical)
-            game.prefConfig.perfOverlayOrientation == PreferenceConfiguration.PerfOverlayOrientation.VERTICAL ->
-                getString(R.string.orientation_vertical)
-            else -> getString(R.string.orientation_horizontal)
-        }
-        return game.getString(R.string.network_quality_menu_summary, getString(performanceStyleLabel(style)), layout)
-    }
-
     private fun showPerformanceMetricsPage() {
         showSubMenu(
             getString(R.string.game_menu_perf_metrics),
@@ -2684,8 +2663,10 @@ class GameMenu(
                 isShowIcon = true,
                 isKeepDialog = true,
                 tintIcon = true,
-                inlineControlMaxWidth = 320.dp,
-                inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments()),
+                inlineControl = InlineControl.Segmented(
+                    buildPerformanceOverlaySegments(),
+                    maxWidth = 320.dp
+                ),
                 focusKey = PERF_MODE_FOCUS_KEY
             ),
             MenuOption(
@@ -2696,8 +2677,10 @@ class GameMenu(
                 isShowIcon = true,
                 isKeepDialog = true,
                 tintIcon = true,
-                inlineControlMaxWidth = 320.dp,
-                inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments()),
+                inlineControl = InlineControl.Segmented(
+                    buildPerfOverlayStyleSegments(),
+                    maxWidth = 320.dp
+                ),
                 focusKey = PERF_STYLE_FOCUS_KEY
             ),
             MenuOption(
@@ -2708,7 +2691,6 @@ class GameMenu(
                 isShowIcon = true,
                 isKeepDialog = true,
                 tintIcon = true,
-                inlineControlMaxWidth = 320.dp,
                 subtitle = if (gestureMode == com.limelight.perfhud.PerfOverlayGestures.CUSTOM)
                     getString(R.string.game_menu_perf_gestures_custom) else null,
                 inlineControl = InlineControl.Segmented(
@@ -2718,7 +2700,8 @@ class GameMenu(
                     ).map { (value, label) ->
                         SegmentOption(getString(label), value == gestureMode,
                             Runnable { game.setPerfOverlayGestureMode(value) })
-                    }
+                    },
+                    maxWidth = 320.dp
                 )
             ),
             MenuOption(
