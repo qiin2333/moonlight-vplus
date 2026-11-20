@@ -33,6 +33,16 @@ class StylusToolClassifierTest {
     }
 
     @Test
+    fun fallbackMappingUsesTheFirstPointerEvenWhenAnotherPointerJoins() {
+        assertTrue(firstPointerIsStylus(MotionEvent.TOOL_TYPE_STYLUS))
+        assertTrue(firstPointerIsStylus(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_FINGER))
+        assertTrue(firstPointerIsStylus(MotionEvent.TOOL_TYPE_ERASER, MotionEvent.TOOL_TYPE_FINGER))
+        assertFalse(firstPointerIsStylus(MotionEvent.TOOL_TYPE_FINGER, MotionEvent.TOOL_TYPE_STYLUS))
+        assertFalse(firstPointerIsStylus(MotionEvent.TOOL_TYPE_MOUSE, MotionEvent.TOOL_TYPE_STYLUS))
+        assertFalse(firstPointerIsStylus())
+    }
+
+    @Test
     fun historicalMotionSamplesAreVisitedBeforeCurrentSamples() {
         val visited = mutableListOf<Pair<Int, Int>>()
 
@@ -56,4 +66,7 @@ class StylusToolClassifierTest {
 
     private fun containsStylus(vararg toolTypes: Int): Boolean =
         containsStylusTool(toolTypes.size) { toolTypes[it] }
+
+    private fun firstPointerIsStylus(vararg toolTypes: Int): Boolean =
+        pointerZeroIsStylus(toolTypes.size) { toolTypes[it] }
 }
