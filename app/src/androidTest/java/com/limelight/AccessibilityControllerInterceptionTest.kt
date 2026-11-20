@@ -129,6 +129,53 @@ class AccessibilityControllerInterceptionTest {
     }
 
     @Test
+    fun accessibleEscapeDoesNotReplacePendingOrdinaryEscape() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val ordinary = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, ordinary))
+                game.keyboardInputHandler.handleKeyDown(ordinary)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val accessible = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, accessible))
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertTrue(forwarded(game).containsKey(KeyEvent.KEYCODE_ESCAPE))
+                assertTrue(send(service, KeyEvent.changeAction(accessible, KeyEvent.ACTION_UP)))
+                val ordinaryUp = KeyEvent.changeAction(ordinary, KeyEvent.ACTION_UP)
+                assertFalse(send(service, ordinaryUp))
+                game.keyboardInputHandler.handleKeyUp(ordinaryUp)
+                assertTrue(forwarded(game).isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun ordinaryEscapeReleaseKeepsAccessibleEscapePending() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val ordinary = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, ordinary))
+                game.keyboardInputHandler.handleKeyDown(ordinary)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val accessible = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, accessible))
+                val ordinaryUp = KeyEvent.changeAction(ordinary, KeyEvent.ACTION_UP)
+                assertFalse(send(service, ordinaryUp))
+                game.keyboardInputHandler.handleKeyUp(ordinaryUp)
+                assertTrue(forwarded(game).isEmpty())
+                assertTrue(send(service, KeyEvent.changeAction(accessible, KeyEvent.ACTION_UP)))
+                assertTrue(forwarded(game).containsKey(KeyEvent.KEYCODE_ESCAPE))
+            }
+        }
+    }
+
+    @Test
     fun captureLossKeepsOrdinaryEscapeTapRelease() = withGame { scenario ->
         scenario.onActivity { game ->
             connect(game)
@@ -239,6 +286,21 @@ class AccessibilityControllerInterceptionTest {
         }
         SystemClock.sleep(350)
         scenario.onActivity { assertTrue(it.grabbedInput) }
+    }
+
+    @Test
+    fun releaseForwardedKeysCancelsOrdinaryGrabShortcut() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.setInputGrabState(false)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                shortcut(service, game, controllerDeviceId(), captured = false)
+                game.keyboardInputHandler.releaseForwardedKeys()
+            }
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { assertFalse(it.grabbedInput) }
     }
 
     @Test

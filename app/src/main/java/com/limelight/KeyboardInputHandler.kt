@@ -208,6 +208,7 @@ class KeyboardInputHandler(private val game: Game) {
         specialKeyUsesAccessibility = false
         cancelAccessibilityToggle()
         handler.removeCallbacks(ordinaryToggleGrab)
+        game.window.decorView.handler?.removeCallbacks(ordinaryToggleGrab)
         val keys = forwardedKeys.values.toList()
         forwardedKeys.clear()
         forwardedKeyOwners.clear()
@@ -281,6 +282,15 @@ class KeyboardInputHandler(private val game: Game) {
         // 自定义组合键，只能其它+esc，esc+其它时，esc抬起时其它才会down
         val keyCode = event.keyCode
         val origin = keyOrigin()
+        if (keyCode == KeyEvent.KEYCODE_ESCAPE && event.repeatCount == 0 &&
+            game.prefConfig.enableCustomKeyMap && game.grabbedInput &&
+            escState == 1 && escStateFromAccessibility != (origin == KeyOrigin.ACCESSIBILITY) &&
+            ::escConfirmRunnable.isInitialized
+        ) {
+            handler.removeCallbacks(escConfirmRunnable)
+            // Preserve the first origin before replacing its pending confirmation.
+            escConfirmRunnable.run()
+        }
         val physicalKey = PhysicalKey(event)
         if (origin == KeyOrigin.ACCESSIBILITY) accessibilityPressedKeys.add(physicalKey)
         else ordinaryPressedKeys.add(physicalKey)
@@ -466,11 +476,24 @@ class KeyboardInputHandler(private val game: Game) {
             }
         }
 
+        if (event.keyCode == KeyEvent.KEYCODE_ESCAPE && game.prefConfig.enableCustomKeyMap && game.grabbedInput &&
+            escState != 0 && escStateFromAccessibility != (origin == KeyOrigin.ACCESSIBILITY)
+        ) {
+            sourcePressedKeys.remove(physicalKey)
+            if (ordinaryPressedKeys.none { it.code == event.keyCode } && accessibilityPressedKeys.none { it.code == event.keyCode }) {
+                pressedKeys.remove(event.keyCode)
+            }
+            val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
+            sendOwnedKeyUp(KeyEvent.KEYCODE_ESCAPE, translated, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED, origin)
+            return true
+        }
+
         val combo = escComboKeys.remove(physicalKey)
         val keyCode = event.keyCode
+        pressedKeys.remove(keyCode)
         sourcePressedKeys.remove(physicalKey)
-        if (ordinaryPressedKeys.none { it.code == keyCode } && accessibilityPressedKeys.none { it.code == keyCode }) {
-            pressedKeys.remove(keyCode)
+        if (ordinaryPressedKeys.any { it.code == keyCode } || accessibilityPressedKeys.any { it.code == keyCode }) {
+            pressedKeys.add(keyCode)
         }
 
         if (game.prefConfig.enableCustomKeyMap && game.grabbedInput) {
