@@ -1,14 +1,11 @@
 package com.limelight
 
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
-import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.limelight.binding.input.capture.InputCaptureProvider
 import org.junit.Assert.assertEquals
@@ -17,7 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.InetAddress
 
 @RunWith(AndroidJUnit4::class)
 class NativeKeyboardCaptureTest {
@@ -28,14 +24,9 @@ class NativeKeyboardCaptureTest {
                 Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
         )
 
-        val intent = Intent(ApplicationProvider.getApplicationContext(), Game::class.java)
-            .putExtra(Game.EXTRA_APP_ID, 1)
-            .putExtra(Game.EXTRA_APP_NAME, "app")
-            .putExtra(Game.EXTRA_HOST, InetAddress.getLoopbackAddress().hostAddress)
-            .putExtra(Game.EXTRA_PORT, 1)
-
-        ActivityScenario.launch<Game>(intent).use { scenario ->
+        KeyboardTestScenario.launch().use { scenario ->
             scenario.onActivity { game ->
+                game.onWindowFocusChanged(true)
                 assertEquals(
                     PackageManager.PERMISSION_GRANTED,
                     game.checkSelfPermission("android.permission.CAPTURE_KEYBOARD")
