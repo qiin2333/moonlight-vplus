@@ -2,7 +2,6 @@
 
 import android.animation.ValueAnimator
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.View
 import androidx.appcompat.widget.SwitchCompat
@@ -25,11 +24,10 @@ object AppSwitchStyle {
         if (existingTrack?.hasPalette(active, soft, outline, density) == true) return
         switch.thumbTintList = null
         switch.trackTintList = null
-        fun thumb(alpha: Int) = InsetDrawable(
-            requireNotNull(ContextCompat.getDrawable(palette, R.drawable.app_switch_thumb))
-                .mutate().apply { this.alpha = alpha },
-            dp(AppSwitchSpec.THUMB_INSET_DP), 0, dp(AppSwitchSpec.THUMB_INSET_DP), 0
-        )
+        // The vector contains its own transparent inset. An InsetDrawable
+        // exposes optical insets that SwitchCompat also subtracts from the track.
+        fun thumb(alpha: Int) = requireNotNull(ContextCompat.getDrawable(palette, R.drawable.app_switch_thumb))
+            .mutate().apply { this.alpha = alpha }
         switch.thumbDrawable = StateListDrawable().apply {
             addState(intArrayOf(-android.R.attr.state_enabled), thumb(97))
             addState(intArrayOf(), thumb(255))
