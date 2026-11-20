@@ -32,18 +32,19 @@ class KeyboardInputHandler(private val game: Game) {
     private var hasShownEscHint = false
 
     private val pressedKeys = HashSet<Int>()
-    private data class AccessibilityControllerKey(val device: Int, val code: Int, val scan: Int) {
-        constructor(event: KeyEvent) : this(event.deviceId, event.keyCode, event.scanCode)
-    }
-    private data class ForwardedControllerKey(val event: KeyEvent, val context: InputDeviceContext)
-    private val forwardedControllerKeys = LinkedHashMap<AccessibilityControllerKey, ForwardedControllerKey>()
-    private var accessibilityReleaseGeneration = 0L
     private data class ForwardedKey(val translated: Short, val flags: Byte)
     private val forwardedKeys = LinkedHashMap<Int, ForwardedKey>()
     private var escState = 0 // 0 = 空闲，1 = ESC已按下，2 = 已进入组合键
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var escConfirmRunnable: Runnable
     private var escTapRelease: Runnable? = null
+
+    private data class AccessibilityControllerKey(val device: Int, val code: Int, val scan: Int) {
+        constructor(event: KeyEvent) : this(event.deviceId, event.keyCode, event.scanCode)
+    }
+    private data class ForwardedControllerKey(val event: KeyEvent, val context: InputDeviceContext)
+    private val forwardedControllerKeys = LinkedHashMap<AccessibilityControllerKey, ForwardedControllerKey>()
+    private var accessibilityReleaseGeneration = 0L
 
     private val toggleGrab = Runnable { game.setInputGrabState(!game.grabbedInput) }
 
