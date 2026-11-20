@@ -17,6 +17,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.limelight.binding.input.capture.NativeKeyboardCapture
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.ui.StreamView
 import com.limelight.utils.UiHelper
@@ -35,6 +36,7 @@ class ExternalDisplayManager(
     private var displayListener: DisplayManager.DisplayListener? = null
     private var externalPresentation: ExternalDisplayPresentation? = null
     private var displayModeSelection: DisplayModeManager.DisplayModeSelection? = null
+    private var keyboardCaptureEnabled = false
 
     interface ExternalDisplayCallback {
         fun onExternalDisplayConnected(display: Display)
@@ -86,6 +88,11 @@ class ExternalDisplayManager(
     fun getStreamView(): StreamView? = externalPresentation?.findViewById(R.id.surfaceView)
 
     fun isUsingExternalDisplay(): Boolean = targetDisplayResolver.isExternalDisplaySelected()
+
+    fun setKeyboardCaptureEnabled(enabled: Boolean) {
+        keyboardCaptureEnabled = enabled
+        externalPresentation?.window?.let { NativeKeyboardCapture.apply(it, enabled) }
+    }
 
     /**
      * Stores the mode selected for a specific display and applies it to the Presentation when
@@ -168,6 +175,7 @@ class ExternalDisplayManager(
             super.onCreate(savedInstanceState)
 
             window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window?.let { NativeKeyboardCapture.apply(it, keyboardCaptureEnabled) }
             @Suppress("DEPRECATION")
             window?.decorView?.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
