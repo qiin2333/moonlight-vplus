@@ -243,4 +243,9 @@
     <string name="perf_overlay_anchor_bottom_left">למטה משמאל</string>
     <string name="perf_overlay_anchor_bottom_center">למטה במרכז</string>
     <string name="perf_overlay_anchor_bottom_right">למטה מימין</string>
+    <string name="game_menu_perf_gestures">מחוות</string>
+    <string name="game_menu_perf_gestures_full">מלא</string>
+    <string name="game_menu_perf_gestures_long_only">לחיצה ארוכה</string>
+    <string name="game_menu_perf_gestures_custom">המחוות הנוכחיות מותאמות אישית</string>
+    <string name="game_menu_perf_moon">מופע הירח</string>
 </resources>

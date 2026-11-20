@@ -347,4 +347,9 @@
     <string name="perf_overlay_anchor_bottom_left">Inferior esquerdo</string>
     <string name="perf_overlay_anchor_bottom_center">Inferior central</string>
     <string name="perf_overlay_anchor_bottom_right">Inferior direito</string>
+    <string name="game_menu_perf_gestures">Gestos</string>
+    <string name="game_menu_perf_gestures_full">Completo</string>
+    <string name="game_menu_perf_gestures_long_only">Só toque longo</string>
+    <string name="game_menu_perf_gestures_custom">Os gestos atuais são personalizados</string>
+    <string name="game_menu_perf_moon">Fase da lua</string>
 </resources>

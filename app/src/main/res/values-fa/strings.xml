@@ -91,4 +91,9 @@
     <string name="perf_overlay_anchor_bottom_left">پایین چپ</string>
     <string name="perf_overlay_anchor_bottom_center">پایین وسط</string>
     <string name="perf_overlay_anchor_bottom_right">پایین راست</string>
+    <string name="game_menu_perf_gestures">حرکت‌ها</string>
+    <string name="game_menu_perf_gestures_full">کامل</string>
+    <string name="game_menu_perf_gestures_long_only">فقط لمس طولانی</string>
+    <string name="game_menu_perf_gestures_custom">حرکت‌های فعلی سفارشی هستند</string>
+    <string name="game_menu_perf_moon">فاز ماه</string>
 </resources>

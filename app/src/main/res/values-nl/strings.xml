@@ -306,4 +306,9 @@
     <string name="perf_overlay_anchor_bottom_left">Linksonder</string>
     <string name="perf_overlay_anchor_bottom_center">Middenonder</string>
     <string name="perf_overlay_anchor_bottom_right">Rechtsonder</string>
+    <string name="game_menu_perf_gestures">Gebaren</string>
+    <string name="game_menu_perf_gestures_full">Volledig</string>
+    <string name="game_menu_perf_gestures_long_only">Alleen lang indrukken</string>
+    <string name="game_menu_perf_gestures_custom">Huidige gebaren zijn aangepast</string>
+    <string name="game_menu_perf_moon">Maanfase</string>
 </resources>

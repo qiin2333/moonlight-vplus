@@ -371,4 +371,9 @@
     <string name="perf_overlay_anchor_bottom_left">Basso sinistra</string>
     <string name="perf_overlay_anchor_bottom_center">Basso centro</string>
     <string name="perf_overlay_anchor_bottom_right">Basso destra</string>
+    <string name="game_menu_perf_gestures">Gesti</string>
+    <string name="game_menu_perf_gestures_full">Completi</string>
+    <string name="game_menu_perf_gestures_long_only">Solo pressione lunga</string>
+    <string name="game_menu_perf_gestures_custom">I gesti attuali sono personalizzati</string>
+    <string name="game_menu_perf_moon">Fase lunare</string>
 </resources>

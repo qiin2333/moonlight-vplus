@@ -340,4 +340,9 @@
     <string name="perf_overlay_anchor_bottom_left">Vlevo dole</string>
     <string name="perf_overlay_anchor_bottom_center">Dole uprostřed</string>
     <string name="perf_overlay_anchor_bottom_right">Vpravo dole</string>
+    <string name="game_menu_perf_gestures">Gesta</string>
+    <string name="game_menu_perf_gestures_full">Úplná</string>
+    <string name="game_menu_perf_gestures_long_only">Jen podržení</string>
+    <string name="game_menu_perf_gestures_custom">Aktuální gesta jsou vlastní</string>
+    <string name="game_menu_perf_moon">Fáze Měsíce</string>
 </resources>

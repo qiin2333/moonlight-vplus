@@ -256,4 +256,9 @@
     <string name="perf_overlay_anchor_bottom_left">左下</string>
     <string name="perf_overlay_anchor_bottom_center">下中央</string>
     <string name="perf_overlay_anchor_bottom_right">右下</string>
+    <string name="game_menu_perf_gestures">ジェスチャー</string>
+    <string name="game_menu_perf_gestures_full">すべて</string>
+    <string name="game_menu_perf_gestures_long_only">長押しのみ</string>
+    <string name="game_menu_perf_gestures_custom">現在のジェスチャーはカスタム設定です</string>
+    <string name="game_menu_perf_moon">月相</string>
 </resources>

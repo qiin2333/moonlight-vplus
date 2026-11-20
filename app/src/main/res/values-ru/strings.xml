@@ -2275,4 +2275,9 @@
     <string name="perf_overlay_anchor_bottom_left">Снизу слева</string>
     <string name="perf_overlay_anchor_bottom_center">Снизу по центру</string>
     <string name="perf_overlay_anchor_bottom_right">Снизу справа</string>
+    <string name="game_menu_perf_gestures">Жесты</string>
+    <string name="game_menu_perf_gestures_full">Все</string>
+    <string name="game_menu_perf_gestures_long_only">Только удержание</string>
+    <string name="game_menu_perf_gestures_custom">Текущие жесты настроены вручную</string>
+    <string name="game_menu_perf_moon">Фаза луны</string>
 </resources>

@@ -36,7 +36,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.limelight.PerfOverlayAnchor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -52,44 +51,46 @@ class GameMenuControllerLayoutFocusTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun positionGridFitsTranslatedLabelsAtLargeFontScale() {
-        val locales = listOf(Locale.GERMAN, Locale.forLanguageTag("nb-NO"), Locale.forLanguageTag("he"))
-        var locale by mutableStateOf(locales.first())
+    fun confirmationReleaseDoesNotActivateANewlyFocusedOption() {
+        var first = 0
+        var second = 0
         composeTestRule.setContent {
-            val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
-                .createConfigurationContext(android.content.res.Configuration().apply { setLocale(locale) })
-            val density = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.3f)) {
-                PerformancePositionGrid(
-                    options = PerfOverlayAnchor.entries.map { anchor ->
-                        GameMenu.MenuOption(
-                            label = context.getString(performanceAnchorLabel(anchor)),
-                            isWithGameFocus = false,
-                            runnable = Runnable {},
-                            iconKey = null,
-                            isShowIcon = false,
-                            isKeepDialog = true,
-                            focusKey = anchor.name
-                        )
-                    },
-                    onOptionClick = {},
-                    modifier = Modifier.width(280.dp)
-                )
+            Column {
+                Box(Modifier.testTag("first").size(48.dp)
+                    .gameMenuActivatable({}, { first++ }, "first"))
+                Box(Modifier.testTag("second").size(48.dp)
+                    .gameMenuActivatable({}, { second++ }, "second"))
             }
         }
-        for (language in locales) {
-            composeTestRule.runOnIdle { locale = language }
-            val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
-                .createConfigurationContext(android.content.res.Configuration().apply { setLocale(language) })
-            PerfOverlayAnchor.entries.forEach { anchor ->
-                val label = context.getString(performanceAnchorLabel(anchor))
-                val results = mutableListOf<TextLayoutResult>()
-                val action = composeTestRule.onNodeWithText(label, useUnmergedTree = true)
-                    .fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult]
-                assertTrue(action.action?.invoke(results) == true)
-                assertFalse("$language: $label overflows", results.single().hasVisualOverflow)
-            }
+        composeTestRule.onNodeWithTag("first").requestFocus()
+        composeTestRule.onNodeWithTag("first").performKeyInput { keyDown(Key.Enter) }
+        composeTestRule.onNodeWithTag("second").requestFocus()
+        composeTestRule.onNodeWithTag("second").performKeyInput { keyUp(Key.Enter) }
+        composeTestRule.runOnIdle { assertEquals(0, first); assertEquals(0, second) }
+        composeTestRule.onNodeWithTag("second").performKeyInput { pressKey(Key.Enter) }
+        composeTestRule.runOnIdle { assertEquals(1, second) }
+    }
+
+    @Test
+    fun confirmationReleaseDoesNotActivateANewlyFocusedSegment() {
+        var selected = -1
+        composeTestRule.setContent {
+            InlineSegmentedControl(
+                segments = listOf(
+                    GameMenu.SegmentOption("First", false, Runnable { selected = 0 }),
+                    GameMenu.SegmentOption("Second", false, Runnable { selected = 1 })
+                ),
+                onSegmentClick = { it.runnable.run() },
+                modifier = Modifier.width(200.dp).height(40.dp)
+            )
         }
+        composeTestRule.onNodeWithContentDescription("First").requestFocus()
+        composeTestRule.onNodeWithContentDescription("First").performKeyInput { keyDown(Key.Enter) }
+        composeTestRule.onNodeWithContentDescription("Second").requestFocus()
+        composeTestRule.onNodeWithContentDescription("Second").performKeyInput { keyUp(Key.Enter) }
+        composeTestRule.runOnIdle { assertEquals(-1, selected) }
+        composeTestRule.onNodeWithContentDescription("Second").performKeyInput { pressKey(Key.Enter) }
+        composeTestRule.runOnIdle { assertEquals(1, selected) }
     }
 
     @Test
@@ -314,8 +315,7 @@ class GameMenuControllerLayoutFocusTest {
                 onInlineToggle = { it.toggleAction?.run() },
                 onSegmentClick = { it.runnable.run() },
                 initialFocusRequester = first,
-                inlineControlsFocusable = false,
-                linearNavigation = true
+                inlineControlsFocusable = false
             )
         }
 
@@ -418,8 +418,7 @@ class GameMenuControllerLayoutFocusTest {
                         onOptionClick = {},
                         onInlineToggle = {},
                         onSegmentClick = {},
-                        modifier = Modifier.width(220.dp),
-                        linearNavigation = true
+                        modifier = Modifier.width(220.dp)
                 )
             }
         }

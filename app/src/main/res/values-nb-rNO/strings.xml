@@ -290,4 +290,9 @@
     <string name="perf_overlay_anchor_bottom_left">Nederst til venstre</string>
     <string name="perf_overlay_anchor_bottom_center">Nederst i midten</string>
     <string name="perf_overlay_anchor_bottom_right">Nederst til høyre</string>
+    <string name="game_menu_perf_gestures">Bevegelser</string>
+    <string name="game_menu_perf_gestures_full">Alle</string>
+    <string name="game_menu_perf_gestures_long_only">Kun langt trykk</string>
+    <string name="game_menu_perf_gestures_custom">Gjeldende bevegelser er tilpasset</string>
+    <string name="game_menu_perf_moon">Månefase</string>
 </resources>
