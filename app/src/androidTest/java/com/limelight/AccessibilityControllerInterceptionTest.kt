@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.os.SystemClock
 import android.view.InputDevice
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -17,6 +18,7 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.StartGestureReducer
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.services.KeyboardAccessibilityService
 import org.junit.Assert.*
 import org.junit.Test
@@ -25,6 +27,283 @@ import java.net.InetAddress
 
 @RunWith(AndroidJUnit4::class)
 class AccessibilityControllerInterceptionTest {
+    @Test
+    fun captureLossKeepsOrdinaryKeyboardKeysUntilTheirOwnRelease() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val deviceId = controllerDeviceId()
+                val wDown = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, wDown))
+                game.keyboardInputHandler.handleKeyDown(wDown)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val aDown = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, aDown))
+                assertEquals(setOf(KeyEvent.KEYCODE_W, KeyEvent.KEYCODE_A), forwarded(game).keys)
+
+                service.keyEventCallback = null
+                assertEquals(setOf(KeyEvent.KEYCODE_W), forwarded(game).keys)
+                assertTrue(send(service, KeyEvent.changeAction(aDown, KeyEvent.ACTION_UP)))
+                val repeat = KeyEvent.changeTimeRepeat(wDown, SystemClock.uptimeMillis(), 1)
+                assertFalse(send(service, repeat))
+                game.keyboardInputHandler.handleKeyDown(repeat)
+                assertEquals(setOf(KeyEvent.KEYCODE_W), forwarded(game).keys)
+                val wUp = KeyEvent.changeAction(wDown, KeyEvent.ACTION_UP)
+                assertFalse(send(service, wUp))
+                game.keyboardInputHandler.handleKeyUp(wUp)
+                assertTrue(forwarded(game).isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun sameKeyHeldByBothOriginsRemainsDownForOrdinaryOwner() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val ordinary = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, ordinary))
+                game.keyboardInputHandler.handleKeyDown(ordinary)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val accessible = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, accessible))
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(setOf(KeyEvent.KEYCODE_W), forwarded(game).keys)
+                assertTrue(send(service, KeyEvent.changeAction(accessible, KeyEvent.ACTION_UP)))
+                val ordinaryUp = KeyEvent.changeAction(ordinary, KeyEvent.ACTION_UP)
+                assertFalse(send(service, ordinaryUp))
+                game.keyboardInputHandler.handleKeyUp(ordinaryUp)
+                assertTrue(forwarded(game).isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun captureLossPreservesOrdinaryModifiers() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val deviceId = controllerDeviceId()
+                val ctrl = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, ctrl))
+                game.keyboardInputHandler.handleKeyDown(ctrl)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val shift = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, shift))
+                assertEquals(KeyboardPacket.MODIFIER_CTRL.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt(), field(game.keyboardInputHandler, "modifierFlags"))
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(KeyboardPacket.MODIFIER_CTRL.toInt(), field(game.keyboardInputHandler, "modifierFlags"))
+                val ctrlUp = KeyEvent.changeAction(ctrl, KeyEvent.ACTION_UP)
+                assertFalse(send(service, ctrlUp))
+                game.keyboardInputHandler.handleKeyUp(ctrlUp)
+                assertEquals(0, field(game.keyboardInputHandler, "modifierFlags"))
+            }
+        }
+    }
+
+    @Test
+    fun captureLossDoesNotCancelOrdinaryEscapeHold() = withGame { scenario ->
+        var deviceId = 0
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                deviceId = controllerDeviceId()
+                val down = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, down))
+                game.keyboardInputHandler.handleKeyDown(down)
+                KeyboardAccessibilityService.setIntercepting(true)
+                service.keyEventCallback = null
+            }
+        }
+        SystemClock.sleep(250)
+        scenario.onActivity { game ->
+            assertTrue(forwarded(game).containsKey(KeyEvent.KEYCODE_ESCAPE))
+            game.keyboardInputHandler.handleKeyUp(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE, deviceId, InputDevice.SOURCE_KEYBOARD))
+            assertTrue(forwarded(game).isEmpty())
+        }
+    }
+
+    @Test
+    fun captureLossKeepsOrdinaryEscapeTapRelease() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val down = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, down))
+                game.keyboardInputHandler.handleKeyDown(down)
+                val up = KeyEvent.changeAction(down, KeyEvent.ACTION_UP)
+                assertFalse(send(service, up))
+                game.keyboardInputHandler.handleKeyUp(up)
+                assertTrue(forwarded(game).containsKey(KeyEvent.KEYCODE_ESCAPE))
+                KeyboardAccessibilityService.setIntercepting(true)
+                service.keyEventCallback = null
+                assertTrue(forwarded(game).containsKey(KeyEvent.KEYCODE_ESCAPE))
+            }
+        }
+        SystemClock.sleep(100)
+        scenario.onActivity { assertTrue(forwarded(it).isEmpty()) }
+    }
+
+    @Test
+    fun captureLossReleasesAccessibleEscapeTapButKeepsOrdinaryKey() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val deviceId = controllerDeviceId()
+                val w = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, w))
+                game.keyboardInputHandler.handleKeyDown(w)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val esc = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, esc))
+                assertTrue(send(service, KeyEvent.changeAction(esc, KeyEvent.ACTION_UP)))
+                assertEquals(setOf(KeyEvent.KEYCODE_W, KeyEvent.KEYCODE_ESCAPE), forwarded(game).keys)
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(setOf(KeyEvent.KEYCODE_W), forwarded(game).keys)
+                val wUp = KeyEvent.changeAction(w, KeyEvent.ACTION_UP)
+                assertFalse(send(service, wUp))
+                game.keyboardInputHandler.handleKeyUp(wUp)
+                assertTrue(forwarded(game).isEmpty())
+            }
+        }
+        SystemClock.sleep(100)
+        scenario.onActivity { assertTrue(forwarded(it).isEmpty()) }
+    }
+
+    @Test
+    fun captureLossKeepsOrdinaryMappedKeyUntilItsRelease() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val deviceId = controllerDeviceId()
+                val one = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_1, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertFalse(send(service, one))
+                game.keyboardInputHandler.handleKeyDown(one)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val esc = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, esc))
+                val repeat = KeyEvent.changeTimeRepeat(one, SystemClock.uptimeMillis(), 1)
+                assertFalse(send(service, repeat))
+                game.keyboardInputHandler.handleKeyDown(repeat)
+                assertEquals(setOf(KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_F1), forwarded(game).keys)
+
+                service.keyEventCallback = null
+                assertEquals(setOf(KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_F1), forwarded(game).keys)
+                assertTrue(send(service, KeyEvent.changeAction(esc, KeyEvent.ACTION_UP)))
+                val oneUp = KeyEvent.changeAction(one, KeyEvent.ACTION_UP)
+                assertFalse(send(service, oneUp))
+                game.keyboardInputHandler.handleKeyUp(oneUp)
+                assertTrue(forwarded(game).isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun captureLossCancelsAccessibleEscapeHold() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.prefConfig.enableCustomKeyMap = true
+            withService(game) { service ->
+                val down = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, down))
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertTrue(send(service, KeyEvent.changeAction(down, KeyEvent.ACTION_UP)))
+            }
+        }
+        SystemClock.sleep(250)
+        scenario.onActivity { assertTrue(forwarded(it).isEmpty()) }
+    }
+
+    @Test
+    fun captureLossDoesNotCancelOrdinaryGrabShortcut() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.setInputGrabState(false)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                shortcut(service, game, controllerDeviceId(), captured = false)
+                KeyboardAccessibilityService.setIntercepting(true)
+                service.keyEventCallback = null
+            }
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { assertTrue(it.grabbedInput) }
+    }
+
+    @Test
+    fun captureLossCancelsAccessibleGrabShortcut() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.setInputGrabState(false)
+            withService(game) { service ->
+                shortcut(service, game, controllerDeviceId(), captured = true)
+                KeyboardAccessibilityService.setIntercepting(false)
+            }
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { assertFalse(it.grabbedInput) }
+    }
+
+    @Test
+    fun captureLossCancelsOnlyAccessiblePendingShortcut() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.setInputGrabState(false)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                shortcut(service, game, controllerDeviceId(), captured = false)
+                KeyboardAccessibilityService.setIntercepting(true)
+                shortcut(service, game, controllerDeviceId(), captured = true)
+                KeyboardAccessibilityService.setIntercepting(false)
+            }
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { assertTrue(it.grabbedInput) }
+    }
+
+    @Test
+    fun captureLossCancelsShortcutJoinedByAccessibleModifier() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            game.setInputGrabState(false)
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                val deviceId = controllerDeviceId()
+                val modifiers = listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT)
+                fun ordinary(action: Int, code: Int) {
+                    val event = key(action, code, deviceId, InputDevice.SOURCE_KEYBOARD)
+                    assertFalse(send(service, event))
+                    if (action == KeyEvent.ACTION_DOWN) game.keyboardInputHandler.handleKeyDown(event)
+                    else game.keyboardInputHandler.handleKeyUp(event)
+                }
+                modifiers.forEach { ordinary(KeyEvent.ACTION_DOWN, it) }
+                ordinary(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z)
+                ordinary(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_Z)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val meta = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, deviceId, InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, meta))
+                modifiers.reversed().forEach { ordinary(KeyEvent.ACTION_UP, it) }
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertTrue(send(service, KeyEvent.changeAction(meta, KeyEvent.ACTION_UP)))
+                ordinary(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A)
+                ordinary(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A)
+            }
+        }
+        SystemClock.sleep(350)
+        scenario.onActivity { assertFalse(it.grabbedInput) }
+    }
+
     @Test
     fun captureLossReleasesOnlyOwnedControllerKeys() = withGame { scenario ->
         scenario.onActivity { game ->
@@ -217,4 +496,18 @@ class AccessibilityControllerInterceptionTest {
     private fun key(action: Int, code: Int, deviceId: Int, source: Int = InputDevice.SOURCE_GAMEPAD) = KeyEvent(
         SystemClock.uptimeMillis() - 100, SystemClock.uptimeMillis(), action, code, 0, 0, deviceId, 0, 0, source
     )
+
+    private fun shortcut(service: KeyboardAccessibilityService, game: Game, deviceId: Int, captured: Boolean) {
+        val keys = listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_Z)
+        fun dispatch(action: Int, code: Int) {
+            val event = key(action, code, deviceId, InputDevice.SOURCE_KEYBOARD)
+            assertEquals(captured, send(service, event))
+            if (!captured) {
+                if (action == KeyEvent.ACTION_DOWN) game.keyboardInputHandler.handleKeyDown(event)
+                else game.keyboardInputHandler.handleKeyUp(event)
+            }
+        }
+        keys.forEach { dispatch(KeyEvent.ACTION_DOWN, it) }
+        keys.reversed().forEach { dispatch(KeyEvent.ACTION_UP, it) }
+    }
 }
