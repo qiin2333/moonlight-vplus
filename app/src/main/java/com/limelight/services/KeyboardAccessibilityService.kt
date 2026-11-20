@@ -20,17 +20,6 @@ class KeyboardAccessibilityService : AccessibilityService() {
     }
 
     var keyEventCallback: KeyEventCallback? = null
-    private val interceptionDrain = KeyboardInterceptionDrain()
-    private data class EventIdentity(
-        val deviceId: Int, val keyCode: Int, val scanCode: Int,
-        val downTime: Long, val eventTime: Long, val action: Int, val repeatCount: Int
-    )
-    private val forwardedEvents = LinkedHashSet<EventIdentity>()
-
-    private fun eventIdentity(event: KeyEvent) = EventIdentity(
-        event.deviceId, event.keyCode, event.scanCode, event.downTime,
-        event.eventTime, event.action, event.repeatCount
-    )
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -40,19 +29,7 @@ class KeyboardAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        if (interceptionDrain.consumeDraining(
-                event.deviceId, event.keyCode, event.scanCode, event.downTime, event.action
-            )
-        ) return true
-        if (interceptionDrain.shouldPassThrough(
-                event.deviceId, event.keyCode, event.scanCode, event.downTime, event.action
-            )
-        ) return false
-
-        val callback = keyEventCallback
-        if (!interceptingEnabled || callback == null) return passThrough(event)
-
-        if (PreferenceConfiguration.readPreferences(this).enableCustomKeyMap) {
+        if (interceptingEnabled && PreferenceConfiguration.readPreferences(this).enableCustomKeyMap) {
             var fixedKeyCode = event.keyCode
             when (fixedKeyCode) {
                 KeyEvent.KEYCODE_HOME -> fixedKeyCode = KeyEvent.KEYCODE_ESCAPE
@@ -61,13 +38,45 @@ class KeyboardAccessibilityService : AccessibilityService() {
                 KeyEvent.KEYCODE_MEDIA_NEXT -> fixedKeyCode = KeyEvent.KEYCODE_F11
             }
             if (fixedKeyCode == KeyEvent.KEYCODE_SYSRQ || fixedKeyCode != event.keyCode) {
-                return consume(event, callback, fixedKeyCode)
+                if (keyEventCallback != null) {
+                    val fixedEvent = KeyEvent(
+                        event.downTime,
+                        event.eventTime,
+                        event.action,
+                        fixedKeyCode,
+                        event.repeatCount,
+                        event.metaState,
+                        event.deviceId,
+                        event.scanCode,
+                        event.flags,
+                        event.source
+                    )
+                    keyEventCallback!!.onKeyEvent(fixedEvent)
+                }
+                return true
             }
         }
 
         // 小米平板将物理 ESC 键（ScanCode=1）映射为 Android 的 BACK 键（Code=4）。
         if (event.scanCode == 1) {
-            return consume(event, callback, KeyEvent.KEYCODE_ESCAPE)
+            if (interceptingEnabled) {
+                if (keyEventCallback != null) {
+                    val fixedEvent = KeyEvent(
+                        event.downTime,
+                        event.eventTime,
+                        event.action,
+                        KeyEvent.KEYCODE_ESCAPE,
+                        event.repeatCount,
+                        event.metaState,
+                        event.deviceId,
+                        event.scanCode,
+                        event.flags,
+                        event.source
+                    )
+                    keyEventCallback!!.onKeyEvent(fixedEvent)
+                }
+                return true
+            }
         }
 
         when (event.keyCode) {
@@ -77,37 +86,15 @@ class KeyboardAccessibilityService : AccessibilityService() {
             KeyEvent.KEYCODE_VOLUME_UP,
             KeyEvent.KEYCODE_VOLUME_DOWN,
             KeyEvent.KEYCODE_VOLUME_MUTE,
-            KeyEvent.KEYCODE_POWER -> return passThrough(event)
+            KeyEvent.KEYCODE_POWER -> return false
         }
 
-        return consume(event, callback, event.keyCode)
-    }
-
-    private fun consume(event: KeyEvent, callback: KeyEventCallback, keyCode: Int): Boolean {
-        // Record before invoking Game, which may synchronously pause interception.
-        interceptionDrain.recordConsumed(
-            event.deviceId, event.keyCode, event.scanCode, event.downTime, event.action
-        )
-        forwardedEvents.add(eventIdentity(event))
-        if (forwardedEvents.size > 256) forwardedEvents.remove(forwardedEvents.first())
-        if (keyCode == event.keyCode) {
-            callback.onKeyEvent(event)
-        } else {
-            callback.onKeyEvent(
-                KeyEvent(
-                    event.downTime, event.eventTime, event.action, keyCode, event.repeatCount,
-                    event.metaState, event.deviceId, event.scanCode, event.flags, event.source
-                )
-            )
+        if (interceptingEnabled) {
+            keyEventCallback?.onKeyEvent(event)
+            return true
         }
-        return true
-    }
 
-    private fun passThrough(event: KeyEvent): Boolean {
-        interceptionDrain.recordPassed(
-            event.deviceId, event.keyCode, event.scanCode, event.downTime, event.action
-        )
-        return false
+        return super.onKeyEvent(event)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -133,14 +120,8 @@ class KeyboardAccessibilityService : AccessibilityService() {
 
         var interceptingEnabled = false
 
-        fun wasForwarded(event: KeyEvent): Boolean =
-            instance?.let { it.forwardedEvents.remove(it.eventIdentity(event)) } == true
-
         fun setIntercepting(enabled: Boolean) {
             Log.d(TAG, "Setting interception to: $enabled")
-            if (interceptingEnabled && !enabled) {
-                instance?.interceptionDrain?.pause()
-            }
             interceptingEnabled = enabled
         }
 

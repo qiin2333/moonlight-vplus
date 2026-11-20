@@ -13,7 +13,6 @@ import android.util.TypedValue
 import android.view.Display
 import android.view.Gravity
 import android.view.View
-import android.view.Window
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
@@ -85,8 +84,6 @@ class ExternalDisplayManager(
     }
 
     fun getStreamView(): StreamView? = externalPresentation?.findViewById(R.id.surfaceView)
-
-    fun getStreamWindow(): Window? = externalPresentation?.window
 
     fun isUsingExternalDisplay(): Boolean = targetDisplayResolver.isExternalDisplaySelected()
 
