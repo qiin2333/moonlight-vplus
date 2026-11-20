@@ -42,7 +42,7 @@ class ExternalDisplayManager(
         fun onExternalDisplayConnected(display: Display)
         fun onExternalDisplayDisconnected()
         fun onStreamViewReady(streamView: StreamView)
-        fun onStreamWindowFocusChanged(hasFocus: Boolean) {}
+        fun onStreamWindowFocusChanged(hasFocus: Boolean)
     }
 
     var callback: ExternalDisplayCallback? = null
