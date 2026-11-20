@@ -1763,6 +1763,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         } catch (_: NoSuchMethodException) {
         } catch (_: InvocationTargetException) {
         } catch (_: IllegalAccessException) {
+        } catch (_: SecurityException) {
+        } catch (_: IllegalArgumentException) {
+        } catch (_: ExceptionInInitializerError) {
+        } catch (_: NoClassDefFoundError) {
         }
     }
 
