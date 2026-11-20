@@ -9,6 +9,7 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.widget.Toast
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -31,6 +32,12 @@ class KeyboardInputHandler(private val game: Game) {
     private var hasShownEscHint = false
 
     private val pressedKeys = HashSet<Int>()
+    private data class AccessibilityControllerKey(val device: Int, val code: Int, val scan: Int) {
+        constructor(event: KeyEvent) : this(event.deviceId, event.keyCode, event.scanCode)
+    }
+    private data class ForwardedControllerKey(val event: KeyEvent, val context: InputDeviceContext)
+    private val forwardedControllerKeys = LinkedHashMap<AccessibilityControllerKey, ForwardedControllerKey>()
+    private var accessibilityReleaseGeneration = 0L
     private data class ForwardedKey(val translated: Short, val flags: Byte)
     private val forwardedKeys = LinkedHashMap<Int, ForwardedKey>()
     private var escState = 0 // 0 = 空闲，1 = ESC已按下，2 = 已进入组合键
@@ -153,39 +160,36 @@ class KeyboardInputHandler(private val game: Game) {
         modifierFlags = 0
     }
 
+    fun releaseAccessibilityKeys() {
+        accessibilityReleaseGeneration++
+        val controllerKeys = forwardedControllerKeys.values.toList()
+        forwardedControllerKeys.clear()
+        releaseForwardedKeys()
+        pressedKeys.clear()
+        controllerKeys.forEach { game.controllerHandler.cancelAccessibilityButton(it.context, it.event) }
+    }
+
     private fun sendKeyDown(trackingKey: Int, translated: Short, modifier: Byte, flags: Byte) {
         forwardedKeys[trackingKey] = ForwardedKey(translated, flags)
         game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, modifier, flags)
     }
 
     private fun sendTrackedKeyUp(trackingKey: Int, translated: Short, modifier: Byte, flags: Byte) {
-        forwardedKeys.remove(trackingKey)
+        if (forwardedKeys.remove(trackingKey) == null) return
         game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, modifier, flags)
     }
 
     fun handleKeyDown(event: KeyEvent): Boolean {
-        when (event.keyCode) {
-            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
-            KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN,
-            KeyEvent.KEYCODE_VOLUME_MUTE, KeyEvent.KEYCODE_POWER -> {
-                // 系统导航键/音量键/电源键直接跳过去重逻辑
-            }
-            else -> {
-                val device = event.device
-                if (!game.isEventFromAccessibilityService &&
-                    KeyboardAccessibilityService.instance != null &&
-                    (device != null && !device.isVirtual)
-                ) {
-                    return true
-                }
-            }
-        }
+        // 系统导航键、音量键和电源键未被无障碍服务消费时仍按原逻辑处理。
+        if (!game.isEventFromAccessibilityService && KeyboardAccessibilityService.wasConsumed(event)) return true
 
         // 自定义组合键，只能其它+esc，esc+其它时，esc抬起时其它才会down
         val keyCode = event.keyCode
         pressedKeys.add(keyCode)
-        if (game.prefConfig.enableCustomKeyMap) {
+        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput) {
             if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
+                if (event.repeatCount > 0) return true
+                if (::escConfirmRunnable.isInitialized) handler.removeCallbacks(escConfirmRunnable)
                 escState = 1
                 escConfirmRunnable = Runnable {
                     if (escState == 1) {
@@ -273,7 +277,17 @@ class KeyboardInputHandler(private val game: Game) {
         var handled = false
 
         if (ControllerHandler.isGameControllerDevice(event.device)) {
+            val generation = accessibilityReleaseGeneration
             handled = game.controllerHandler.handleButtonDown(event) == true
+            if (handled && game.isEventFromAccessibilityService && event.repeatCount == 0) {
+                game.controllerHandler.existingContextForEvent(event)?.let { context ->
+                    if (generation != accessibilityReleaseGeneration) {
+                        game.controllerHandler.cancelAccessibilityButton(context, event)
+                    } else {
+                        forwardedControllerKeys[AccessibilityControllerKey(event)] = ForwardedControllerKey(KeyEvent(event), context)
+                    }
+                }
+            }
         }
 
         if (!handled) {
@@ -311,20 +325,13 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun handleKeyUp(event: KeyEvent): Boolean {
-        when (event.keyCode) {
-            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH -> {
-                // 系统导航键直接跳过去重逻辑
-            }
-            else -> {
-                val device = event.device
-                if (!game.isEventFromAccessibilityService &&
-                    KeyboardAccessibilityService.instance != null &&
-                    (device != null && !device.isVirtual)
-                ) {
-                    return true
-                }
-            }
-        }
+        if (game.isEventFromAccessibilityService) forwardedControllerKeys.remove(AccessibilityControllerKey(event))
+        // 未被无障碍服务消费的系统导航键仍按原逻辑处理。
+        if (!game.isEventFromAccessibilityService && KeyboardAccessibilityService.wasConsumed(event)) return true
+
+        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput &&
+            event.keyCode == KeyEvent.KEYCODE_ESCAPE && event.keyCode !in pressedKeys
+        ) return true
 
         if (isPhysicalKeyboardConnected()) {
             // ESC键双击逻辑
@@ -351,9 +358,9 @@ class KeyboardInputHandler(private val game: Game) {
         val keyCode = event.keyCode
         pressedKeys.remove(keyCode)
 
-        if (game.prefConfig.enableCustomKeyMap) {
+        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput) {
             if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
-                handler.removeCallbacks(escConfirmRunnable)
+                if (::escConfirmRunnable.isInitialized) handler.removeCallbacks(escConfirmRunnable)
                 when (escState) {
                     1 -> {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
