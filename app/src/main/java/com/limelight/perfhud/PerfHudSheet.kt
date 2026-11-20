@@ -316,7 +316,7 @@ class PerfHudSheet(private val activity: Activity) {
         spec.settingsAction?.let {
             addView(
                 actionIcon(
-                    iconRes = R.drawable.ic_settings,
+                    iconRes = R.drawable.phc_settings,
                     contentDescription = it.label,
                     accent = P.TXT,
                     onClick = {

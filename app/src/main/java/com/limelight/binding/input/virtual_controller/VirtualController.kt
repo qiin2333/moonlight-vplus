@@ -102,7 +102,7 @@ class VirtualController(
             addState(intArrayOf(android.R.attr.state_pressed), surface(0xF03F5C80.toInt()))
             addState(intArrayOf(), surface(0xD91A2330.toInt()))
         }, (6 * density).toInt())
-        setImageResource(R.drawable.ic_settings)
+        setImageResource(R.drawable.phc_settings)
         setColorFilter(Color.WHITE)
         scaleType = ImageView.ScaleType.FIT_CENTER
         // The backplate keeps the gear readable over both bright and dark game scenes.
