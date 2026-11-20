@@ -60,7 +60,6 @@ class ExternalDisplayManagerTest {
                     var disconnects = 0
                     manager.callback = object : ExternalDisplayManager.ExternalDisplayCallback {
                         override fun onExternalDisplayConnected(display: Display) = Unit
-                        override fun onStreamWindowFocusChanged(hasFocus: Boolean) = Unit
 
                         override fun onStreamViewReady(streamView: StreamView) {
                             // Dialog starts Presentation's listener before WindowManager.addView().

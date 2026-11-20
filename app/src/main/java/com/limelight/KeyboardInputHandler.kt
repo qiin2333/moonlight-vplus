@@ -9,7 +9,6 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.widget.Toast
 import com.limelight.binding.input.ControllerHandler
-import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
@@ -31,29 +30,19 @@ class KeyboardInputHandler(private val game: Game) {
     private var lastEscPressTime = 0L
     private var hasShownEscHint = false
 
-    private data class PhysicalKey(val device: Int, val source: Int, val code: Int, val scan: Int) {
-        constructor(event: KeyEvent) : this(event.deviceId, event.source, event.keyCode, event.scanCode)
-    }
-    private val pressedKeys = HashSet<PhysicalKey>()
-    private val releasedKeys = HashSet<PhysicalKey>()
-    private data class AccessibilityControllerKey(val device: Int, val code: Int, val scan: Int) {
-        constructor(event: KeyEvent) : this(event.deviceId, event.keyCode, event.scanCode)
-    }
-    private data class ForwardedControllerKey(val event: KeyEvent, val context: InputDeviceContext)
-    private val forwardedControllerKeys = LinkedHashMap<AccessibilityControllerKey, ForwardedControllerKey>()
-    private var releaseGeneration = 0L
+    private val pressedKeys = HashSet<Int>()
     private var rightMouseButtonDown = false
-    private var middleMouseButtonDown = false
+    private data class MiddleMouseKey(val deviceId: Int, val scanCode: Int)
+    private var middleMouseButtonDown: MiddleMouseKey? = null
+    private var releasedMiddleMouseButton: MiddleMouseKey? = null
     private data class ForwardedKey(val translated: Short, val flags: Byte)
     private val forwardedKeys = LinkedHashMap<Int, ForwardedKey>()
     private var escState = 0 // 0 = 空闲，1 = ESC已按下，2 = 已进入组合键
     private val handler = Handler(Looper.getMainLooper())
-    private var escConfirmRunnable: Runnable? = null
+    private lateinit var escConfirmRunnable: Runnable
     private var escTapRelease: Runnable? = null
 
-    private val toggleGrab = Runnable {
-        if (game.canUseKeyboardShortcuts()) game.setInputGrabState(!game.grabbedInput)
-    }
+    private val toggleGrab = Runnable { game.setInputGrabState(!game.grabbedInput) }
 
     companion object {
         private const val ESC_DOUBLE_PRESS_INTERVAL = 500L // 500毫秒内按第二次ESC才有效
@@ -103,7 +92,7 @@ class KeyboardInputHandler(private val game: Game) {
                             // This shortcut also captures the pointer in native mouse mode.
                             game.inputCaptureProvider.enableCapture()
                             game.grabbedInput = true
-                            game.updateKeyboardInterception()
+                            game.setMetaKeyCaptureState(game.connected)
                         }
                         game.cursorVisible = !game.cursorVisible
                         if (game.cursorVisible) {
@@ -150,24 +139,21 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun releaseForwardedKeys() {
-        releaseGeneration++
         handler.removeCallbacks(toggleGrab)
-        escConfirmRunnable?.let { handler.removeCallbacks(it) }
-        escConfirmRunnable = null
-        releasedKeys.addAll(pressedKeys)
+        if (::escConfirmRunnable.isInitialized) {
+            handler.removeCallbacks(escConfirmRunnable)
+        }
         pressedKeys.clear()
-        val controllerKeys = forwardedControllerKeys.values.toList()
-        forwardedControllerKeys.clear()
-        controllerKeys.forEach { game.controllerHandler.cancelAccessibilityButton(it.context, it.event) }
         lastEscPressTime = 0
         hasShownEscHint = false
         if (rightMouseButtonDown) {
             game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
             rightMouseButtonDown = false
         }
-        if (middleMouseButtonDown) {
+        middleMouseButtonDown?.let { key ->
             game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
-            middleMouseButtonDown = false
+            releasedMiddleMouseButton = key
+            middleMouseButtonDown = null
             game.touchInputHandler.detectMouseMiddleDown = false
         }
         escTapRelease?.let { handler.removeCallbacks(it) }
@@ -191,29 +177,35 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     private fun sendTrackedKeyUp(trackingKey: Int, translated: Short, modifier: Byte, flags: Byte) {
-        val key = forwardedKeys.remove(trackingKey) ?: return
-        game.conn?.sendKeyboardInput(key.translated, KeyboardPacket.KEY_UP, modifier, key.flags)
+        if (forwardedKeys.remove(trackingKey) == null) return
+        game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, modifier, flags)
     }
 
     fun handleKeyDown(event: KeyEvent): Boolean {
-        if (!game.isEventFromAccessibilityService && KeyboardAccessibilityService.wasConsumed(event)) return true
-        if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) return false
-        val physicalKey = PhysicalKey(event)
-        if (event.repeatCount == 0) releasedKeys.remove(physicalKey)
-        else if (physicalKey in releasedKeys) return true
-        val controller = ControllerHandler.isGameControllerDevice(event.device)
-        if (!controller && !game.canForwardKeyboardInput()) {
-            return game.canUseKeyboardShortcuts() && handleSpecialKeys(event.keyCode, true)
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
+            KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN,
+            KeyEvent.KEYCODE_VOLUME_MUTE, KeyEvent.KEYCODE_POWER -> {
+                // 系统导航键/音量键/电源键直接跳过去重逻辑
+            }
+            else -> {
+                val device = event.device
+                if (!game.isEventFromAccessibilityService &&
+                    KeyboardAccessibilityService.instance != null &&
+                    (device != null && !device.isVirtual)
+                ) {
+                    return true
+                }
+            }
         }
-
 
         // 自定义组合键，只能其它+esc，esc+其它时，esc抬起时其它才会down
         val keyCode = event.keyCode
-        if (!controller) pressedKeys.add(physicalKey)
-        if (game.prefConfig.enableCustomKeyMap) {
+        pressedKeys.add(keyCode)
+        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput) {
             if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
                 if (event.repeatCount > 0) return true
-                escConfirmRunnable?.let { handler.removeCallbacks(it) }
+                if (::escConfirmRunnable.isInitialized) handler.removeCallbacks(escConfirmRunnable)
                 escState = 1
                 escConfirmRunnable = Runnable {
                     if (escState == 1) {
@@ -222,12 +214,12 @@ class KeyboardInputHandler(private val game: Game) {
                         escState = 0
                     }
                 }
-                handler.postDelayed(checkNotNull(escConfirmRunnable), 200)
+                handler.postDelayed(escConfirmRunnable, 200)
                 return true
             }
 
             if (escState == 1) {
-                escConfirmRunnable?.let { handler.removeCallbacks(it) }
+                handler.removeCallbacks(escConfirmRunnable)
 
                 when (keyCode) {
                     KeyEvent.KEYCODE_Q -> {
@@ -277,6 +269,11 @@ class KeyboardInputHandler(private val game: Game) {
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click
         val eventSource = event.source
+        if (eventSource == InputDevice.SOURCE_KEYBOARD && event.keyCode == KeyEvent.KEYCODE_BACK &&
+            event.repeatCount == 0 && releasedMiddleMouseButton == MiddleMouseKey(event.deviceId, event.scanCode)
+        ) {
+            releasedMiddleMouseButton = null
+        }
         if ((eventSource == InputDevice.SOURCE_MOUSE || eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
             event.keyCode == KeyEvent.KEYCODE_BACK
         ) {
@@ -293,7 +290,7 @@ class KeyboardInputHandler(private val game: Game) {
         ) {
             if (android.os.SystemClock.uptimeMillis() - game.touchInputHandler.lastMouseHoverTime < 250) {
                 game.touchInputHandler.detectMouseMiddleDown = true
-                middleMouseButtonDown = true
+                middleMouseButtonDown = MiddleMouseKey(event.deviceId, event.scanCode)
                 game.touchInputHandler.detectMouseMiddle = false
                 game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
                 return true
@@ -302,18 +299,8 @@ class KeyboardInputHandler(private val game: Game) {
 
         var handled = false
 
-        if (controller) {
-            val generation = releaseGeneration
+        if (ControllerHandler.isGameControllerDevice(event.device)) {
             handled = game.controllerHandler.handleButtonDown(event) == true
-            if (handled && game.isEventFromAccessibilityService && event.repeatCount == 0) {
-                game.controllerHandler.existingContextForEvent(event)?.let { context ->
-                    if (generation != releaseGeneration) {
-                        game.controllerHandler.cancelAccessibilityButton(context, event)
-                    } else {
-                        forwardedControllerKeys[AccessibilityControllerKey(event)] = ForwardedControllerKey(KeyEvent(event), context)
-                    }
-                }
-            }
         }
 
         if (!handled) {
@@ -351,18 +338,24 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun handleKeyUp(event: KeyEvent): Boolean {
-        if (!game.isEventFromAccessibilityService && KeyboardAccessibilityService.wasConsumed(event)) return true
-        if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) return false
-        val physicalKey = PhysicalKey(event)
-        if (releasedKeys.remove(physicalKey)) return true
-        if (game.isEventFromAccessibilityService) forwardedControllerKeys.remove(AccessibilityControllerKey(event))
-        val controller = ControllerHandler.isGameControllerDevice(event.device)
-        if (!controller && !game.canForwardKeyboardInput()) {
-            return game.canUseKeyboardShortcuts() && handleSpecialKeys(event.keyCode, false)
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH -> {
+                // 系统导航键直接跳过去重逻辑
+            }
+            else -> {
+                val device = event.device
+                if (!game.isEventFromAccessibilityService &&
+                    KeyboardAccessibilityService.instance != null &&
+                    (device != null && !device.isVirtual)
+                ) {
+                    return true
+                }
+            }
         }
-        val wasPressed = pressedKeys.remove(physicalKey)
-        if (event.keyCode == KeyEvent.KEYCODE_ESCAPE && !wasPressed && !controller) return true
 
+        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput &&
+            event.keyCode == KeyEvent.KEYCODE_ESCAPE && event.keyCode !in pressedKeys
+        ) return true
 
         if (isPhysicalKeyboardConnected()) {
             // ESC键双击逻辑
@@ -387,10 +380,11 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         val keyCode = event.keyCode
+        pressedKeys.remove(keyCode)
 
-        if (game.prefConfig.enableCustomKeyMap) {
+        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput) {
             if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
-                escConfirmRunnable?.let { handler.removeCallbacks(it) }
+                if (::escConfirmRunnable.isInitialized) handler.removeCallbacks(escConfirmRunnable)
                 when (escState) {
                     1 -> {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
@@ -461,13 +455,18 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         // 鼠标中键
-        if (game.touchInputHandler.detectMouseMiddleDown && eventSource == InputDevice.SOURCE_KEYBOARD &&
-            event.keyCode == KeyEvent.KEYCODE_BACK
-        ) {
-            game.touchInputHandler.detectMouseMiddleDown = false
-            middleMouseButtonDown = false
-            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
-            return true
+        if (eventSource == InputDevice.SOURCE_KEYBOARD && event.keyCode == KeyEvent.KEYCODE_BACK) {
+            val key = MiddleMouseKey(event.deviceId, event.scanCode)
+            if (game.touchInputHandler.detectMouseMiddleDown && middleMouseButtonDown == key) {
+                game.touchInputHandler.detectMouseMiddleDown = false
+                middleMouseButtonDown = null
+                game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
+                return true
+            }
+            if (releasedMiddleMouseButton == key) {
+                releasedMiddleMouseButton = null
+                return true
+            }
         }
 
         var handled = false
@@ -501,7 +500,6 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun handleKeyMultiple(event: KeyEvent): Boolean {
-        if (!game.canForwardKeyboardInput()) return false
         if (event.keyCode != KeyEvent.KEYCODE_UNKNOWN || event.characters == null) {
             return false
         }

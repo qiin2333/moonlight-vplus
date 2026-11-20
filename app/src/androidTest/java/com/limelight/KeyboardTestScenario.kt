@@ -8,14 +8,13 @@ import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import java.net.InetAddress
 
-/** Uses a real window and input handlers, with connection transitions driven by each test. */
+/** Uses a real window while the tests drive connection transitions without a host. */
 internal object KeyboardTestScenario {
     fun launch(): ActivityScenario<Game> {
         val monitor = ActivityLifecycleMonitorRegistry.getInstance()
         val callback = ActivityLifecycleCallback { activity, stage ->
             if (activity is Game && stage == Stage.CREATED) {
-                // Prevent the surface from starting a real connection to the fixture address.
-                // Otherwise asynchronous failure dialogs race with simulated connection state.
+                // Avoid a real connection failure racing the simulated connection state.
                 activity.streamView.holder.removeCallback(activity)
                 activity.activeStreamView?.holder?.removeCallback(activity)
                 activity.progressOverlay?.dismiss()
