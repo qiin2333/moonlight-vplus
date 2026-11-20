@@ -281,7 +281,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         if (valuesString != null && !valuesString.isEmpty()) {
             val segments = valuesString.split(",")
             for (segment in segments) {
-                if (segment.isEmpty()) continue
+                // 保留空位，避免 k51,,k47 这类配置在加载后整体前移错位
                 val parts = segment.split("|", limit = 2)
                 segmentValues.add(parts[0])
                 segmentNames.add(if (parts.size > 1) parts[1] else "")
@@ -337,11 +337,14 @@ class WheelPad(attributesMap: Map<String, Any>,
     }
 
     private fun syncViewSizeForCurrentMode() {
-        if (layoutParams == null) {
-            return
-        }
+        val lp = layoutParams ?: return
         val targetSize = getExpectedViewSize()
-        if (targetSize != currentViewSize) {
+        if (targetSize != currentViewSize ||
+            getElementWidth() != targetSize ||
+            getElementHeight() != targetSize ||
+            lp.width != targetSize ||
+            lp.height != targetSize
+        ) {
             currentViewSize = targetSize
             setElementWidth(targetSize)
             setElementHeight(targetSize)
@@ -619,7 +622,8 @@ class WheelPad(attributesMap: Map<String, Any>,
                 paintGlassStroke.color = Color.argb(215,
                     Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
             } else {
-                paintGlassStroke.color = 0x2EFFFFFF
+                paintGlassStroke.color = Color.argb(130,
+                    Color.red(normalColor), Color.green(normalColor), Color.blue(normalColor))
             }
             canvas.drawPath(segmentPath, paintGlassStroke)
 
@@ -644,7 +648,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         paintGlassStroke.strokeWidth = Math.max(1.2f, glassStroke)
         paintGlassStroke.color = if (activeIndex != -1)
             Color.argb(190, Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
-        else 0x33FFFFFF
+        else Color.argb(130, Color.red(normalColor), Color.green(normalColor), Color.blue(normalColor))
         canvas.drawCircle(centerX, centerY, innerDiscR, paintGlassStroke)
 
         // 3. 中心随动方向指针
@@ -652,38 +656,42 @@ class WheelPad(attributesMap: Map<String, Any>,
             drawCenterDirectionPointer(canvas, centerX, centerY, innerDiscR, lastPointerAngleDeg)
         }
 
-        // 4. 分区文字（1~2 行智能自适应）
+        // 4. 分区文字（1~2 行智能自适应，按扇区真实径向空间限宽）
         val ringThickness = fillOuterRadius - fillInnerRadius
         val baseSegmentTextSize = ringThickness * (this.textSizePercent / 100.0f)
         paintText.setShadowLayer(3f, 0f, 1.5f, 0xAA000000.toInt())
-        val effectiveSweepDeg = Math.min(120f, Math.max(10f, drawSweep))
 
         for (i in 0 until segmentCount) {
             if (i >= segmentValues.size) continue
             val pop = segPopProgress[i]
-            val startAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge)
-            val textAngle = startAngle + sweepAngle / 2.0f
+            val startAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge) + halfGap
+            val textAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge) + sweepAngle / 2.0f
 
-            val displayName: String
-            if (i < segmentNames.size && segmentNames[i].isNotEmpty()) {
-                displayName = segmentNames[i]
+            val displayName = if (i < segmentNames.size && segmentNames[i].isNotEmpty()) {
+                segmentNames[i]
             } else {
-                displayName = getDisplayStringForValue(segmentValues[i])
+                getDisplayStringForValue(segmentValues[i])
             }
 
-            paintText.setColor(if (i == activeIndex) this.pressedTextColor else this.normalTextColor)
-            paintText.isFakeBoldText = i == activeIndex
+            paintText.color = if (i == activeIndex) this.pressedTextColor else this.normalTextColor
+            paintText.isFakeBoldText = (i == activeIndex)
 
-            val textRadius = fillInnerRadius + ringThickness * 0.54f + pop * (popOutMax * 0.35f)
+            val segInnerR = fillInnerRadius + 2.5f
+            val segOuterR = (fillOuterRadius + pop * (popOutMax * 0.65f) - 2.5f).coerceAtLeast(segInnerR + 2f)
+            // 放到 0.50 环中线，内外两侧留白对称
+            val textRadius = fillInnerRadius + ringThickness * 0.50f + pop * (popOutMax * 0.35f)
             val targetSize = baseSegmentTextSize + pop * 2.0f
-            val maxHeight = Math.max(20f, ringThickness * 0.82f)
+            val maxHeight = (ringThickness * 0.84f).coerceAtLeast(6f)
 
             val textRad = Math.toRadians(textAngle.toDouble())
-            val textCenterX = centerX + (textRadius * Math.cos(textRad)).toFloat()
-            val textCenterY = centerY + (textRadius * Math.sin(textRad)).toFloat()
+            val tx = (textRadius * Math.cos(textRad)).toFloat()
+            val ty = (textRadius * Math.sin(textRad)).toFloat()
 
-            drawAdaptiveSectorText(canvas, displayName, textCenterX, textCenterY,
-                fillInnerRadius, textRadius, effectiveSweepDeg, targetSize, maxHeight, ringThickness)
+            drawAdaptiveSectorText(
+                canvas, displayName, centerX, centerY, tx, ty,
+                segInnerR, segOuterR, startAngle, drawSweep,
+                targetSize, maxHeight, ringThickness
+            )
         }
 
         // 5. 中心预览文字
@@ -748,85 +756,204 @@ class WheelPad(attributesMap: Map<String, Any>,
         canvas.restore()
     }
 
-    private fun computeSectorChordWidth(innerR: Float, textRadius: Float,
-                                        effectiveSweepDeg: Float, blockHeight: Float): Float {
-        // 文本块上下各有半高，下边缘更靠近内圈（更窄），按偏下边缘算弦长可防撞线
-        val chordRadius = Math.max(innerR + 4f, textRadius - blockHeight * 0.32f)
-        return (2.0 * chordRadius * Math.sin(Math.toRadians(effectiveSweepDeg / 2.0))).toFloat() * 0.90f
-    }
-
     private fun computeCircleChordWidth(safeRadius: Float, blockHeight: Float): Float {
         val halfH = Math.min(safeRadius * 0.76f, blockHeight * 0.44f)
         return (2.0 * Math.sqrt(Math.max(1f, safeRadius * safeRadius - halfH * halfH).toDouble())).toFloat()
     }
 
-    private fun drawAdaptiveSectorText(canvas: Canvas, text: String, cx: Float, cy: Float,
-                                       innerR: Float, textRadius: Float, effectiveSweepDeg: Float,
-                                       targetSize: Float, maxHeight: Float, ringThickness: Float) {
-        if (text.isEmpty()) return
+    private fun computeSectorLineMaxWidth(
+        tx: Float,
+        lineCenterYOffset: Float,
+        lineHeight: Float,
+        innerR: Float,
+        outerR: Float,
+        startAngleDeg: Float,
+        sweepAngleDeg: Float
+    ): Float {
+        if (sweepAngleDeg <= 0f || outerR <= innerR) return 0f
+        if (sweepAngleDeg >= 180f) {
+            return (outerR - innerR).coerceAtLeast(0f) * 0.92f
+        }
 
-        val minSize = Math.min(targetSize, Math.max(14f, Math.min(20f, ringThickness * 0.08f)))
-        var size1 = Math.min(targetSize, maxHeight)
-        var maxW1 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size1)
+        val halfH = (lineHeight * 0.45f).coerceAtLeast(0.5f)
+        val a1 = Math.toRadians(startAngleDeg.toDouble())
+        val a2 = Math.toRadians((startAngleDeg + sweepAngleDeg).toDouble())
+        val cos1 = Math.cos(a1).toFloat()
+        val sin1 = Math.sin(a1).toFloat()
+        val cos2 = Math.cos(a2).toFloat()
+        val sin2 = Math.sin(a2).toFloat()
+
+        var minW = Float.MAX_VALUE
+        val ys = floatArrayOf(
+            lineCenterYOffset - halfH,
+            lineCenterYOffset,
+            lineCenterYOffset + halfH
+        )
+        for (y in ys) {
+            val w = scanlineCenteredWidthInSector(tx, y, innerR, outerR, cos1, sin1, cos2, sin2)
+            if (w < minW) minW = w
+        }
+        return if (minW == Float.MAX_VALUE) 0f else minW * 0.94f
+    }
+
+    private fun scanlineCenteredWidthInSector(
+        tx: Float,
+        y: Float,
+        innerR: Float,
+        outerR: Float,
+        cos1: Float,
+        sin1: Float,
+        cos2: Float,
+        sin2: Float
+    ): Float {
+        val absY = Math.abs(y)
+        if (absY >= outerR) return 0f
+
+        val xOuter = Math.sqrt((outerR * outerR - y * y).toDouble()).toFloat()
+        var xMin = -xOuter
+        var xMax = xOuter
+
+        val eps = 1e-5f
+        // 边 1：y * cos1 - x * sin1 >= 0
+        if (Math.abs(sin1) < eps) {
+            if (y * cos1 < -1e-4f) return 0f
+        } else if (sin1 > 0f) {
+            xMax = minOf(xMax, (y * cos1) / sin1)
+        } else {
+            xMin = maxOf(xMin, (y * cos1) / sin1)
+        }
+
+        // 边 2：x * sin2 - y * cos2 >= 0
+        if (Math.abs(sin2) < eps) {
+            if (-y * cos2 < -1e-4f) return 0f
+        } else if (sin2 > 0f) {
+            xMin = maxOf(xMin, (y * cos2) / sin2)
+        } else {
+            xMax = minOf(xMax, (y * cos2) / sin2)
+        }
+
+        if (xMax <= xMin) return 0f
+
+        if (absY < innerR) {
+            val xInner = Math.sqrt((innerR * innerR - y * y).toDouble()).toFloat()
+            val leftMax = minOf(xMax, -xInner)
+            val rightMin = maxOf(xMin, xInner)
+            if (tx >= 0f) {
+                if (rightMin < xMax) xMin = rightMin
+                else if (xMin < leftMax) xMax = leftMax
+                else return 0f
+            } else {
+                if (xMin < leftMax) xMax = leftMax
+                else if (rightMin < xMax) xMin = rightMin
+                else return 0f
+            }
+        }
+
+        if (tx < xMin || tx > xMax) return 0f
+        return 2f * minOf(tx - xMin, xMax - tx)
+    }
+
+    private fun drawAdaptiveSectorText(
+        canvas: Canvas,
+        text: String,
+        cx: Float,
+        cy: Float,
+        tx: Float,
+        ty: Float,
+        innerR: Float,
+        outerR: Float,
+        startAngleDeg: Float,
+        sweepAngleDeg: Float,
+        targetSize: Float,
+        maxHeight: Float,
+        ringThickness: Float
+    ) {
+        if (text.isEmpty() || outerR <= innerR) return
+
+        val minSize = minOf(targetSize, maxOf(6f, minOf(20f, ringThickness * 0.45f)))
+        var size1 = minOf(targetSize, maxHeight)
+        var maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
 
         paintText.textSize = size1
         var measured1 = paintText.measureText(text)
-        if (measured1 > maxW1 && maxW1 > 4f) {
-            size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1))
-            paintText.textSize = size1
-            maxW1 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size1)
-            measured1 = paintText.measureText(text)
-            if (measured1 > maxW1 && size1 > minSize) {
-                size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+        if (measured1 > maxW1) {
+            if (maxW1 > 1f) {
+                size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
                 paintText.textSize = size1
-                maxW1 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size1)
+                maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                measured1 = paintText.measureText(text)
+                if (measured1 > maxW1 && size1 > minSize && maxW1 > 1f) {
+                    size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+                    paintText.textSize = size1
+                    maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                    measured1 = paintText.measureText(text)
+                }
+            } else {
+                size1 = minSize
+                paintText.textSize = size1
+                maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
                 measured1 = paintText.measureText(text)
             }
         }
 
-        // 短词或单行已经足够大时，直接单行绘制
+        val drawX = cx + tx
+        val drawY = cy + ty
         val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.25f
         val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
         if (!canTryTwoLines || preferOneLine) {
             val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
-            drawSingleLineCentered(canvas, finalOne, cx, cy, paintText)
+            drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
             return
         }
 
-        // 尝试拆成居中 2 行，看看字号能不能明显变大
         val lines = splitBalancedTwoLines(text)
         if (lines[1].isEmpty()) {
             val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
-            drawSingleLineCentered(canvas, finalOne, cx, cy, paintText)
+            drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
             return
         }
 
-        var size2 = Math.min(targetSize * 0.85f, maxHeight / 2.25f)
+        var size2 = minOf(targetSize * 0.85f, maxHeight / 2.25f)
         paintText.textSize = size2
-        var maxLineW2 = Math.max(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
-        var maxW2 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size2 * 2.15f)
+        var step2 = size2 * 1.12f
+        var wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+        var wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+        var maxW2 = minOf(wLine1, wLine2)
+        var maxLineW2 = maxOf(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
 
-        if (maxLineW2 > maxW2 && maxW2 > 4f) {
-            size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
-            paintText.textSize = size2
-            maxW2 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size2 * 2.15f)
-            maxLineW2 = Math.max(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
-            if (maxLineW2 > maxW2 && size2 > minSize) {
-                size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+        if (maxLineW2 > maxW2) {
+            if (maxW2 > 1f) {
+                size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
                 paintText.textSize = size2
-                maxW2 = computeSectorChordWidth(innerR, textRadius, effectiveSweepDeg, size2 * 2.15f)
+                step2 = size2 * 1.12f
+                wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                maxW2 = minOf(wLine1, wLine2)
+                maxLineW2 = maxOf(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
+                if (maxLineW2 > maxW2 && size2 > minSize && maxW2 > 1f) {
+                    size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+                    paintText.textSize = size2
+                    step2 = size2 * 1.12f
+                    wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                    wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                }
+            } else {
+                size2 = minSize
+                paintText.textSize = size2
+                step2 = size2 * 1.12f
+                wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
             }
         }
 
-        // 2 行能比单行大 15% 以上，或者单行原本放不下时，采用 2 行
         if (size2 > size1 * 1.15f || measured1 > maxW1) {
-            val l1 = ellipsizeWithFallback(lines[0], paintText, maxW2, size2)
-            val l2 = ellipsizeWithFallback(lines[1], paintText, maxW2, size2)
-            drawTwoLinesCentered(canvas, l1, l2, cx, cy, paintText)
+            val l1 = ellipsizeWithFallback(lines[0], paintText, wLine1, size2)
+            val l2 = ellipsizeWithFallback(lines[1], paintText, wLine2, size2)
+            drawTwoLinesCentered(canvas, l1, l2, drawX, drawY, paintText)
         } else {
             paintText.textSize = size1
             val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
-            drawSingleLineCentered(canvas, finalOne, cx, cy, paintText)
+            drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
         }
     }
 
@@ -941,18 +1068,20 @@ class WheelPad(attributesMap: Map<String, Any>,
     }
 
     private fun ellipsizeWithFallback(text: String, paint: Paint, maxWidth: Float, currentSize: Float): String {
-        if (maxWidth <= 4f) return text
+        if (text.isEmpty() || maxWidth <= 0f) return ""
         if (paint.measureText(text) <= maxWidth) return text
 
         textMeasurePaint.set(paint)
         val result = TextUtils.ellipsize(text, textMeasurePaint, maxWidth, TextUtils.TruncateAt.END).toString()
         if (result.isEmpty()) {
-            val firstChar = text.substring(0, 1)
-            val singleW = paint.measureText(firstChar)
+            // 按完整码点截取，避免把 Emoji 的代理对劈成半个乱码
+            val firstCharCount = Character.charCount(text.codePointAt(0))
+            val firstGlyph = text.substring(0, firstCharCount)
+            val singleW = paint.measureText(firstGlyph)
             if (singleW > maxWidth && singleW > 0f) {
-                paint.textSize = Math.max(8f, currentSize * ((maxWidth * 0.92f) / singleW))
+                paint.textSize = maxOf(6f, currentSize * ((maxWidth * 0.92f) / singleW))
             }
-            return firstChar
+            return firstGlyph
         }
         return result
     }
@@ -1028,9 +1157,9 @@ class WheelPad(attributesMap: Map<String, Any>,
         val dy = event.y - height / 2.0f
         val distance = Math.hypot(dx.toDouble(), dy.toDouble())
         val triggerRadius = getTriggerRadius()
-        // 屏幕中心模式：轮盘不在手指下，手指的物理边界就是触发按钮本身；
-        // 原地弹出模式：触发圆本身就是轮盘内圈，两者天然相等。
-        val segmentInnerRadius = if (popupAtScreenCenter) triggerRadius else getWheelInnerRadiusPx()
+        // 原地模式的触发半径本身就是 max(10f, 轮盘内圈)，统一用它做选区边界，
+        // 避免内圈设 0% 时触发圆内部（0~10px）被误判为选中扇区。
+        val segmentInnerRadius = triggerRadius
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -1169,14 +1298,22 @@ class WheelPad(attributesMap: Map<String, Any>,
         triggerSizeNumberSeekbar.setValueWithNoCallBack(this.triggerDiameter)
         triggerSizeNumberSeekbar.visibility = if (isPopupMode && popupAtScreenCenter) View.VISIBLE else View.GONE
         triggerSizeNumberSeekbar.setOnNumberSeekbarChangeListener(object : NumberSeekbar.OnNumberSeekbarChangeListener {
+            private var isTracking = false
+
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 setTriggerDiameter(progress)
+                // 无障碍/点击步进不会触发 onStopTrackingTouch，这里补一次落库
+                if (fromUser && !isTracking) {
+                    save()
+                }
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
+                isTracking = true
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
+                isTracking = false
                 save()
             }
         })
