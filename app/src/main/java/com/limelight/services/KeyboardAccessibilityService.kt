@@ -8,7 +8,11 @@ import android.view.accessibility.AccessibilityEvent
 import com.limelight.preferences.PreferenceConfiguration
 import java.util.ArrayDeque
 
-/** Filters hardware keys while a streaming window owns keyboard input. */
+/**
+ * 一个无障碍服务，用于在系统级别拦截硬件键盘事件。
+ * 主要目的是捕获像 Win 键、Alt+Tab 等被 Android 系统默认行为占用的按键，
+ * 并将它们转发给应用（如 Moonlight 的 Game Activity），以提供完整的 PC 游戏体验。
+ */
 @SuppressLint("AccessibilityPolicy")
 class KeyboardAccessibilityService : AccessibilityService() {
     interface KeyEventCallback {
@@ -77,7 +81,7 @@ class KeyboardAccessibilityService : AccessibilityService() {
                 KeyEvent.KEYCODE_MEDIA_NEXT -> return KeyEvent.KEYCODE_F11
             }
         }
-        // Some keyboards expose physical Escape as Back (Linux scan code 1).
+        // 小米平板将物理 ESC 键（ScanCode=1）映射为 Android 的 BACK 键（Code=4）。
         if (event.scanCode == 1) return KeyEvent.KEYCODE_ESCAPE
         return when (event.keyCode) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
@@ -87,6 +91,7 @@ class KeyboardAccessibilityService : AccessibilityService() {
         }
     }
 
+    // 对于只过滤按键事件的场景，不需要在这里做什么。
     override fun onAccessibilityEvent(event: AccessibilityEvent) = Unit
 
     override fun onInterrupt() {
