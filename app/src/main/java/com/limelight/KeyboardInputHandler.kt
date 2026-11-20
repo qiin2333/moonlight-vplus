@@ -132,6 +132,7 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun releaseForwardedKeys() {
+        game.window.decorView.handler?.removeCallbacks(toggleGrab)
         if (::escConfirmRunnable.isInitialized) {
             handler.removeCallbacks(escConfirmRunnable)
         }
@@ -155,12 +156,14 @@ class KeyboardInputHandler(private val game: Game) {
         game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_DOWN, modifier, flags)
     }
 
-    private fun sendTrackedKeyUp(trackingKey: Int, translated: Short, modifier: Byte, flags: Byte) {
-        forwardedKeys.remove(trackingKey)
+    private fun sendTrackedKeyUp(trackingKey: Int, translated: Short, modifier: Byte, flags: Byte): Boolean {
+        if (forwardedKeys.remove(trackingKey) == null) return false
         game.conn?.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, modifier, flags)
+        return true
     }
 
     fun handleKeyDown(event: KeyEvent): Boolean {
+        if (game.isLocalInputOverlayVisible()) return false
         when (event.keyCode) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
             KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN,
@@ -170,12 +173,19 @@ class KeyboardInputHandler(private val game: Game) {
             else -> {
                 val device = event.device
                 if (!game.isEventFromAccessibilityService &&
-                    KeyboardAccessibilityService.instance != null &&
-                    (device != null && !device.isVirtual)
+                    (device != null && !device.isVirtual) &&
+                    KeyboardAccessibilityService.wasForwarded(event)
                 ) {
                     return true
                 }
             }
+        }
+
+        if (!game.grabbedInput &&
+            (event.device == null || !ControllerHandler.isGameControllerDevice(event.device))
+        ) {
+            if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) return false
+            return handleSpecialKeys(event.keyCode, true)
         }
 
         // 自定义组合键，只能其它+esc，esc+其它时，esc抬起时其它才会down
@@ -308,19 +318,29 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     fun handleKeyUp(event: KeyEvent): Boolean {
+        if (game.isLocalInputOverlayVisible()) return false
         when (event.keyCode) {
-            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH -> {
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH,
+            KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN,
+            KeyEvent.KEYCODE_VOLUME_MUTE, KeyEvent.KEYCODE_POWER -> {
                 // 系统导航键直接跳过去重逻辑
             }
             else -> {
                 val device = event.device
                 if (!game.isEventFromAccessibilityService &&
-                    KeyboardAccessibilityService.instance != null &&
-                    (device != null && !device.isVirtual)
+                    (device != null && !device.isVirtual) &&
+                    KeyboardAccessibilityService.wasForwarded(event)
                 ) {
                     return true
                 }
             }
+        }
+
+        if (!game.grabbedInput &&
+            (event.device == null || !ControllerHandler.isGameControllerDevice(event.device))
+        ) {
+            if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) return false
+            return handleSpecialKeys(event.keyCode, false)
         }
 
         if (isPhysicalKeyboardConnected()) {
@@ -350,7 +370,7 @@ class KeyboardInputHandler(private val game: Game) {
 
         if (game.prefConfig.enableCustomKeyMap) {
             if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
-                handler.removeCallbacks(escConfirmRunnable)
+                if (::escConfirmRunnable.isInitialized) handler.removeCallbacks(escConfirmRunnable)
                 when (escState) {
                     1 -> {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
@@ -368,8 +388,8 @@ class KeyboardInputHandler(private val game: Game) {
                     }
                     else -> {
                         val translated = keyboardTranslator.translate(KeyEvent.KEYCODE_ESCAPE, event.deviceId)
-                        sendTrackedKeyUp(KeyEvent.KEYCODE_ESCAPE, translated, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                         escState = 0
+                        return sendTrackedKeyUp(KeyEvent.KEYCODE_ESCAPE, translated, 0.toByte(), MoonBridge.SS_KBE_FLAG_NON_NORMALIZED)
                     }
                 }
                 return true
@@ -449,7 +469,7 @@ class KeyboardInputHandler(private val game: Game) {
                         (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0
             }
 
-            sendTrackedKeyUp(
+            return sendTrackedKeyUp(
                 event.keyCode, translated, getModifierState(event),
                 if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0 else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED
             )
