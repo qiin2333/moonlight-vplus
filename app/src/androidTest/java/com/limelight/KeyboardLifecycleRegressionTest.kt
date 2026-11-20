@@ -17,7 +17,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class KeyboardLifecycleRegressionTest {
     @Test
-    fun mainWindowFocusLossReleasesKeyboardAndMouseWithoutAccessibility() = withGame { scenario ->
+    fun pauseReleasesKeyboardAndMouseEvenWhenInterceptionIsAlreadyDisabled() = withGame { scenario ->
         scenario.onActivity { game ->
             connect(game)
             KeyboardAccessibilityService.setIntercepting(false)
@@ -27,31 +27,23 @@ class KeyboardLifecycleRegressionTest {
             handler.handleKeyDown(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, source = InputDevice.SOURCE_MOUSE))
             assertFalse(forwarded(game).isEmpty())
             assertTrue(field(handler, "rightMouseButtonDown") as Boolean)
-
-            game.onWindowFocusChanged(false)
+        }
+        scenario.moveToState(Lifecycle.State.STARTED)
+        scenario.onActivity { game ->
+            val handler = game.keyboardInputHandler
             assertTrue(forwarded(game).isEmpty())
             assertFalse(field(handler, "rightMouseButtonDown") as Boolean)
             handler.handleKeyUp(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_W))
             handler.handleKeyUp(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, source = InputDevice.SOURCE_MOUSE))
             assertTrue(forwarded(game).isEmpty())
-            game.onWindowFocusChanged(true)
-            handler.handleKeyDown(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W))
-            assertFalse(forwarded(game).isEmpty())
-            handler.handleKeyUp(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_W))
-            assertTrue(forwarded(game).isEmpty())
         }
-    }
-
-    @Test
-    fun pauseReleasesForwardedKeysEvenWhenInterceptionIsAlreadyDisabled() = withGame { scenario ->
+        scenario.moveToState(Lifecycle.State.RESUMED)
         scenario.onActivity { game ->
-            connect(game)
-            KeyboardAccessibilityService.setIntercepting(false)
             game.keyboardInputHandler.handleKeyDown(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W))
             assertFalse(forwarded(game).isEmpty())
+            game.keyboardInputHandler.handleKeyUp(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_W))
+            assertTrue(forwarded(game).isEmpty())
         }
-        scenario.moveToState(Lifecycle.State.STARTED)
-        scenario.onActivity { assertTrue(forwarded(it).isEmpty()) }
     }
 
     @Test
@@ -147,7 +139,9 @@ class KeyboardLifecycleRegressionTest {
 
     private fun controllerDeviceId(): Int {
         if (ControllerHandler.isGameControllerDevice(InputDevice.getDevice(0))) return 0
-        return InputDevice.getDeviceIds().first { ControllerHandler.isGameControllerDevice(InputDevice.getDevice(it)) }
+        return requireNotNull(InputDevice.getDeviceIds().firstOrNull {
+            ControllerHandler.isGameControllerDevice(InputDevice.getDevice(it))
+        }) { "The test requires a controller-class input device" }
     }
 
     private fun key(action: Int, code: Int, deviceId: Int = KeyCharacterMap.VIRTUAL_KEYBOARD,

@@ -1794,15 +1794,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (::keyboardInputHandler.isInitialized) {
-            // An external stream window can receive focus independently of the main window.
-            if (!hasFocus && externalDisplayManager?.isUsingExternalDisplay() != true) {
-                keyboardInputHandler.releaseForwardedKeys()
-            } else {
-                keyboardInputHandler.clearModifierState()
-            }
-        }
-        if (::inputCaptureProvider.isInitialized) inputCaptureProvider.onWindowFocusChanged(hasFocus)
+        keyboardInputHandler.clearModifierState()
+        inputCaptureProvider.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             // Android only delivers OnPrimaryClipChangedListener events while
             // the app holds input focus; clips copied in another app while
