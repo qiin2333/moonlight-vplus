@@ -35,6 +35,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.view.WindowCompat
 import androidx.core.view.doOnLayout
@@ -630,7 +632,9 @@ class GameMenu(
         val inlineControl: InlineControl? = null,
         val selected: Boolean = false,
         val presentation: GameMenuOptionPresentation = GameMenuOptionPresentation.DEFAULT,
-        val focusKey: String? = null
+        val focusKey: String? = null,
+        val tintIcon: Boolean = false,
+        val inlineControlMaxWidth: Dp? = null
     ) {
         constructor(label: String, runnable: Runnable?) :
                 this(label, false, runnable, null, true, false)
@@ -2679,6 +2683,8 @@ class GameMenu(
                 iconKey = "game_menu_toggle_performance_overlay",
                 isShowIcon = true,
                 isKeepDialog = true,
+                tintIcon = true,
+                inlineControlMaxWidth = 320.dp,
                 inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments()),
                 focusKey = PERF_MODE_FOCUS_KEY
             ),
@@ -2689,6 +2695,8 @@ class GameMenu(
                 iconKey = "game_menu_perf_overlay_style",
                 isShowIcon = true,
                 isKeepDialog = true,
+                tintIcon = true,
+                inlineControlMaxWidth = 320.dp,
                 inlineControl = InlineControl.Segmented(buildPerfOverlayStyleSegments()),
                 focusKey = PERF_STYLE_FOCUS_KEY
             ),
@@ -2699,6 +2707,8 @@ class GameMenu(
                 iconKey = "game_menu_perf_gestures",
                 isShowIcon = true,
                 isKeepDialog = true,
+                tintIcon = true,
+                inlineControlMaxWidth = 320.dp,
                 subtitle = if (gestureMode == com.limelight.perfhud.PerfOverlayGestures.CUSTOM)
                     getString(R.string.game_menu_perf_gestures_custom) else null,
                 inlineControl = InlineControl.Segmented(
@@ -2718,7 +2728,7 @@ class GameMenu(
                 iconKey = "game_menu_perf_metrics",
                 isShowIcon = true,
                 isKeepDialog = true,
-                subtitle = getString(R.string.game_menu_perf_metric_summary),
+                tintIcon = true,
                 showChevron = true,
                 focusKey = PERF_METRICS_FOCUS_KEY
             ),
@@ -2738,6 +2748,7 @@ class GameMenu(
                 iconKey = "game_menu_perf_reset",
                 isShowIcon = true,
                 isKeepDialog = true,
+                tintIcon = true,
                 focusKey = PERF_POSITION_RESET_FOCUS_KEY
             ) else null
         )
@@ -2764,6 +2775,7 @@ class GameMenu(
                     iconKey = "perf_metric_$value",
                     isShowIcon = true,
                     isKeepDialog = true,
+                    tintIcon = true,
                     inlineControl = InlineControl.Toggle(value in selected),
                     focusKey = value
                 )
@@ -2800,7 +2812,7 @@ class GameMenu(
         private const val HAPTIC_FEEDBACK_SETTING = "haptic_feedback_enabled"
 
         private val ICON_MAP = mapOf(
-            "game_menu_perf_gestures" to R.drawable.phc_perf_gauge,
+            "game_menu_perf_gestures" to R.drawable.ic_touch_settings,
             "game_menu_perf_metrics" to R.drawable.phc_perf_monitor,
             "game_menu_perf_reset" to R.drawable.phc_action_reset,
             "perf_metric_resolution" to R.drawable.phc_perf_resolution,
@@ -2813,12 +2825,12 @@ class GameMenu(
             "perf_metric_battery" to R.drawable.phc_perf_battery,
             "perf_metric_one_percent_low" to R.drawable.phc_perf_gauge,
             "perf_metric_clock" to R.drawable.phc_perf_timer,
-            "perf_metric_health" to R.drawable.phc_perf_monitor,
+            "perf_metric_health" to R.drawable.phc_moon,
             "microphone_input" to R.drawable.ic_mic_gm,
             "game_menu_change_resolution" to R.drawable.ic_resolution_cute,
             "game_menu_toggle_keyboard" to R.drawable.ic_candy_keyboard,
             "game_menu_toggle_performance_overlay" to R.drawable.ic_candy_performance,
-            "game_menu_perf_overlay_style" to R.drawable.phc_action_auto_color,
+            "game_menu_perf_overlay_style" to R.drawable.phc_layers,
             "game_menu_toggle_virtual_controller" to R.drawable.ic_candy_controller,
             "game_menu_disconnect" to R.drawable.ic_disconnect_cute,
             "game_menu_send_keys" to R.drawable.ic_candy_send_keys,
