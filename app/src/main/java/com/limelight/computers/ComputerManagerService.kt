@@ -140,6 +140,8 @@ class ComputerManagerService : Service() {
     // Returns true if the details object was modified
     @Throws(InterruptedException::class)
     private fun runPoll(details: ComputerDetails, newPc: Boolean, offlineCount: Int): Boolean {
+        val expectedUuid = details.uuid
+
         if (!getLocalDatabaseReference()) {
             return false
         }
@@ -165,6 +167,17 @@ class ComputerManagerService : Service() {
         }
 
         if (details.state == ComputerDetails.State.ONLINE) {
+            // Never persist a host identity that changed during the poll. Otherwise another
+            // host's row would receive this host's serverCert and later fail TLS pinning
+            // with "Certificate mismatch".
+            if (!PairStateTrust.isSameHostIdentity(expectedUuid, details.uuid)) {
+                LimeLog.warning(
+                    "Poll changed host identity ($expectedUuid -> ${details.uuid}); skipping DB update"
+                )
+                releaseLocalDatabaseReference()
+                return false
+            }
+
             val existingComputer = dbManager.getComputerByUUID(details.uuid!!)
 
             if (!newPc && existingComputer == null) {
@@ -772,21 +785,29 @@ class ComputerManagerService : Service() {
 
     private fun getPollKeys(details: ComputerDetails): List<String> {
         val keys = ArrayList<String>()
-        details.uuid?.let { keys.add("uuid:$it") }
+        val uuid = details.uuid
+        if (uuid != null) {
+            keys.add("uuid:$uuid")
+        }
 
-        val addressKey = listOfNotNull(
-            details.activeAddress,
-            details.localAddress,
-            details.manualAddress,
-            details.remoteAddress,
-            details.ipv6Address
-        )
-            .distinct()
-            .sortedBy { it.toString() }
-            .joinToString("|")
+        // The address key is only a discovery aid for hosts whose identity is still unknown.
+        // Different hosts can share the same IP:port (one PC dual-booting multiple Sunshine
+        // installs), so a host with a known UUID must never match poll results by address.
+        if (uuid == null) {
+            val addressKey = listOfNotNull(
+                details.activeAddress,
+                details.localAddress,
+                details.manualAddress,
+                details.remoteAddress,
+                details.ipv6Address
+            )
+                .distinct()
+                .sortedBy { it.toString() }
+                .joinToString("|")
 
-        if (addressKey.isNotEmpty()) {
-            keys.add("addr:$addressKey")
+            if (addressKey.isNotEmpty()) {
+                keys.add("addr:$addressKey")
+            }
         }
 
         return keys.distinct()
@@ -821,6 +842,15 @@ class ComputerManagerService : Service() {
     private fun getFreshPollResult(details: ComputerDetails, nowMs: Long, pairStateEpoch: Long): ComputerDetails? {
         for (key in getPollKeys(details)) {
             val recent = recentPollResults[key] ?: continue
+            if (!PairStateTrust.isSameHostIdentity(details.uuid, recent.details.uuid)) {
+                // Cached state belongs to a different host that shares this address.
+                // Reusing it would overwrite this host's uuid/name/state/certificate.
+                LimeLog.warning(
+                    "Fast poll: ignoring cached state for ${recent.details.uuid} " +
+                            "requested by ${details.uuid}"
+                )
+                continue
+            }
             if (recent.pairStateEpoch != pairStateEpoch) {
                 recentPollResults.remove(key, recent)
                 continue
@@ -1082,6 +1112,13 @@ class ComputerManagerService : Service() {
 
             val polledDetails = pollFlight?.result
             if (polledDetails != null) {
+                if (!PairStateTrust.isSameHostIdentity(details.uuid, polledDetails.uuid)) {
+                    LimeLog.warning(
+                        "Fast poll: discarding in-flight result for ${polledDetails.uuid} " +
+                                "requested by ${details.uuid}"
+                    )
+                    return false
+                }
                 if ((tuple?.pairStateEpoch ?: 0L) != pollFlight.pairStateEpoch) {
                     LimeLog.warning("Fast poll: discarding stale in-flight result for ${details.name ?: getPrimaryPollKey(details)}")
                     return false
@@ -1103,6 +1140,12 @@ class ComputerManagerService : Service() {
 
             if (polledDetails != null) {
                 val completedAtMs = SystemClock.elapsedRealtime()
+                if (!PairStateTrust.isSameHostIdentity(details.uuid, polledDetails.uuid)) {
+                    LimeLog.warning(
+                        "Fast poll: poll returned ${polledDetails.uuid} for ${details.uuid}; discarding"
+                    )
+                    return false
+                }
                 if ((tuple?.pairStateEpoch ?: 0L) != pairStateEpoch) {
                     LimeLog.warning("Fast poll: discarding stale poll result for ${details.name ?: getPrimaryPollKey(details)}")
                     return false
