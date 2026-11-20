@@ -479,10 +479,6 @@ class KeyboardInputHandler(private val game: Game) {
             (event.keyCode !in pressedKeys || physicalKey !in sourcePressedKeys)
         ) return true
 
-        if (game.prefConfig.enableCustomKeyMap && game.grabbedInput &&
-            event.keyCode == KeyEvent.KEYCODE_ESCAPE && event.keyCode !in pressedKeys
-        ) return true
-
         if (isPhysicalKeyboardConnected()) {
             // ESC键双击逻辑
             if (event.keyCode == game.prefConfig.escMenuKey && game.prefConfig.enableEscMenu) {
