@@ -1548,12 +1548,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onKeyEvent(event: KeyEvent) {
         isEventFromAccessibilityService = true
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            onKeyDown(event.keyCode, event)
-        } else if (event.action == KeyEvent.ACTION_UP) {
-            onKeyUp(event.keyCode, event)
+        try {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                onKeyDown(event.keyCode, event)
+            } else if (event.action == KeyEvent.ACTION_UP) {
+                onKeyUp(event.keyCode, event)
+            }
+        } finally {
+            isEventFromAccessibilityService = false
         }
-        isEventFromAccessibilityService = false
+    }
+
+    override fun onKeyboardCaptureLost() {
+        if (::keyboardInputHandler.isInitialized) keyboardInputHandler.releaseAccessibilityKeys()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

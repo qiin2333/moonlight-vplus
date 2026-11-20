@@ -1900,6 +1900,14 @@ class ControllerHandler(
         return context
     }
 
+    internal fun existingContextForEvent(event: InputEvent): InputDeviceContext? {
+        if (stopped) return null
+        if (event.deviceId == 0) return defaultContext
+        if (event.device == null) return null
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R && event.deviceId == -1) return defaultContext
+        return inputDeviceContexts.get(event.deviceId)
+    }
+
     // ========== Input Helpers ==========
 
     private fun maxByMagnitude(a: Byte, b: Byte): Byte {
@@ -2892,9 +2900,21 @@ class ControllerHandler(
 
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
+        return handleButtonUp(context, event, cancelled = false)
+    }
 
+    internal fun cancelAccessibilityButton(context: InputDeviceContext, down: KeyEvent) {
+        if (isContextUsable(context)) {
+            handleButtonUp(context, KeyEvent.changeAction(down, KeyEvent.ACTION_UP), cancelled = true)
+        }
+    }
+
+    private fun handleButtonUp(context: InputDeviceContext, event: KeyEvent, cancelled: Boolean): Boolean {
         val captureAtEntry = context.isLocalInputCaptureActive()
-        if (!captureAtEntry) {
+        if (cancelled) {
+            context.pendingExit = false
+            context.performanceOverlayShortcutState.reset()
+        } else if (!captureAtEntry) {
             updatePerformanceShortcut(context, event, pressed = false)
         }
         var keyCode = handleRemapping(context, event)
@@ -2907,12 +2927,13 @@ class ControllerHandler(
         }
 
         val isStartKey = keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU
+        if (cancelled && isStartKey) resetSystemStartGesture(context)
 
         // If the button hasn't been down long enough, sleep for a bit before sending the up event
         // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
         // path should not be triggered during normal usage.
         val buttonDownTime = (event.eventTime - event.downTime).toInt()
-        if (buttonDownTime < MINIMUM_BUTTON_DOWN_TIME_MS) {
+        if (!cancelled && buttonDownTime < MINIMUM_BUTTON_DOWN_TIME_MS) {
             // Since our sleep time is so short (<= 25 ms), it shouldn't cause a problem doing this
             // in the UI thread.
             try {
@@ -2980,11 +3001,11 @@ class ControllerHandler(
                 context.inputMap = context.inputMap and ControllerPacket.Y_FLAG.inv()
             KeyEvent.KEYCODE_BUTTON_L1 -> {
                 context.inputMap = context.inputMap and ControllerPacket.LB_FLAG.inv()
-                context.lastLbUpTime = event.eventTime
+                context.lastLbUpTime = if (cancelled) 0 else event.eventTime
             }
             KeyEvent.KEYCODE_BUTTON_R1 -> {
                 context.inputMap = context.inputMap and ControllerPacket.RB_FLAG.inv()
-                context.lastRbUpTime = event.eventTime
+                context.lastRbUpTime = if (cancelled) 0 else event.eventTime
             }
             KeyEvent.KEYCODE_BUTTON_THUMBL ->
                 context.inputMap = context.inputMap and ControllerPacket.LS_CLK_FLAG.inv()
@@ -3022,13 +3043,13 @@ class ControllerHandler(
             else -> return false
         }
 
-        if (!isStartKey && isWheelDpadKey(keyCode) &&
+        if (!cancelled && !isStartKey && isWheelDpadKey(keyCode) &&
             context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
         ) {
             handleSystemStartWheelAxes(context)
         }
 
-        if (isStartKey) {
+        if (isStartKey && !cancelled) {
             handleSystemStartGestureUpdate(
                 context,
                 context.startGesture.onStartUp(
@@ -3042,7 +3063,7 @@ class ControllerHandler(
             )
         }
 
-        if (captureAtEntry || context.isLocalInputCaptureActive()) {
+        if (!cancelled && (captureAtEntry || context.isLocalInputCaptureActive())) {
             updateSystemStartReleaseState(context)
             return true
         }
@@ -3085,7 +3106,7 @@ class ControllerHandler(
 
         updateSystemStartReleaseState(context)
 
-        if (context.pendingExit && context.inputMap == 0) {
+        if (!cancelled && context.pendingExit && context.inputMap == 0) {
             // All buttons from the quit combo are lifted. Finish the activity now.
             activityContext.finish()
         }
