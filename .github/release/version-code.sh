@@ -67,8 +67,10 @@ calculate_release_version() {
   floor=$gradle_floor
   floor_source=$gradle_file
 
-  # Creation time is primary. refname provides a deterministic tie-breaker for
-  # tags created in the same second.
+  # Lightweight tags share their target commit's timestamp. When a preview and
+  # its stable release point at the same commit, put previews first so the
+  # stable APK gets the greater code. Natural ordering also places beta.2
+  # before beta.10 when both tags point at the same commit.
   while IFS= read -r tag; do
     [[ "$tag" == v* ]] || continue
     parse_rc=0
@@ -102,10 +104,16 @@ calculate_release_version() {
       target_code=$code
     fi
   done < <(git for-each-ref \
-    --sort=refname \
-    --sort=creatordate \
-    --format='%(refname:short)' \
-    refs/tags)
+    --format='%(creatordate:unix) %(refname:short)' refs/tags |
+    python3 -c 'import re, sys
+rows = [line.split(" ", 1) for line in sys.stdin.read().splitlines()]
+stable = re.compile(r"^v[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
+def natural(tag):
+    return tuple((1, int(part)) if part.isdigit() else (0, part)
+                 for part in re.split(r"(\d+)", tag))
+rows.sort(key=lambda row: (int(row[0]), bool(stable.fullmatch(row[1])), natural(row[1]), row[1]))
+for _, tag in rows:
+    print(tag)')
 
   if [ -z "$target_code" ]; then
     echo "ERROR: no versionCode could be derived for tag '$target_tag'" >&2

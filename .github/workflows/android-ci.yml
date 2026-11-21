@@ -243,6 +243,15 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Validate release tag
+        id: release_kind
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=$(bash .github/release/release-kind.sh "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY")
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
         with:
@@ -359,100 +368,29 @@ jobs:
           echo "Renamed APK to: $DEST"
           echo "REL_APK=$DEST" >> $GITHUB_ENV
 
+      - name: Verify release APK
+        run: python3 .github/release/verify-release-apk.py "$REL_APK" "$VERSION_NAME" "$VERSION_CODE"
+
       - name: Generate release notes
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IS_PRERELEASE: ${{ steps.release_kind.outputs.prerelease }}
         run: |
-          set -e
-          DATE=$(date +'%Y-%m-%d')
-          V="${VERSION_NAME:-${GITHUB_REF#refs/tags/}}"; V="${V#v}"
-          CUR_TAG="${GITHUB_REF#refs/tags/}"
-          # 只在发版 tag（v*）里找上一个版本，并显式排除当前 tag。
-          # 直接取 `git tag | sed -n 2p` 会选中 issue-*-test-* 这类临时 tag，changelog 区间就错了。
-          PREV_TAG=$(git tag --list 'v*' --sort=-creatordate | grep -Fxv "$CUR_TAG" | head -n 1 || true)
-          echo "Previous release tag: ${PREV_TAG:-<none>}"
-          APK_SHA256=$(sha256sum "$REL_APK" | awk '{print $1}')
-
-          # 定制发布说明一律在 GitHub Release 页面发布后直接编辑，
-          # 不再从仓库根目录读取 RELEASE_NOTES_V*.md 文件。
-          if [ -n "$PREV_TAG" ]; then
-            LOG=$(git log --pretty=format:'%s' "${PREV_TAG}..${CUR_TAG}" --no-merges || true)
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            channel=prerelease
           else
-            LOG=$(git log --pretty=format:'%s' -n 100 --no-merges || true)
+            channel=stable
           fi
+          python3 .github/release/generate-release-notes.py \
+            "$GITHUB_REF_NAME" "$channel" "$REL_APK" > release_notes.md
 
-          # 按 conventional commit 前缀分类
-          FEAT="" FIX="" PERF="" OTHER=""
-          # 正则存入变量，避免 bash [[ =~ ]] 的括号解析问题
-          RE='^(feat|fix|perf|refactor|remove|chore|ci|docs|style|test|build)(\([^)]*\))?:[[:space:]](.+)$'
-          while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            # 提取前缀和描述（支持 type(scope): desc 和 type: desc）
-            if [[ "$line" =~ $RE ]]; then
-              prefix="${BASH_REMATCH[1]}"
-              desc="${BASH_REMATCH[3]}"
-              case "$prefix" in
-                feat)           FEAT+="- ✨ ${desc}"$'\n' ;;
-                fix)            FIX+="- 🐛 ${desc}"$'\n' ;;
-                perf|refactor)  PERF+="- ⚡ ${desc}"$'\n' ;;
-                remove)         OTHER+="- 🗑️ ${desc}"$'\n' ;;
-                # chore/ci/docs/style/test/build → 跳过
-              esac
-            fi
-          done <<< "$LOG"
-
-          # 拼装 release notes
-          {
-            echo "## 🌙 Moonlight V+ ${V}"
-            echo ""
-            echo "感谢你使用 Moonlight V+！如果喜欢，记得点亮一颗 ⭐～"
-            echo ""
-
-            if [ -n "$FEAT" ]; then
-              echo "### 新增"
-              printf '%s' "$FEAT"
-              echo ""
-            fi
-            if [ -n "$PERF" ]; then
-              echo "### 优化"
-              printf '%s' "$PERF"
-              echo ""
-            fi
-            if [ -n "$FIX" ]; then
-              echo "### 修复"
-              printf '%s' "$FIX"
-              echo ""
-            fi
-            if [ -n "$OTHER" ]; then
-              echo "### 其他"
-              printf '%s' "$OTHER"
-              echo ""
-            fi
-
-            # 如果所有分类都为空，列出原始提交
-            if [ -z "$FEAT" ] && [ -z "$FIX" ] && [ -z "$PERF" ] && [ -z "$OTHER" ]; then
-              echo "### 更新内容"
-              if [ -n "$PREV_TAG" ]; then
-                git log --pretty=format:'- %s' "${PREV_TAG}..${CUR_TAG}" --no-merges || true
-              else
-                echo "- 初始发布"
-              fi
-              echo ""
-            fi
-
-            echo "### 📦 下载"
-            echo "- APK 文件：\`Moonlight.V+.${V}.apk\`"
-            echo ""
-            echo "### SHA256"
-            echo ""
-            echo '```text'
-            echo "${APK_SHA256}  Moonlight.V+.${V}.apk"
-            echo '```'
-            echo ""
-            echo "---"
-            echo "如遇到问题，请在 [Issues](../../issues) 反馈。祝你游戏顺利、低延迟满帧！🎮"
-            echo ""
-            echo "*发布于 ${DATE}*"
-          } > release_notes.md
+      - name: Archive release mapping
+        shell: bash
+        run: >-
+          bash .github/release/archive-mapping.sh
+          app/build/outputs/mapping/nonRootRelease/mapping.txt "$REL_APK"
+          "$GITHUB_REF_NAME" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -460,11 +398,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Moonlight V+ ${{ env.VERSION_NAME }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
+          prerelease: ${{ steps.release_kind.outputs.prerelease == 'true' }}
           body_path: release_notes.md
-          files: |
-            ${{ env.REL_APK }}
-            app/build/outputs/mapping/nonRootRelease/mapping.txt
+          files: ${{ env.REL_APK }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -472,6 +408,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-nonroot-release-signed
+          if-no-files-found: error
           path: |
             app/build/outputs/apk/nonRoot/release/Moonlight.V+.*.apk
             app/build/outputs/mapping/nonRootRelease/mapping.txt

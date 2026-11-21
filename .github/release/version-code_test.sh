@@ -81,6 +81,25 @@ printf 'versionName "13.0.0"\nversionCode = 130000001\n' > build.gradle
 assert_info v12.11.0-hotfix.1 121100004 130000001 build.gradle
 printf 'versionName "0.0.0"\nversionCode = 393\n' > build.gradle
 
+# Lightweight tags on the same commit share its timestamp even when created at
+# different times. A stable release must sort after its previews, regardless of
+# lexical ordering, to permit beta -> RC -> stable upgrades.
+git tag v12.12.0-beta.1
+assert_info v12.12.0-beta.1 121200001 121200001 'tag v12.12.0-beta.1'
+git tag v12.12.0-beta.2
+assert_info v12.12.0-beta.2 121200002 121200002 'tag v12.12.0-beta.2'
+git tag v12.12.0-beta.10
+assert_info v12.12.0-beta.2 121200002 121200003 'tag v12.12.0-beta.10'
+assert_info v12.12.0-beta.10 121200003 121200003 'tag v12.12.0-beta.10'
+git tag v12.12.0-rc.1
+assert_info v12.12.0-rc.1 121200004 121200004 'tag v12.12.0-rc.1'
+git tag v12.12.0
+assert_info v12.12.0-beta.1 121200001 121200005 'tag v12.12.0'
+assert_info v12.12.0-beta.2 121200002 121200005 'tag v12.12.0'
+assert_info v12.12.0-beta.10 121200003 121200005 'tag v12.12.0'
+assert_info v12.12.0-rc.1 121200004 121200005 'tag v12.12.0'
+assert_info v12.12.0 121200005 121200005 'tag v12.12.0'
+
 tag_at v12.100.0 2026-01-11T00:00:00Z
 if bash "$VERSION_SCRIPT" v12.100.0 build.gradle >/dev/null 2>&1; then
   fail "MINOR values greater than 99 must be rejected"
@@ -94,7 +113,7 @@ fi
 if bash "$VERSION_SCRIPT" v12 build.gradle >/dev/null 2>&1; then
   fail "tags without a MINOR component must be rejected"
 fi
-if bash "$VERSION_SCRIPT" v12.12.0 build.gradle >/dev/null 2>&1; then
+if bash "$VERSION_SCRIPT" v12.13.0 build.gradle >/dev/null 2>&1; then
   fail "tags absent from the repository must be rejected"
 fi
 
