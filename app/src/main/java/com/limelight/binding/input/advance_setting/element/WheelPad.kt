@@ -9,7 +9,12 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
+import android.os.SystemClock
+import android.text.TextPaint
+import android.text.TextUtils
 import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -49,6 +54,14 @@ class WheelPad(attributesMap: Map<String, Any>,
         private const val EXTRA_SEGMENT_ALIGNMENT = "segmentAlignment"
         private const val SEGMENT_ALIGNMENT_CENTER = "center"
         private const val SEGMENT_ALIGNMENT_EDGE = "edge"
+        private const val EXTRA_WHEEL_DIAMETER = "wheelDiameter"
+        private const val EXTRA_TRIGGER_DIAMETER = "triggerDiameter"
+        private const val EXTRA_SEGMENT_NAMES = "segmentNames"
+
+        private const val WHEEL_MIN_DIAMETER = 150
+        private const val TRIGGER_MIN_DIAMETER = 60
+        private const val TRIGGER_MAX_DIAMETER = 300
+        private const val GLASS_SEGMENT_GAP_DEG = 1.6f
 
         @JvmStatic
         fun getInitialInfo(): ContentValues {
@@ -70,16 +83,16 @@ class WheelPad(attributesMap: Map<String, Any>,
             contentValues.put(COLUMN_INT_ELEMENT_FLAG1, 1)
 
             val extraAttrs = JsonObject()
-            // **为所有新的字体属性设置默认值**
-            extraAttrs.addProperty("normalTextColor", 0xFFFFFFFFL.toInt()) // White
-            extraAttrs.addProperty("pressedTextColor", 0xFFFFFFFFL.toInt()) // White
-            extraAttrs.addProperty("centerTextColor", 0xFFFFFFFFL.toInt()) // White
-            extraAttrs.addProperty("textSizePercent", 35) // 35%
-            extraAttrs.addProperty("centerTextSizePercent", 60) // 60%
+            extraAttrs.addProperty("normalTextColor", 0xFFFFFFFFL.toInt())
+            extraAttrs.addProperty("pressedTextColor", 0xFFFFFFFFL.toInt())
+            extraAttrs.addProperty("centerTextColor", 0xFFFFFFFFL.toInt())
+            extraAttrs.addProperty("textSizePercent", 35)
+            extraAttrs.addProperty("centerTextSizePercent", 60)
             extraAttrs.addProperty("triggerTextSizePercent", 40)
             extraAttrs.addProperty("previewGroupChildren", true)
             extraAttrs.addProperty(EXTRA_SEGMENT_ALIGNMENT, SEGMENT_ALIGNMENT_CENTER)
-            // 将 JsonObject 转换为字符串，并存入通用的 "extra_attributes" 列
+            extraAttrs.addProperty(EXTRA_WHEEL_DIAMETER, 400)
+            extraAttrs.addProperty(EXTRA_TRIGGER_DIAMETER, 130)
             contentValues.put("extra_attributes", Gson().toJson(extraAttrs))
 
             return contentValues
@@ -89,7 +102,9 @@ class WheelPad(attributesMap: Map<String, Any>,
     private val pageDeviceController: PageDeviceController = pageDeviceController
     private val wheelPad: WheelPad
 
-    private var diameter: Int
+    private var diameter: Int              // 轮盘自身直径
+    private var triggerDiameter: Int = 0   // 屏幕中心弹出模式下触发按钮的独立直径（也作为 View 尺寸）
+    private var currentViewSize: Int = -1
     private var segmentCount: Int
     private var innerRadiusPercent: Int
     private var isPopupMode: Boolean
@@ -102,25 +117,52 @@ class WheelPad(attributesMap: Map<String, Any>,
     private var thick: Int
     private var normalTextColor: Int = 0
     private var pressedTextColor: Int = 0
-    private var centerTextColor: Int = 0  // 中心文字颜色
-    private var textSizePercent: Int = 0  // 分区文字大小百分比
-    private var centerTextSizePercent: Int = 0 // 选择预览文字大小百分比
-
-    private var triggerTextSizePercent: Int = 0 // 触发器文字大小百分比
+    private var centerTextColor: Int = 0
+    private var textSizePercent: Int = 0
+    private var centerTextSizePercent: Int = 0
+    private var triggerTextSizePercent: Int = 0
 
     private val screenWidth: Int
     private val screenHeight: Int
 
-    private val paintBorder = Paint()
-    private val paintSegmentFill = Paint()
-    private val paintSegmentFillPressed = Paint()
-    private val paintBackground = Paint()
-    private val paintText = Paint()
+    private val paintBackground = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paintText = Paint(Paint.ANTI_ALIAS_FLAG)
     private val paintEdit = Paint()
-    private val paintCenterText = Paint()
-    private val paintGlow = Paint() // 用于激活分区的发光效果
+    private val paintCenterText = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paintGlassFill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paintGlassStroke = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paintAccentArc = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paintPointer = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val textMeasurePaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private val tempFontMetrics = Paint.FontMetrics()
+
     private val rect = RectF()
-    private val textPath = Path()
+    private val tempOuterRect = RectF()
+    private val tempInnerRect = RectF()
+    private val segmentPath = Path()
+    private val pointerPath = Path()
+
+    // 渐变着色器缓存，避免频繁 GC
+    private var cachedNormalShader: Shader? = null
+    private var cachedPressedShader: Shader? = null
+    private var lastShaderCx = 0f
+    private var lastShaderCy = 0f
+    private var lastShaderInnerR = 0f
+    private var lastShaderOuterR = 0f
+    private var lastShaderBgColor = 0
+    private var lastShaderPressedColor = 0
+
+    private var cachedTriggerShader: Shader? = null
+    private var lastTrigCx = 0f
+    private var lastTrigCy = 0f
+    private var lastTrigR = 0f
+    private var lastTrigBgColor = 0
+
+    // 动画过渡状态
+    private var popupAnimProgress = 1.0f
+    private var segPopProgress = FloatArray(16)
+    private var lastPointerAngleDeg = -90f
+    private var lastAnimTimestamp = 0L
 
     private var activeIndex = -1
     private var lastActiveIndex = -1
@@ -128,7 +170,6 @@ class WheelPad(attributesMap: Map<String, Any>,
     private var popupAtScreenCenter: Boolean
     private var previewGroupChildren = false
     private var alignSegmentEdge = false
-    // 用于追踪当前悬停的组按键，以实现子按键预览
     private var hoveredGroupButton: GroupButton? = null
 
     private var wheelPadPage: SuperPageLayout? = null
@@ -149,36 +190,33 @@ class WheelPad(attributesMap: Map<String, Any>,
         centralYMax = displayMetrics.heightPixels
         centralYMin = 0
         widthMax = displayMetrics.widthPixels
-        widthMin = 150
+        widthMin = TRIGGER_MIN_DIAMETER
         heightMax = displayMetrics.heightPixels
-        heightMin = 150
+        heightMin = TRIGGER_MIN_DIAMETER
 
-        paintBorder.style = Paint.Style.STROKE
-        paintBorder.isAntiAlias = true
-        paintSegmentFill.style = Paint.Style.FILL
-        paintSegmentFill.isAntiAlias = true
-        paintSegmentFillPressed.style = Paint.Style.FILL
-        paintSegmentFillPressed.isAntiAlias = true
         paintBackground.style = Paint.Style.FILL
-        paintBackground.isAntiAlias = true
         paintText.setColor(0xFFFFFFFF.toInt())
         paintText.textSize = 30f
         paintText.textAlign = Paint.Align.CENTER
-        paintText.isAntiAlias = true
         paintEdit.style = Paint.Style.STROKE
         paintEdit.strokeWidth = 4f
         paintEdit.pathEffect = DashPathEffect(floatArrayOf(10f, 20f), 0f)
         paintCenterText.setColor(0xFFFFFFFF.toInt())
         paintCenterText.textSize = 60f
         paintCenterText.textAlign = Paint.Align.CENTER
-        paintCenterText.isAntiAlias = true
         paintCenterText.isFakeBoldText = true
 
-        // 初始化发光效果画笔
-        paintGlow.style = Paint.Style.FILL
-        paintGlow.isAntiAlias = true
+        paintGlassFill.style = Paint.Style.FILL
+        paintGlassStroke.style = Paint.Style.STROKE
+        paintAccentArc.style = Paint.Style.STROKE
+        paintAccentArc.strokeCap = Paint.Cap.ROUND
+        paintPointer.style = Paint.Style.FILL
 
-        this.diameter = (attributesMap.get(COLUMN_INT_ELEMENT_WIDTH) as Long).toInt()
+        // 历史数据里 width 就是轮盘直径；新数据在中心弹出模式下 width 只是触发按钮直径，
+        // 真正的轮盘直径由 extra_attributes.wheelDiameter 保存。
+        val savedViewWidth = (attributesMap.get(COLUMN_INT_ELEMENT_WIDTH) as Long).toInt()
+        this.currentViewSize = savedViewWidth
+        this.diameter = clampWheelDiameter(savedViewWidth)
 
         val textObj = attributesMap.get(COLUMN_STRING_ELEMENT_TEXT)
         this.centerText = if (textObj != null) textObj as String else ""
@@ -188,12 +226,14 @@ class WheelPad(attributesMap: Map<String, Any>,
         normalColor = (attributesMap.get(COLUMN_INT_ELEMENT_NORMAL_COLOR) as Long).toInt()
         pressedColor = (attributesMap.get(COLUMN_INT_ELEMENT_PRESSED_COLOR) as Long).toInt()
         backgroundColor = (attributesMap.get(COLUMN_INT_ELEMENT_BACKGROUND_COLOR) as Long).toInt()
-        segmentCount = (attributesMap.get(COLUMN_INT_ELEMENT_MODE) as Long).toInt()
+        segmentCount = Math.max(2, (attributesMap.get(COLUMN_INT_ELEMENT_MODE) as Long).toInt())
         innerRadiusPercent = (attributesMap.get(COLUMN_INT_ELEMENT_SENSE) as Long).toInt()
 
-        // Load the popup behavior flag. Default to true (new behavior) for old configs.
         val popupFlagObj = attributesMap.get(COLUMN_INT_ELEMENT_FLAG1)
         this.popupAtScreenCenter = popupFlagObj == null || (popupFlagObj as Long).toInt() == 1
+
+        this.triggerDiameter = 0
+        var segmentNamesFromExtra: List<String>? = null
 
         if (attributesMap.containsKey("extra_attributes")) {
             val extraAttrsJsonString = attributesMap.get("extra_attributes") as String?
@@ -201,79 +241,84 @@ class WheelPad(attributesMap: Map<String, Any>,
                 try {
                     val extraAttrs = Gson().fromJson(extraAttrsJsonString, JsonObject::class.java)
 
-                    // 从 extraAttrs 中安全地读取值
-                    if (extraAttrs.has("normalTextColor")) {
-                        this.normalTextColor = extraAttrs.get("normalTextColor").asInt
-                    } else {
-                        this.normalTextColor = 0xFFFFFFFF.toInt()
-                    }
+                    this.normalTextColor = if (extraAttrs.has("normalTextColor"))
+                        extraAttrs.get("normalTextColor").asInt else 0xFFFFFFFF.toInt()
+                    this.centerTextColor = if (extraAttrs.has("centerTextColor"))
+                        extraAttrs.get("centerTextColor").asInt else 0xFFFFFFFF.toInt()
+                    this.pressedTextColor = if (extraAttrs.has("pressedTextColor"))
+                        extraAttrs.get("pressedTextColor").asInt else 0xFFFFFFFF.toInt()
+                    this.textSizePercent = if (extraAttrs.has("textSizePercent"))
+                        extraAttrs.get("textSizePercent").asInt else 35
+                    this.centerTextSizePercent = if (extraAttrs.has("centerTextSizePercent"))
+                        extraAttrs.get("centerTextSizePercent").asInt else 60
+                    this.triggerTextSizePercent = if (extraAttrs.has("triggerTextSizePercent"))
+                        extraAttrs.get("triggerTextSizePercent").asInt else 40
+                    this.previewGroupChildren = !extraAttrs.has("previewGroupChildren") ||
+                        extraAttrs.get("previewGroupChildren").asBoolean
+                    this.alignSegmentEdge = extraAttrs.has(EXTRA_SEGMENT_ALIGNMENT) &&
+                        SEGMENT_ALIGNMENT_EDGE == extraAttrs.get(EXTRA_SEGMENT_ALIGNMENT).asString
 
-                    if (extraAttrs.has("centerTextColor")) {
-                        this.centerTextColor = extraAttrs.get("centerTextColor").asInt
-                    } else {
-                        this.centerTextColor = 0xFFFFFFFF.toInt()
+                    if (extraAttrs.has(EXTRA_WHEEL_DIAMETER)) {
+                        this.diameter = clampWheelDiameter(extraAttrs.get(EXTRA_WHEEL_DIAMETER).asInt)
                     }
-
-                    if (extraAttrs.has("pressedTextColor")) {
-                        this.pressedTextColor = extraAttrs.get("pressedTextColor").asInt
-                    } else {
-                        this.pressedTextColor = 0xFFFFFFFF.toInt()
+                    if (extraAttrs.has(EXTRA_TRIGGER_DIAMETER)) {
+                        this.triggerDiameter = clampTriggerDiameter(extraAttrs.get(EXTRA_TRIGGER_DIAMETER).asInt)
                     }
-
-                    if (extraAttrs.has("textSizePercent")) {
-                        this.textSizePercent = extraAttrs.get("textSizePercent").asInt
+                    segmentNamesFromExtra = if (extraAttrs.has(EXTRA_SEGMENT_NAMES) &&
+                        extraAttrs.get(EXTRA_SEGMENT_NAMES).isJsonArray) {
+                        extraAttrs.getAsJsonArray(EXTRA_SEGMENT_NAMES).map {
+                            if (it.isJsonNull) "" else it.asString
+                        }
                     } else {
-                        this.textSizePercent = 35
-                    }
-
-                    if (extraAttrs.has("centerTextSizePercent")) {
-                        this.centerTextSizePercent = extraAttrs.get("centerTextSizePercent").asInt
-                    } else {
-                        this.centerTextSizePercent = 60
-                    }
-                    if (extraAttrs.has("triggerTextSizePercent")) {
-                        this.triggerTextSizePercent = extraAttrs.get("triggerTextSizePercent").asInt
-                    } else {
-                        // 提供一个合理的默认值，通常应该比中心预览文字小
-                        this.triggerTextSizePercent = 40
-                    }
-                    if (extraAttrs.has("previewGroupChildren")) {
-                        this.previewGroupChildren = extraAttrs.get("previewGroupChildren").asBoolean
-                    } else {
-                        this.previewGroupChildren = true // 默认为开启
-                    }
-                    if (extraAttrs.has(EXTRA_SEGMENT_ALIGNMENT)) {
-                        this.alignSegmentEdge = SEGMENT_ALIGNMENT_EDGE == extraAttrs.get(EXTRA_SEGMENT_ALIGNMENT).asString
-                    } else {
-                        this.alignSegmentEdge = false
+                        null
                     }
                 } catch (e: Exception) {
-                    // JSON 解析失败，使用默认值
                     initializeDefaultFontAttributes()
                 }
             } else {
-                // 字段存在但为空，使用默认值
                 initializeDefaultFontAttributes()
             }
         } else {
-            // 字段不存在（旧数据），使用默认值
             initializeDefaultFontAttributes()
+        }
+
+        if (this.triggerDiameter <= 0) {
+            this.triggerDiameter = computeDefaultTriggerDiameter()
         }
 
         val valuesString = attributesMap.get(COLUMN_STRING_ELEMENT_VALUE) as String?
         segmentValues = ArrayList()
         segmentNames = ArrayList()
-        val segments = valuesString!!.split(",")
-        for (segment in segments) {
-            if (segment.isEmpty()) continue
-            val parts = segment.split("|", limit = 2)
-            segmentValues.add(parts[0])
-            if (parts.size > 1) {
-                segmentNames.add(parts[1])
-            } else {
-                segmentNames.add("")
+        val legacyNames = ArrayList<String>()
+        if (valuesString != null && !valuesString.isEmpty()) {
+            val segments = valuesString.split(",")
+            for (segment in segments) {
+                // 保留空位，避免 k51,,k47 这类配置在加载后整体前移错位
+                val parts = segment.split("|", limit = 2)
+                segmentValues.add(parts[0])
+                legacyNames.add(if (parts.size > 1) parts[1] else "")
             }
         }
+        while (segmentValues.size < segmentCount) {
+            segmentValues.add("null")
+        }
+        // 名称优先读 extra_attributes（不含分隔符冲突），旧数据回退到 value|name 里的名称
+        for (i in 0 until segmentCount) {
+            val name = when {
+                segmentNamesFromExtra != null -> segmentNamesFromExtra!!.getOrElse(i) { "" }
+                i < legacyNames.size -> legacyNames[i]
+                else -> ""
+            }
+            segmentNames.add(name)
+        }
+
+        ensureSegPopCapacity(segmentCount)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        // 构造阶段还没有 LayoutParams，尺寸同步必须等 View 真正挂载后再做。
+        syncViewSizeForCurrentMode()
     }
 
     private fun initializeDefaultFontAttributes() {
@@ -285,6 +330,76 @@ class WheelPad(attributesMap: Map<String, Any>,
         this.triggerTextSizePercent = 40
         this.previewGroupChildren = true
         this.alignSegmentEdge = false
+    }
+
+    private fun clampWheelDiameter(size: Int): Int {
+        val max = Math.min(widthMax, heightMax)
+        return Math.max(WHEEL_MIN_DIAMETER, Math.min(max, size))
+    }
+
+    private fun clampTriggerDiameter(size: Int): Int {
+        val max = Math.min(TRIGGER_MAX_DIAMETER, Math.min(widthMax, heightMax))
+        return Math.max(TRIGGER_MIN_DIAMETER, Math.min(max, size))
+    }
+
+    private fun computeDefaultTriggerDiameter(): Int {
+        val outerR = Math.max(20f, (this.diameter / 2.0f) - this.thick)
+        val innerR = outerR * (this.innerRadiusPercent / 100.0f)
+        val visualRadius = innerR + Math.max(5f, this.thick.toFloat())
+        return clampTriggerDiameter(Math.round(visualRadius * 2.0f))
+    }
+
+    private fun getExpectedViewSize(): Int {
+        if (isPopupMode && popupAtScreenCenter) {
+            return clampTriggerDiameter(this.triggerDiameter)
+        }
+        return clampWheelDiameter(this.diameter)
+    }
+
+    private fun syncViewSizeForCurrentMode() {
+        val lp = layoutParams ?: return
+        val targetSize = getExpectedViewSize()
+        if (targetSize != currentViewSize ||
+            getElementWidth() != targetSize ||
+            getElementHeight() != targetSize ||
+            lp.width != targetSize ||
+            lp.height != targetSize
+        ) {
+            currentViewSize = targetSize
+            setElementWidth(targetSize)
+            setElementHeight(targetSize)
+        }
+    }
+
+    private fun getWheelFillOuterRadius(): Float {
+        val wheelRadius = this.diameter / 2.0f
+        val popReserve = Math.min(12f, wheelRadius * 0.055f)
+        return Math.max(0f, wheelRadius - popReserve - thick)
+    }
+
+    private fun getWheelInnerRadiusPx(): Float {
+        return getWheelFillOuterRadius() * (innerRadiusPercent / 100.0f)
+    }
+
+    private fun getTriggerRadius(): Float {
+        if (isPopupMode && popupAtScreenCenter) {
+            val inset = Math.max(4f, thick * 0.4f)
+            val viewSize = if (width > 0) width.toFloat() else getExpectedViewSize().toFloat()
+            return Math.max(10f, (viewSize / 2.0f) - inset)
+        }
+        return Math.max(10f, getWheelInnerRadiusPx())
+    }
+
+    private fun ensureSegPopCapacity(count: Int) {
+        if (segPopProgress.size < count) {
+            segPopProgress = segPopProgress.copyOf(Math.max(count, segPopProgress.size * 2))
+        }
+    }
+
+    private fun invalidateWheel() {
+        invalidate()
+        // 中心弹出模式下轮盘绘制在 View 边界之外，只重绘自身不会刷新屏幕中心区域。
+        (parent as? View)?.invalidate()
     }
 
     fun isBeingEdited(): Boolean {
@@ -311,7 +426,7 @@ class WheelPad(attributesMap: Map<String, Any>,
     override fun onElementDraw(canvas: Canvas) {
         val currentMode = elementController.getMode()
         val isTheOneBeingEdited = isBeingEdited()
-        // 屏幕中心预览
+
         if (isPopupMode && popupAtScreenCenter) {
             drawInactivePopupCenter(canvas)
             val shouldDrawCentralPreview = (currentMode === ElementController.Mode.Normal && isWheelActive) ||
@@ -324,8 +439,6 @@ class WheelPad(attributesMap: Map<String, Any>,
                 canvas.translate(translateX, translateY)
                 drawFullWheel(canvas)
 
-                // 在绘制完轮盘后，如果悬停在组按键上，则绘制其子按键预览
-                // 如果开启了预览功能，则绘制子按键
                 if (previewGroupChildren) {
                     drawHoveredGroupButtonChildren(canvas, translateX, translateY)
                 }
@@ -338,18 +451,11 @@ class WheelPad(attributesMap: Map<String, Any>,
             if (shouldDrawTriggerInsteadOfFullWheel) {
                 drawInactivePopupCenter(canvas)
             } else {
-                // 原地预览
                 drawFullWheel(canvas)
-                // 检查是否为激活的 "原地弹出模式"，如果是，则添加组按键预览
                 val isActiveOnSitePopup = isPopupMode && !popupAtScreenCenter &&
                     currentMode === ElementController.Mode.Normal && isWheelActive
-
-                if (isActiveOnSitePopup) {
-                    // 因为是原地绘制，没有对画布进行平移，所以平移量为0
-                    // 如果开启了预览功能，并且是激活的原地弹出模式，则绘制
-                    if (previewGroupChildren && isActiveOnSitePopup) {
-                        drawHoveredGroupButtonChildren(canvas, 0f, 0f)
-                    }
+                if (previewGroupChildren && isActiveOnSitePopup) {
+                    drawHoveredGroupButtonChildren(canvas, 0f, 0f)
                 }
             }
         }
@@ -364,12 +470,6 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
     }
 
-    /**
-     * 在轮盘预览模式下，绘制当前悬停的组按键的子按键。
-     * @param canvas 画布。对于屏幕中心模式，其坐标系已平移；对于原地模式，坐标系为WheelPad的视图坐标系。
-     * @param wheelTranslateX 轮盘绘制时在X轴上的平移量 (原地弹出时为0)。
-     * @param wheelTranslateY 轮盘绘制时在Y轴上的平移量 (原地弹出时为0)。
-     */
     private fun drawHoveredGroupButtonChildren(canvas: Canvas, wheelTranslateX: Float, wheelTranslateY: Float) {
         if (hoveredGroupButton == null) {
             return
@@ -384,58 +484,65 @@ class WheelPad(attributesMap: Map<String, Any>,
             val child = elementController.findElementById(childId)
             if (child != null) {
                 canvas.save()
-
-                // 计算子元素相对于当前画布坐标系原点的位置。
-                // 1. child.getLeft() 是子元素在屏幕上的绝对X坐标。
-                // 2. this.getLeft() 是WheelPad视图在屏幕上的绝对X坐标。
-                // 3. wheelTranslateX 是为了将轮盘居中而额外平移的量。
-                // 最终，(this.getLeft() + wheelTranslateX) 就是当前画布原点在屏幕上的绝对X坐标。
-                // 两者相减，得到子元素应该在当前画布的哪个相对位置绘制。
                 val childDrawX = child.left - (this@WheelPad.left + wheelTranslateX)
                 val childDrawY = child.top - (this@WheelPad.top + wheelTranslateY)
-
-                // 将画布平移到子元素应该被绘制的相对位置。
                 canvas.translate(childDrawX, childDrawY)
-
-                // 调用子元素的绘制方法。
-                // onElementDraw 期望画布原点已经位于元素的左上角，我们刚刚通过translate实现了这一点。
                 child.onElementDraw(canvas)
-
                 canvas.restore()
             }
         }
     }
 
+    /** 让玻璃描边的透明度跟随用户选色的 Alpha，全透明颜色不会仍有描边显示。 */
+    private fun scaleAlpha(color: Int, targetOpaqueAlpha: Int): Int {
+        val scaled = (Color.alpha(color) * targetOpaqueAlpha) / 255
+        return Color.argb(scaled.coerceIn(0, 255),
+            Color.red(color), Color.green(color), Color.blue(color))
+    }
+
     private fun drawInactivePopupCenter(canvas: Canvas) {
         val centerX = width / 2.0f
         val centerY = height / 2.0f
-        var fillOuterRadius = width / 2.0f - thick
-        if (fillOuterRadius < 0) fillOuterRadius = 0f
-        val fillInnerRadius = fillOuterRadius * (innerRadiusPercent / 100.0f)
-        val borderInnerDrawRadius = fillInnerRadius + thick / 2.0f
+        val triggerRadius = getTriggerRadius()
 
-        paintBorder.setColor(normalColor)
-        paintBorder.strokeWidth = thick.toFloat()
-        // 柔和内圈高亮轮廓
-        paintBorder.setShadowLayer(thick * 0.6f, 0f, 0f, (normalColor and 0x00FFFFFF) or 0x33000000)
+        val bgAlpha = Math.max(45, Color.alpha(backgroundColor))
+        val innerGlass = Color.argb(Math.round(bgAlpha * 0.65f),
+            Color.red(backgroundColor), Color.green(backgroundColor), Color.blue(backgroundColor))
+        val outerGlass = Color.argb(Math.round(bgAlpha * 0.92f),
+            Color.red(backgroundColor) / 2, Color.green(backgroundColor) / 2, Color.blue(backgroundColor) / 2)
 
-        paintSegmentFill.setColor(0x80000000.toInt())
-        canvas.drawCircle(centerX, centerY, fillInnerRadius, paintSegmentFill)
+        if (cachedTriggerShader == null || lastTrigCx != centerX || lastTrigCy != centerY ||
+            lastTrigR != triggerRadius || lastTrigBgColor != backgroundColor) {
+            cachedTriggerShader = RadialGradient(
+                centerX, centerY - triggerRadius * 0.25f, Math.max(1f, triggerRadius * 1.2f),
+                innerGlass, outerGlass, Shader.TileMode.CLAMP)
+            lastTrigCx = centerX
+            lastTrigCy = centerY
+            lastTrigR = triggerRadius
+            lastTrigBgColor = backgroundColor
+        }
 
-        rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius)
-        canvas.drawOval(rect, paintBorder)
-        // 清除阴影以免影响后续绘制
-        paintBorder.setShadowLayer(0f, 0f, 0f, 0)
+        paintGlassFill.shader = cachedTriggerShader
+        paintGlassFill.setShadowLayer(Math.max(4f, thick * 1.2f), 0f, 2f, 0x66000000)
+        canvas.drawCircle(centerX, centerY, triggerRadius, paintGlassFill)
+        paintGlassFill.setShadowLayer(0f, 0f, 0f, 0)
+        paintGlassFill.shader = null
 
-        // 应用中心文字的颜色和大小 ---
+        // 微透外边
+        val glassStroke = Math.max(1.5f, thick * 0.45f)
+        paintGlassStroke.strokeWidth = glassStroke
+        paintGlassStroke.color = scaleAlpha(normalColor, 150)
+        canvas.drawCircle(centerX, centerY, Math.max(1f, triggerRadius - glassStroke / 2f), paintGlassStroke)
+
+        // 内沿微弱白色高光环（玻璃质感）
+        paintGlassStroke.strokeWidth = 1.2f
+        paintGlassStroke.color = 0x2EFFFFFF
+        canvas.drawCircle(centerX, centerY, Math.max(1f, triggerRadius - glassStroke - 2.5f), paintGlassStroke)
+
         paintCenterText.setColor(this.centerTextColor)
-        // 触发器文字大小改为基于内圈直径计算，随中心分区大小联动
-        val triggerTextSize = fillInnerRadius * 2 * (this.triggerTextSizePercent / 100.0f)
-        paintCenterText.textSize = triggerTextSize
-        paintCenterText.setShadowLayer(Math.max(2f, thick * 0.3f), 0f, Math.max(1f, thick * 0.2f), 0x88000000.toInt())
-
-        val textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2)
-        canvas.drawText(centerText, centerX, textY, paintCenterText)
+        val triggerTextSize = (triggerRadius * 2f) * (this.triggerTextSizePercent / 100.0f)
+        paintCenterText.setShadowLayer(Math.max(2f, thick * 0.35f), 0f, 1.5f, 0x99000000.toInt())
+        drawFittedCenterText(canvas, centerText, centerX, centerY, triggerRadius, triggerTextSize, paintCenterText)
     }
 
     private fun drawFullWheel(canvas: Canvas) {
@@ -443,136 +550,635 @@ class WheelPad(attributesMap: Map<String, Any>,
         val centerX = width / 2.0f
         val centerY = height / 2.0f
 
-        var fillOuterRadius = width / 2.0f - thick
-        if (fillOuterRadius < 0) fillOuterRadius = 0f
+        // 轮盘尺寸始终由 this.diameter 决定（与 View 触发尺寸彻底解耦）
+        val wheelRadius = this.diameter / 2.0f
+        val popOutMax = Math.min(12f, wheelRadius * 0.055f)
+        val fillOuterRadius = Math.max(0f, wheelRadius - popOutMax - thick)
         val fillInnerRadius = fillOuterRadius * (innerRadiusPercent / 100.0f)
-        var borderOuterDrawRadius = width / 2.0f - thick / 2.0f
-        if (borderOuterDrawRadius < 0) borderOuterDrawRadius = 0f
-        val borderInnerDrawRadius = fillInnerRadius + thick / 2.0f
 
-        paintBorder.setColor(normalColor)
-        paintBorder.strokeWidth = thick.toFloat()
-        paintBackground.setColor(0xFF000000.toInt())
+        // 平滑过渡动画
+        val now = SystemClock.uptimeMillis()
+        val dt = if (lastAnimTimestamp == 0L) 16f
+                 else Math.min(32f, Math.max(1f, (now - lastAnimTimestamp).toFloat()))
+        lastAnimTimestamp = now
+        val step = Math.min(1f, dt * 0.022f)
 
-        paintSegmentFill.setColor(backgroundColor)
-        paintSegmentFillPressed.setColor(pressedColor)
+        var needNextFrame = false
+        val isEditPreview = currentMode === ElementController.Mode.Edit && isBeingEdited()
+        val targetPopup = if (isEditPreview || !isPopupMode || isWheelActive) 1f else 0f
+        if (isEditPreview) {
+            popupAnimProgress = 1f
+        } else if (Math.abs(targetPopup - popupAnimProgress) > 0.01f) {
+            popupAnimProgress += (targetPopup - popupAnimProgress) * Math.min(1f, step * 1.4f)
+            needNextFrame = true
+        } else {
+            popupAnimProgress = targetPopup
+        }
 
-        paintText.setColor(this.normalTextColor)
-        // 字体大小基于内外半径的差值（环带厚度）来计算，这样更直观
-        val ringThickness = fillOuterRadius - fillInnerRadius
-        val segmentTextSize = ringThickness * (this.textSizePercent / 100.0f)
-        paintText.textSize = segmentTextSize
+        ensureSegPopCapacity(segmentCount)
+        for (i in 0 until segmentCount) {
+            val targetPop = if (i == activeIndex) 1f else 0f
+            if (Math.abs(targetPop - segPopProgress[i]) > 0.01f) {
+                segPopProgress[i] += (targetPop - segPopProgress[i]) * Math.min(1f, step * 1.6f)
+                needNextFrame = true
+            } else {
+                segPopProgress[i] = targetPop
+            }
+        }
+
+        val maxOuterForShader = fillOuterRadius + popOutMax
+        if (cachedNormalShader == null || cachedPressedShader == null ||
+            lastShaderCx != centerX || lastShaderCy != centerY ||
+            lastShaderInnerR != fillInnerRadius || lastShaderOuterR != maxOuterForShader ||
+            lastShaderBgColor != backgroundColor || lastShaderPressedColor != pressedColor) {
+
+            val bgA = Color.alpha(backgroundColor)
+            val bgInner = Color.argb(Math.max(20, Math.round(bgA * 0.55f)),
+                Color.red(backgroundColor), Color.green(backgroundColor), Color.blue(backgroundColor))
+            val bgOuter = Color.argb(Math.max(30, Math.round(bgA * 0.88f)),
+                Color.red(backgroundColor), Color.green(backgroundColor), Color.blue(backgroundColor))
+            cachedNormalShader = RadialGradient(centerX, centerY, Math.max(1f, maxOuterForShader),
+                intArrayOf(bgInner, bgOuter),
+                floatArrayOf(Math.min(0.95f, fillInnerRadius / Math.max(1f, maxOuterForShader)), 1f),
+                Shader.TileMode.CLAMP)
+
+            val prA = Color.alpha(pressedColor)
+            val prInner = Color.argb(Math.max(35, Math.round(prA * 0.28f)),
+                Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
+            val prOuter = Color.argb(Math.max(60, Math.round(prA * 0.68f)),
+                Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
+            cachedPressedShader = RadialGradient(centerX, centerY, Math.max(1f, maxOuterForShader),
+                intArrayOf(prInner, prOuter),
+                floatArrayOf(Math.min(0.95f, fillInnerRadius / Math.max(1f, maxOuterForShader)), 1f),
+                Shader.TileMode.CLAMP)
+
+            lastShaderCx = centerX
+            lastShaderCy = centerY
+            lastShaderInnerR = fillInnerRadius
+            lastShaderOuterR = maxOuterForShader
+            lastShaderBgColor = backgroundColor
+            lastShaderPressedColor = pressedColor
+        }
+
+        canvas.save()
+        val scale = 0.86f + 0.14f * popupAnimProgress
+        canvas.scale(scale, scale, centerX, centerY)
 
         val sweepAngle = WheelPadGeometry.sweepAngleDegrees(segmentCount)
+        val halfGap = if (segmentCount >= 2) GLASS_SEGMENT_GAP_DEG / 2.0f else 0f
+        val drawSweep = Math.max(1f, sweepAngle - halfGap * 2f)
+        val glassStroke = Math.max(1.2f, thick * 0.35f)
 
-        rect.set(centerX - fillOuterRadius, centerY - fillOuterRadius, centerX + fillOuterRadius, centerY + fillOuterRadius)
+        // 1. 镂空毛玻璃扇区
         for (i in 0 until segmentCount) {
-            val startAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge)
-            val currentFillPaint = if (i == activeIndex) paintSegmentFillPressed else paintSegmentFill
-            canvas.drawArc(rect, startAngle, sweepAngle, true, currentFillPaint)
+            val pop = segPopProgress[i]
+            val isAct = i == activeIndex
+            val startAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge) + halfGap
+            val segInnerR = fillInnerRadius + 1.5f
+            val segOuterR = fillOuterRadius + pop * (popOutMax * 0.65f)
 
-            // 为激活分区添加发光效果
-            if (i == activeIndex) {
-                paintGlow.setColor(Color.argb(60, Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor)))
-                paintGlow.setShadowLayer(fillOuterRadius * 0.15f, 0f, 0f, pressedColor)
-                canvas.drawArc(rect, startAngle, sweepAngle, true, paintGlow)
-                paintGlow.setShadowLayer(0f, 0f, 0f, 0) // 清除阴影
+            buildAnnularSectorPath(segmentPath, centerX, centerY, segInnerR, segOuterR, startAngle, drawSweep)
+
+            paintGlassFill.shader = if (isAct) cachedPressedShader else cachedNormalShader
+            canvas.drawPath(segmentPath, paintGlassFill)
+            paintGlassFill.shader = null
+
+            paintGlassStroke.strokeWidth = if (isAct) Math.max(1.8f, glassStroke * 1.4f) else glassStroke
+            paintGlassStroke.color = if (isAct) scaleAlpha(pressedColor, 215) else scaleAlpha(normalColor, 130)
+            canvas.drawPath(segmentPath, paintGlassStroke)
+
+            if (pop > 0.05f) {
+                val accentR = segOuterR + 2.5f
+                tempOuterRect.set(centerX - accentR, centerY - accentR, centerX + accentR, centerY + accentR)
+                val padDeg = Math.min(4f, drawSweep * 0.12f)
+                paintAccentArc.strokeWidth = Math.max(2.5f, thick * 0.65f)
+                paintAccentArc.color = Color.argb(Math.round(230 * pop), 255, 255, 255)
+                paintAccentArc.setShadowLayer(8f * pop, 0f, 0f, pressedColor)
+                canvas.drawArc(tempOuterRect, startAngle + padDeg,
+                    Math.max(1f, drawSweep - padDeg * 2f), false, paintAccentArc)
+                paintAccentArc.setShadowLayer(0f, 0f, 0f, 0)
             }
         }
 
-        canvas.drawCircle(centerX, centerY, fillInnerRadius, paintBackground)
+        // 2. 通透半透明中心底盘
+        val innerDiscR = Math.max(0f, fillInnerRadius - 1.5f)
+        paintBackground.setColor(0x5A0B0F17)
+        canvas.drawCircle(centerX, centerY, innerDiscR, paintBackground)
 
-        val textRadius = fillInnerRadius + (fillOuterRadius - fillInnerRadius) / 2.0f
+        paintGlassStroke.strokeWidth = Math.max(1.2f, glassStroke)
+        paintGlassStroke.color = if (activeIndex != -1) scaleAlpha(pressedColor, 190) else scaleAlpha(normalColor, 130)
+        canvas.drawCircle(centerX, centerY, innerDiscR, paintGlassStroke)
+
+        // 3. 中心随动方向指针
+        if (activeIndex != -1 && innerDiscR > 14f) {
+            drawCenterDirectionPointer(canvas, centerX, centerY, innerDiscR, lastPointerAngleDeg)
+        }
+
+        // 4. 分区文字（1~2 行智能自适应，按扇区真实径向空间限宽）
+        val ringThickness = fillOuterRadius - fillInnerRadius
+        val baseSegmentTextSize = ringThickness * (this.textSizePercent / 100.0f)
+        paintText.setShadowLayer(3f, 0f, 1.5f, 0xAA000000.toInt())
+
         for (i in 0 until segmentCount) {
-            val startAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge)
-            val textAngle = startAngle + sweepAngle / 2.0f // 分区中心角度（以上方为-90度起点）
+            if (i >= segmentValues.size) continue
+            val pop = segPopProgress[i]
+            val startAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge) + halfGap
+            val textAngle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge) + sweepAngle / 2.0f
 
-            if (i < segmentValues.size) {
-                val displayName: String
-                if (i < segmentNames.size && segmentNames[i] != null && !segmentNames[i].isEmpty()) {
-                    displayName = segmentNames[i]
-                } else {
-                    displayName = getDisplayStringForValue(segmentValues[i])
-                }
-
-                // 根据激活状态切换文字颜色与粗体
-                if (i == activeIndex) {
-                    paintText.setColor(this.pressedTextColor)
-                    paintText.isFakeBoldText = true
-                } else {
-                    paintText.setColor(this.normalTextColor)
-                    paintText.isFakeBoldText = false
-                }
-
-                // 计算文字中心点坐标（保持文字水平，不旋转）
-                val textRad = Math.toRadians(textAngle.toDouble())
-                val textCenterX = centerX + (textRadius * Math.cos(textRad)).toFloat()
-                val textCenterY = centerY + (textRadius * Math.sin(textRad)).toFloat()
-
-                // 将中心点转换为基线位置，使用字体度量保证垂直居中
-                val fm = paintText.fontMetrics
-                val baselineY = textCenterY - (fm.ascent + fm.descent) / 2.0f
-
-                canvas.drawText(displayName, textCenterX, baselineY, paintText)
+            val displayName = if (i < segmentNames.size && segmentNames[i].isNotEmpty()) {
+                segmentNames[i]
+            } else {
+                getDisplayStringForValue(segmentValues[i])
             }
+
+            paintText.color = if (i == activeIndex) this.pressedTextColor else this.normalTextColor
+            paintText.isFakeBoldText = (i == activeIndex)
+
+            val drawInnerR = fillInnerRadius + 1.5f
+            val drawOuterR = (fillOuterRadius + pop * (popOutMax * 0.65f)).coerceAtLeast(drawInnerR + 1f)
+            // 内边距随可绘环带厚度缩放，极薄环不会被固定 2.5px 挤没
+            val radialInset = minOf(2.5f, (drawOuterR - drawInnerR) * 0.12f)
+            val segInnerR = drawInnerR + radialInset
+            val segOuterR = (drawOuterR - radialInset).coerceAtLeast(segInnerR + 0.5f)
+            // 放到环带中线，内外两侧留白对称
+            val textRadius = fillInnerRadius + ringThickness * 0.50f + pop * (popOutMax * 0.35f)
+            val targetSize = baseSegmentTextSize + pop * 2.0f
+            val maxHeight = ((segOuterR - segInnerR) * 0.90f).coerceAtLeast(2f)
+
+            val textRad = Math.toRadians(textAngle.toDouble())
+            val tx = (textRadius * Math.cos(textRad)).toFloat()
+            val ty = (textRadius * Math.sin(textRad)).toFloat()
+
+            drawAdaptiveSectorText(
+                canvas, displayName, centerX, centerY, tx, ty,
+                segInnerR, segOuterR, drawInnerR, drawOuterR,
+                startAngle, drawSweep, targetSize, maxHeight
+            )
         }
 
-        rect.set(centerX - borderOuterDrawRadius, centerY - borderOuterDrawRadius, centerX + borderOuterDrawRadius, centerY + borderOuterDrawRadius)
-        canvas.drawOval(rect, paintBorder)
-        rect.set(centerX - borderInnerDrawRadius, centerY - borderInnerDrawRadius, centerX + borderInnerDrawRadius, centerY + borderInnerDrawRadius)
-        canvas.drawOval(rect, paintBorder)
-
-        for (i in 0 until segmentCount) {
-            val angle = WheelPadGeometry.segmentStartAngleDegrees(i, segmentCount, alignSegmentEdge)
-            val angleRad = Math.toRadians(angle.toDouble())
-            val startX = centerX + (fillInnerRadius * Math.cos(angleRad)).toFloat()
-            val startY = centerY + (fillInnerRadius * Math.sin(angleRad)).toFloat()
-            val endX = centerX + (fillOuterRadius * Math.cos(angleRad)).toFloat()
-            val endY = centerY + (fillOuterRadius * Math.sin(angleRad)).toFloat()
-            canvas.drawLine(startX, startY, endX, endY, paintBorder)
-        }
-
-        // 在中心模式时，为外圈描边添加柔和阴影以增强层次
-        if (isPopupMode && popupAtScreenCenter) {
-            paintBorder.setShadowLayer(Math.max(2f, thick * 0.6f), 0f, 0f, 0x55000000)
-        }
-
-        val showCenterTextInNormalMode = isPopupMode && activeIndex != -1 && currentMode === ElementController.Mode.Normal
-        val showCenterTextInEditMode = currentMode === ElementController.Mode.Edit && isBeingEdited()
-
-        if (showCenterTextInNormalMode || showCenterTextInEditMode) {
+        // 5. 中心预览文字
+        val showCenterTextInNormalMode = isPopupMode && activeIndex != -1 &&
+            currentMode === ElementController.Mode.Normal
+        if (showCenterTextInNormalMode || isEditPreview) {
             val displayName: String
-
-            if (showCenterTextInNormalMode) {
-                // 正常模式下，显示当前选中的分区文本
-                if (activeIndex < segmentValues.size) {
-                    if (activeIndex < segmentNames.size && segmentNames[activeIndex] != null && !segmentNames[activeIndex].isEmpty()) {
-                        displayName = segmentNames[activeIndex]
-                    } else {
-                        displayName = getDisplayStringForValue(segmentValues[activeIndex])
-                    }
+            if (showCenterTextInNormalMode && activeIndex < segmentValues.size) {
+                if (activeIndex < segmentNames.size && segmentNames[activeIndex].isNotEmpty()) {
+                    displayName = segmentNames[activeIndex]
                 } else {
-                    displayName = context.getString(R.string.crown_preview) // 备用
+                    displayName = getDisplayStringForValue(segmentValues[activeIndex])
                 }
             } else {
-                // 编辑模式下，显示固定的示例文本
                 displayName = context.getString(R.string.crown_preview)
             }
 
-            // 应用中心文字的颜色和大小 (这部分逻辑不变)
             paintCenterText.setColor(this.centerTextColor)
-            val centerTextSize = fillInnerRadius * 2 * (this.centerTextSizePercent / 100.0f)
-            paintCenterText.textSize = centerTextSize
-            paintCenterText.setShadowLayer(Math.max(2f, centerTextSize * 0.06f), 0f, Math.max(1f, centerTextSize * 0.04f), 0x88000000.toInt())
-
-            val textY = centerY - ((paintCenterText.descent() + paintCenterText.ascent()) / 2)
-            canvas.drawText(displayName, centerX, textY, paintCenterText)
+            val centerTextSize = fillInnerRadius * 2f * (this.centerTextSizePercent / 100.0f)
+            paintCenterText.setShadowLayer(Math.max(2f, centerTextSize * 0.06f), 0f,
+                Math.max(1f, centerTextSize * 0.04f), 0x99000000.toInt())
+            drawFittedCenterText(canvas, displayName, centerX, centerY, innerDiscR, centerTextSize, paintCenterText)
         }
 
-        // 清除描边阴影，避免影响外部绘制
-        if (isPopupMode && popupAtScreenCenter) {
-            paintBorder.setShadowLayer(0f, 0f, 0f, 0)
+        canvas.restore()
+
+        if (needNextFrame) {
+            postOnAnimation { invalidateWheel() }
         }
+    }
+
+    private fun buildAnnularSectorPath(path: Path, cx: Float, cy: Float,
+                                       innerR: Float, outerR: Float,
+                                       startAngle: Float, sweepAngle: Float) {
+        path.reset()
+        tempOuterRect.set(cx - outerR, cy - outerR, cx + outerR, cy + outerR)
+        tempInnerRect.set(cx - innerR, cy - innerR, cx + innerR, cy + innerR)
+        path.arcTo(tempOuterRect, startAngle, sweepAngle, true)
+        path.arcTo(tempInnerRect, startAngle + sweepAngle, -sweepAngle, false)
+        path.close()
+    }
+
+    private fun drawCenterDirectionPointer(canvas: Canvas, cx: Float, cy: Float, innerR: Float, angleDeg: Float) {
+        val arcR = Math.max(4f, innerR - 3f)
+        tempInnerRect.set(cx - arcR, cy - arcR, cx + arcR, cy + arcR)
+        paintAccentArc.strokeWidth = 3.2f
+        paintAccentArc.color = 0xEEFFFFFF.toInt()
+        paintAccentArc.setShadowLayer(6f, 0f, 0f, pressedColor)
+        canvas.drawArc(tempInnerRect, angleDeg - 18f, 36f, false, paintAccentArc)
+        paintAccentArc.setShadowLayer(0f, 0f, 0f, 0)
+
+        canvas.save()
+        canvas.translate(cx, cy)
+        canvas.rotate(angleDeg)
+        pointerPath.reset()
+        pointerPath.moveTo(innerR + 2f, 0f)
+        pointerPath.lineTo(innerR - 6f, -4.5f)
+        pointerPath.lineTo(innerR - 6f, 4.5f)
+        pointerPath.close()
+        paintPointer.color = 0xFFFFFFFF.toInt()
+        canvas.drawPath(pointerPath, paintPointer)
+        canvas.restore()
+    }
+
+    private fun computeCircleChordWidth(safeRadius: Float, blockHeight: Float): Float {
+        val halfH = Math.min(safeRadius * 0.76f, blockHeight * 0.44f)
+        return (2.0 * Math.sqrt(Math.max(1f, safeRadius * safeRadius - halfH * halfH).toDouble())).toFloat()
+    }
+
+    private fun computeSectorLineMaxWidth(
+        tx: Float,
+        lineCenterYOffset: Float,
+        lineHeight: Float,
+        innerR: Float,
+        outerR: Float,
+        startAngleDeg: Float,
+        sweepAngleDeg: Float
+    ): Float {
+        if (sweepAngleDeg <= 0f || outerR <= innerR) return 0f
+        if (sweepAngleDeg >= 180f) {
+            return (outerR - innerR).coerceAtLeast(0f) * 0.92f
+        }
+
+        val halfH = (lineHeight * 0.45f).coerceAtLeast(0.5f)
+        val a1 = Math.toRadians(startAngleDeg.toDouble())
+        val a2 = Math.toRadians((startAngleDeg + sweepAngleDeg).toDouble())
+        val cos1 = Math.cos(a1).toFloat()
+        val sin1 = Math.sin(a1).toFloat()
+        val cos2 = Math.cos(a2).toFloat()
+        val sin2 = Math.sin(a2).toFloat()
+
+        var minW = Float.MAX_VALUE
+        val ys = floatArrayOf(
+            lineCenterYOffset - halfH,
+            lineCenterYOffset,
+            lineCenterYOffset + halfH
+        )
+        for (y in ys) {
+            val w = scanlineCenteredWidthInSector(tx, y, innerR, outerR, cos1, sin1, cos2, sin2)
+            if (w < minW) minW = w
+        }
+        return if (minW == Float.MAX_VALUE) 0f else minW * 0.94f
+    }
+
+    private fun scanlineCenteredWidthInSector(
+        tx: Float,
+        y: Float,
+        innerR: Float,
+        outerR: Float,
+        cos1: Float,
+        sin1: Float,
+        cos2: Float,
+        sin2: Float
+    ): Float {
+        val absY = Math.abs(y)
+        if (absY >= outerR) return 0f
+
+        val xOuter = Math.sqrt((outerR * outerR - y * y).toDouble()).toFloat()
+        var xMin = -xOuter
+        var xMax = xOuter
+
+        val eps = 1e-5f
+        // 边 1：y * cos1 - x * sin1 >= 0
+        if (Math.abs(sin1) < eps) {
+            if (y * cos1 < -1e-4f) return 0f
+        } else if (sin1 > 0f) {
+            xMax = minOf(xMax, (y * cos1) / sin1)
+        } else {
+            xMin = maxOf(xMin, (y * cos1) / sin1)
+        }
+
+        // 边 2：x * sin2 - y * cos2 >= 0
+        if (Math.abs(sin2) < eps) {
+            if (-y * cos2 < -1e-4f) return 0f
+        } else if (sin2 > 0f) {
+            xMin = maxOf(xMin, (y * cos2) / sin2)
+        } else {
+            xMax = minOf(xMax, (y * cos2) / sin2)
+        }
+
+        if (xMax <= xMin) return 0f
+
+        if (absY < innerR) {
+            val xInner = Math.sqrt((innerR * innerR - y * y).toDouble()).toFloat()
+            val leftMax = minOf(xMax, -xInner)
+            val rightMin = maxOf(xMin, xInner)
+            if (tx >= 0f) {
+                if (rightMin < xMax) xMin = rightMin
+                else if (xMin < leftMax) xMax = leftMax
+                else return 0f
+            } else {
+                if (xMin < leftMax) xMax = leftMax
+                else if (rightMin < xMax) xMin = rightMin
+                else return 0f
+            }
+        }
+
+        if (tx < xMin || tx > xMax) return 0f
+        return 2f * minOf(tx - xMin, xMax - tx)
+    }
+
+    private fun computeLineGlyphHeight(paint: Paint): Float {
+        paint.getFontMetrics(tempFontMetrics)
+        return (tempFontMetrics.descent - tempFontMetrics.ascent).coerceAtLeast(1f)
+    }
+
+    private fun computeTwoLineStep(paint: Paint): Float = computeLineGlyphHeight(paint) * 1.08f
+
+    /** 带内边距的扫描线算不出宽度时，回退到真实可绘环带重试一次。 */
+    private fun computeSectorLineMaxWidthWithFallback(
+        tx: Float,
+        lineCenterYOffset: Float,
+        lineHeight: Float,
+        segInnerR: Float,
+        segOuterR: Float,
+        drawInnerR: Float,
+        drawOuterR: Float,
+        startAngleDeg: Float,
+        sweepAngleDeg: Float
+    ): Float {
+        val padded = computeSectorLineMaxWidth(
+            tx, lineCenterYOffset, lineHeight, segInnerR, segOuterR, startAngleDeg, sweepAngleDeg)
+        if (padded > 0f) return padded
+        return computeSectorLineMaxWidth(
+            tx, lineCenterYOffset, lineHeight, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+    }
+
+    private fun drawAdaptiveSectorText(
+        canvas: Canvas,
+        text: String,
+        cx: Float,
+        cy: Float,
+        tx: Float,
+        ty: Float,
+        segInnerR: Float,
+        segOuterR: Float,
+        drawInnerR: Float,
+        drawOuterR: Float,
+        startAngleDeg: Float,
+        sweepAngleDeg: Float,
+        targetSize: Float,
+        maxHeight: Float
+    ) {
+        if (text.isEmpty() || drawOuterR <= drawInnerR) return
+
+        val bandThickness = (segOuterR - segInnerR).coerceAtLeast(0.5f)
+        val minSize = minOf(targetSize, maxOf(2f, minOf(20f, bandThickness * 0.75f)))
+
+        var size1 = minOf(targetSize, maxHeight)
+        paintText.textSize = size1
+        var glyphH1 = computeLineGlyphHeight(paintText)
+        var maxW1 = computeSectorLineMaxWidthWithFallback(
+            tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+        var measured1 = paintText.measureText(text)
+
+        if (measured1 > maxW1) {
+            if (maxW1 > 1f) {
+                size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+                paintText.textSize = size1
+                glyphH1 = computeLineGlyphHeight(paintText)
+                maxW1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                measured1 = paintText.measureText(text)
+                if (measured1 > maxW1 && size1 > minSize && maxW1 > 1f) {
+                    size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+                    paintText.textSize = size1
+                    glyphH1 = computeLineGlyphHeight(paintText)
+                    maxW1 = computeSectorLineMaxWidthWithFallback(
+                        tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                    measured1 = paintText.measureText(text)
+                }
+            } else {
+                size1 = minSize
+                paintText.textSize = size1
+                glyphH1 = computeLineGlyphHeight(paintText)
+                maxW1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                measured1 = paintText.measureText(text)
+            }
+        }
+
+        val drawX = cx + tx
+        val drawY = cy + ty
+        val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.4f
+        val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
+        if (!canTryTwoLines || preferOneLine) {
+            val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
+            drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
+            return
+        }
+
+        val lines = splitBalancedTwoLines(text)
+        if (lines[1].isEmpty()) {
+            val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
+            drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
+            return
+        }
+
+        var size2 = minOf(targetSize * 0.85f, maxHeight / 2.45f)
+        paintText.textSize = size2
+        var glyphH2 = computeLineGlyphHeight(paintText)
+        var step2 = computeTwoLineStep(paintText)
+        var wLine1 = computeSectorLineMaxWidthWithFallback(
+            tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+        var wLine2 = computeSectorLineMaxWidthWithFallback(
+            tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+        var maxW2 = minOf(wLine1, wLine2)
+        var maxLineW2 = maxOf(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
+
+        if (maxLineW2 > maxW2) {
+            if (maxW2 > 1f) {
+                size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+                paintText.textSize = size2
+                glyphH2 = computeLineGlyphHeight(paintText)
+                step2 = computeTwoLineStep(paintText)
+                wLine1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                wLine2 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                maxW2 = minOf(wLine1, wLine2)
+                maxLineW2 = maxOf(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
+                if (maxLineW2 > maxW2 && size2 > minSize && maxW2 > 1f) {
+                    size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+                    paintText.textSize = size2
+                    glyphH2 = computeLineGlyphHeight(paintText)
+                    step2 = computeTwoLineStep(paintText)
+                    wLine1 = computeSectorLineMaxWidthWithFallback(
+                        tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                    wLine2 = computeSectorLineMaxWidthWithFallback(
+                        tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                }
+            } else {
+                size2 = minSize
+                paintText.textSize = size2
+                glyphH2 = computeLineGlyphHeight(paintText)
+                step2 = computeTwoLineStep(paintText)
+                wLine1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                wLine2 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+            }
+        }
+
+        if (size2 > size1 * 1.15f || measured1 > maxW1) {
+            val l1 = ellipsizeWithFallback(lines[0], paintText, wLine1, size2)
+            val l2 = ellipsizeWithFallback(lines[1], paintText, wLine2, size2)
+            drawTwoLinesCentered(canvas, l1, l2, drawX, drawY, step2, paintText)
+        } else {
+            paintText.textSize = size1
+            val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
+            drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
+        }
+    }
+
+    private fun drawFittedCenterText(canvas: Canvas, text: String, cx: Float, cy: Float,
+                                     discRadius: Float, targetSize: Float, paint: Paint) {
+        if (text.isEmpty() || discRadius <= 4f) return
+
+        val safeRadius = discRadius * 0.86f
+        val maxHeight = safeRadius * 1.50f
+        val minSize = minOf(targetSize, maxOf(12f, minOf(18f, discRadius * 0.16f)))
+
+        var size1 = minOf(targetSize, maxHeight)
+        paint.textSize = size1
+        var glyphH1 = computeLineGlyphHeight(paint)
+        var maxW1 = computeCircleChordWidth(safeRadius, glyphH1)
+        var measured1 = paint.measureText(text)
+
+        if (measured1 > maxW1 && maxW1 > 4f) {
+            size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+            paint.textSize = size1
+            glyphH1 = computeLineGlyphHeight(paint)
+            maxW1 = computeCircleChordWidth(safeRadius, glyphH1)
+            measured1 = paint.measureText(text)
+            if (measured1 > maxW1 && size1 > minSize) {
+                size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+                paint.textSize = size1
+                glyphH1 = computeLineGlyphHeight(paint)
+                maxW1 = computeCircleChordWidth(safeRadius, glyphH1)
+                measured1 = paint.measureText(text)
+            }
+        }
+
+        val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.4f
+        val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
+        if (!canTryTwoLines || preferOneLine) {
+            val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paint)
+            return
+        }
+
+        val lines = splitBalancedTwoLines(text)
+        if (lines[1].isEmpty()) {
+            val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paint)
+            return
+        }
+
+        var size2 = minOf(targetSize * 0.85f, maxHeight / 2.45f)
+        paint.textSize = size2
+        var glyphH2 = computeLineGlyphHeight(paint)
+        var step2 = computeTwoLineStep(paint)
+        // 两行文本总高度 = 行距 + 单行字形高
+        var maxW2 = computeCircleChordWidth(safeRadius, step2 + glyphH2)
+        var maxLineW2 = maxOf(paint.measureText(lines[0]), paint.measureText(lines[1]))
+
+        if (maxLineW2 > maxW2 && maxW2 > 4f) {
+            size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+            paint.textSize = size2
+            glyphH2 = computeLineGlyphHeight(paint)
+            step2 = computeTwoLineStep(paint)
+            maxW2 = computeCircleChordWidth(safeRadius, step2 + glyphH2)
+            maxLineW2 = maxOf(paint.measureText(lines[0]), paint.measureText(lines[1]))
+            if (maxLineW2 > maxW2 && size2 > minSize) {
+                size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+                paint.textSize = size2
+                glyphH2 = computeLineGlyphHeight(paint)
+                step2 = computeTwoLineStep(paint)
+                maxW2 = computeCircleChordWidth(safeRadius, step2 + glyphH2)
+            }
+        }
+
+        if (size2 > size1 * 1.15f || measured1 > maxW1) {
+            val l1 = ellipsizeWithFallback(lines[0], paint, maxW2, size2)
+            val l2 = ellipsizeWithFallback(lines[1], paint, maxW2, size2)
+            drawTwoLinesCentered(canvas, l1, l2, cx, cy, step2, paint)
+        } else {
+            paint.textSize = size1
+            val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
+            drawSingleLineCentered(canvas, finalOne, cx, cy, paint)
+        }
+    }
+
+    private fun splitBalancedTwoLines(text: String): Array<String> {
+        val len = text.length
+        val mid = len / 2
+        var bestSplit = -1
+        var bestDist = Int.MAX_VALUE
+
+        val minIdx = Math.max(1, len / 4)
+        val maxIdx = Math.min(len - 1, len * 3 / 4)
+        for (i in minIdx..maxIdx) {
+            val prev = text[i - 1]
+            val cur = text[i]
+            val breakAfter = prev == ' ' || prev == ']' || prev == '+' || prev == '-' ||
+                prev == '|' || prev == '/'
+            val breakBefore = cur == ' ' || cur == '['
+            if (breakAfter || breakBefore) {
+                val dist = Math.abs(i - mid)
+                if (dist < bestDist) {
+                    bestDist = dist
+                    bestSplit = i
+                }
+            }
+        }
+
+        if (bestSplit == -1) {
+            bestSplit = mid
+        }
+        if (bestSplit > 0 && bestSplit < len && Character.isLowSurrogate(text[bestSplit])) {
+            bestSplit++
+        }
+        if (bestSplit <= 0 || bestSplit >= len) {
+            return arrayOf(text, "")
+        }
+
+        val l1 = text.substring(0, bestSplit).trim()
+        val l2 = text.substring(bestSplit).trim()
+        if (l1.isEmpty() || l2.isEmpty()) {
+            return arrayOf(text, "")
+        }
+        return arrayOf(l1, l2)
+    }
+
+    private fun ellipsizeWithFallback(text: String, paint: Paint, maxWidth: Float, currentSize: Float): String {
+        if (text.isEmpty() || maxWidth <= 0f) return ""
+        if (paint.measureText(text) <= maxWidth) return text
+
+        textMeasurePaint.set(paint)
+        val result = TextUtils.ellipsize(text, textMeasurePaint, maxWidth, TextUtils.TruncateAt.END).toString()
+        if (result.isEmpty()) {
+            // 按完整码点截取，避免把 Emoji 的代理对劈成半个乱码
+            val firstCharCount = Character.charCount(text.codePointAt(0))
+            val firstGlyph = text.substring(0, firstCharCount)
+            val singleW = paint.measureText(firstGlyph)
+            if (singleW > maxWidth && singleW > 0f) {
+                paint.textSize = maxOf(6f, currentSize * ((maxWidth * 0.92f) / singleW))
+            }
+            return firstGlyph
+        }
+        return result
+    }
+
+    private fun drawSingleLineCentered(canvas: Canvas, text: String, cx: Float, cy: Float, paint: Paint) {
+        val fm = paint.fontMetrics
+        val baselineY = cy - (fm.ascent + fm.descent) / 2.0f
+        canvas.drawText(text, cx, baselineY, paint)
+    }
+
+    private fun drawTwoLinesCentered(canvas: Canvas, l1: String, l2: String, cx: Float, cy: Float,
+                                    lineStep: Float, paint: Paint) {
+        paint.getFontMetrics(tempFontMetrics)
+        val baseCenter = cy - (tempFontMetrics.ascent + tempFontMetrics.descent) / 2.0f
+        canvas.drawText(l1, cx, baseCenter - lineStep / 2.0f, paint)
+        canvas.drawText(l2, cx, baseCenter + lineStep / 2.0f, paint)
     }
 
     override fun onElementTouchEvent(event: MotionEvent): Boolean {
@@ -591,18 +1197,9 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
 
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            val x = event.x
-            val y = event.y
-            val centerX = width / 2.0f
-            val centerY = height / 2.0f
-            var outerRadius = width / 2.0f - thick
-            if (outerRadius < 0) outerRadius = 0f
-            val innerRadius = outerRadius * (innerRadiusPercent / 100.0f)
-            val dx = x - centerX
-            val dy = y - centerY
-            val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
-
-            if (distance <= innerRadius) {
+            val dx = event.x - width / 2.0f
+            val dy = event.y - height / 2.0f
+            if (Math.hypot(dx.toDouble(), dy.toDouble()) <= getTriggerRadius()) {
                 handlePopupModeTouchEvent(event)
                 return true
             }
@@ -616,19 +1213,16 @@ class WheelPad(attributesMap: Map<String, Any>,
             if (action == MotionEvent.ACTION_DOWN) {
                 elementController.buttonVibrator()
             }
-            val x = event.x
-            val y = event.y
-            val centerX = width / 2.0f
-            val centerY = height / 2.0f
-            var outerRadius = width / 2.0f - thick
-            if (outerRadius < 0) outerRadius = 0f
-            val innerRadius = outerRadius * (innerRadiusPercent / 100.0f)
-            val dx = x - centerX
-            val dy = y - centerY
-            val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+            val dx = event.x - width / 2.0f
+            val dy = event.y - height / 2.0f
+            val distance = Math.hypot(dx.toDouble(), dy.toDouble())
+
+            val outerRadius = getWheelFillOuterRadius()
+            val innerRadius = getWheelInnerRadiusPx()
 
             if (distance > innerRadius && distance < outerRadius) {
                 activeIndex = WheelPadGeometry.segmentIndexForVector(dx, dy, segmentCount, alignSegmentEdge)
+                lastPointerAngleDeg = Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
             } else {
                 activeIndex = -1
             }
@@ -636,102 +1230,99 @@ class WheelPad(attributesMap: Map<String, Any>,
             activeIndex = -1
         }
         updateSendingState()
-        invalidate()
+        invalidateWheel()
     }
 
     private fun handlePopupModeTouchEvent(event: MotionEvent) {
-        val x = event.x
-        val y = event.y
-        val centerX = width / 2.0f
-        val centerY = height / 2.0f
-
-        var outerRadius = width / 2.0f - thick
-        if (outerRadius < 0) outerRadius = 0f
-        val innerRadius = outerRadius * (innerRadiusPercent / 100.0f)
-
-        val dx = x - centerX
-        val dy = y - centerY
-        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+        val dx = event.x - width / 2.0f
+        val dy = event.y - height / 2.0f
+        val distance = Math.hypot(dx.toDouble(), dy.toDouble())
+        val triggerRadius = getTriggerRadius()
+        // 原地模式的触发半径本身就是 max(10f, 轮盘内圈)，统一用它做选区边界，
+        // 避免内圈设 0% 时触发圆内部（0~10px）被误判为选中扇区。
+        val segmentInnerRadius = triggerRadius
 
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> if (distance <= innerRadius) {
-                isWheelActive = true
-                elementController.buttonVibrator()
-                invalidate()
+            MotionEvent.ACTION_DOWN -> {
+                if (distance <= triggerRadius) {
+                    isWheelActive = true
+                    popupAnimProgress = 0.0f
+                    // 复位时间戳，否则首帧 dt 会被夹到上限，弹出动画一帧就结束了。
+                    lastAnimTimestamp = 0L
+                    elementController.buttonVibrator()
+                    invalidateWheel()
+                }
             }
-            MotionEvent.ACTION_MOVE -> if (isWheelActive) {
-                // 清除上一帧的悬停状态
-                hoveredGroupButton = null
+            MotionEvent.ACTION_MOVE -> {
+                if (isWheelActive) {
+                    hoveredGroupButton = null
+                    lastPointerAngleDeg = Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
 
-                if (distance > innerRadius) {
-                    activeIndex = WheelPadGeometry.segmentIndexForVector(dx, dy, segmentCount, alignSegmentEdge)
+                    if (distance > segmentInnerRadius) {
+                        activeIndex = WheelPadGeometry.segmentIndexForVector(dx, dy, segmentCount, alignSegmentEdge)
 
-                    // 检查当前分区是否为组按键，如果是，则获取其实例用于预览
-                    if (activeIndex != -1 && activeIndex < segmentValues.size) {
-                        val value = segmentValues[activeIndex]
-                        if (value.startsWith("gb")) {
-                            try {
-                                val groupId = value.substring(2).toLong()
-                                val element = elementController.findElementById(groupId)
-                                if (element is GroupButton) {
-                                    hoveredGroupButton = element as GroupButton
+                        if (activeIndex != -1 && activeIndex < segmentValues.size) {
+                            val value = segmentValues[activeIndex]
+                            if (value.startsWith("gb")) {
+                                try {
+                                    val groupId = value.substring(2).toLong()
+                                    val element = elementController.findElementById(groupId)
+                                    if (element is GroupButton) {
+                                        hoveredGroupButton = element as GroupButton
+                                    }
+                                } catch (e: Exception) {
+                                    hoveredGroupButton = null
                                 }
-                            } catch (e: Exception) {
-                                // 如果ID解析失败或找不到元素，确保悬停状态被清除
-                                hoveredGroupButton = null
                             }
                         }
+                    } else {
+                        activeIndex = -1
                     }
-                } else {
-                    activeIndex = -1
+                    invalidateWheel()
                 }
-                invalidate()
             }
-            MotionEvent.ACTION_UP -> if (isWheelActive) {
-                if (activeIndex != -1 && activeIndex < segmentValues.size) {
+            MotionEvent.ACTION_UP -> {
+                if (isWheelActive && activeIndex != -1 && activeIndex < segmentValues.size) {
                     val value = segmentValues[activeIndex]
-                    // 即时获取 handlers
                     val handlers = getHandlersForValueNow(value)
 
-                    // 按下
                     for (handler in handlers) {
                         handler.sendEvent(true)
                     }
 
-                    // 加入 30 毫秒延迟后再发送释放事件，防止按键时间过短被游戏忽略
                     if (!handlers.isEmpty()) {
                         elementController.getHandler().postDelayed({
                             for (i in handlers.indices.reversed()) {
                                 handlers[i].sendEvent(false)
                             }
-                        }, 30L) // 30 毫秒的持续时间
+                        }, 30L)
                     }
                 }
-                isWheelActive = false
-                activeIndex = -1
-                // 手指抬起，清除组按键预览
-                hoveredGroupButton = null
-                invalidate()
+                resetWheelState()
             }
+            MotionEvent.ACTION_CANCEL -> resetWheelState()
         }
+    }
+
+    private fun resetWheelState() {
+        isWheelActive = false
+        activeIndex = -1
+        hoveredGroupButton = null
+        invalidateWheel()
     }
 
     private fun updateSendingState() {
         if (activeIndex != lastActiveIndex) {
-            // --- 释放上一个 ---
             if (lastActiveIndex != -1 && lastActiveIndex < segmentValues.size) {
                 val lastValue = segmentValues[lastActiveIndex]
-                // 即时获取 handlers
                 val lastHandlers = getHandlersForValueNow(lastValue)
                 for (i in lastHandlers.indices.reversed()) {
                     lastHandlers[i].sendEvent(false)
                 }
             }
 
-            // --- 按下新的 ---
             if (activeIndex != -1 && activeIndex < segmentValues.size) {
                 val activeValue = segmentValues[activeIndex]
-                // 即时获取 handlers
                 val activeHandlers = getHandlersForValueNow(activeValue)
                 for (handler in activeHandlers) {
                     handler.sendEvent(true)
@@ -754,13 +1345,11 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
 
         val wheelPadPage = wheelPadPage!!
-        // Find all views
         val centerTextInput = wheelPadPage.findViewById<ElementEditText>(R.id.page_wheel_pad_center_text)
         val popupSwitch = wheelPadPage.findViewById<SwitchCompat>(R.id.page_wheel_pad_popup_at_center_switch)
-
         val previewGroupSwitch = wheelPadPage.findViewById<SwitchCompat>(R.id.page_wheel_pad_preview_group_switch)
-
         val popupOptionsContainer = wheelPadPage.findViewById<LinearLayout>(R.id.page_wheel_pad_popup_options_container)
+        val triggerSizeNumberSeekbar = wheelPadPage.findViewById<NumberSeekbar>(R.id.page_wheel_pad_trigger_size)
 
         val sizeNumberSeekbar = wheelPadPage.findViewById<NumberSeekbar>(R.id.page_wheel_pad_size)
         val thickNumberSeekbar = wheelPadPage.findViewById<NumberSeekbar>(R.id.page_wheel_pad_thick)
@@ -785,33 +1374,56 @@ class WheelPad(attributesMap: Map<String, Any>,
             normalColorElementEditText, pressedColorElementEditText, backgroundColorElementEditText,
             copyButton, deleteButton)
 
-        // Setup the switch
+        triggerSizeNumberSeekbar.setProgressMin(TRIGGER_MIN_DIAMETER)
+        triggerSizeNumberSeekbar.setProgressMax(Math.min(TRIGGER_MAX_DIAMETER, Math.min(widthMax, heightMax)))
+        triggerSizeNumberSeekbar.setValueWithNoCallBack(this.triggerDiameter)
+        triggerSizeNumberSeekbar.visibility = if (isPopupMode && popupAtScreenCenter) View.VISIBLE else View.GONE
+        triggerSizeNumberSeekbar.setOnNumberSeekbarChangeListener(object : NumberSeekbar.OnNumberSeekbarChangeListener {
+            private var isTracking = false
+
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                setTriggerDiameter(progress)
+                // 无障碍/点击步进不会触发 onStopTrackingTouch，这里补一次落库
+                if (fromUser && !isTracking) {
+                    save()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) {
+                isTracking = true
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+                isTracking = false
+                save()
+            }
+        })
+
         popupSwitch.isChecked = this.popupAtScreenCenter
         popupSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
             this.popupAtScreenCenter = isChecked
-            invalidate()
+            triggerSizeNumberSeekbar.visibility = if (isPopupMode && isChecked) View.VISIBLE else View.GONE
+            syncViewSizeForCurrentMode()
+            invalidateWheel()
             save()
         }
 
-        // 设置预览开关
         previewGroupSwitch.isChecked = this.previewGroupChildren
         previewGroupSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
             this.previewGroupChildren = isChecked
-            // 预览开关不需要实时 invalidate()，因为它只在轮盘激活时生效
             save()
         }
 
-        // Set the initial visibility based on the current mode
         val isPopup = !this.centerText.isEmpty()
         popupOptionsContainer.visibility = if (isPopup) View.VISIBLE else View.GONE
 
-        // Override the listener to control visibility of the container
         centerTextInput.setOnTextChangedListener { text ->
             setCenterText(text)
             val isPopupNow = !text.isEmpty()
-            // Show/Hide the entire container based on popup mode
             popupOptionsContainer.visibility = if (isPopupNow) View.VISIBLE else View.GONE
-            invalidate()
+            triggerSizeNumberSeekbar.visibility =
+                if (isPopupNow && popupAtScreenCenter) View.VISIBLE else View.GONE
+            invalidateWheel()
             save()
         }
 
@@ -846,7 +1458,7 @@ class WheelPad(attributesMap: Map<String, Any>,
                 val newAlignSegmentEdge = position == 1
                 if (alignSegmentEdge != newAlignSegmentEdge) {
                     alignSegmentEdge = newAlignSegmentEdge
-                    invalidate()
+                    invalidateWheel()
                     save()
                 }
             }
@@ -869,14 +1481,13 @@ class WheelPad(attributesMap: Map<String, Any>,
             }
         })
 
-        // 分区文字大小
-        textSizeNumberSeekbar.setProgressMin(10) // 10%
-        textSizeNumberSeekbar.setProgressMax(100) // 100%
+        textSizeNumberSeekbar.setProgressMin(10)
+        textSizeNumberSeekbar.setProgressMax(100)
         textSizeNumberSeekbar.setValueWithNoCallBack(this.textSizePercent)
         textSizeNumberSeekbar.setOnNumberSeekbarChangeListener(object : NumberSeekbar.OnNumberSeekbarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 textSizePercent = progress
-                invalidate()
+                invalidateWheel()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -887,14 +1498,13 @@ class WheelPad(attributesMap: Map<String, Any>,
             }
         })
 
-        // 中心文字大小
-        centerTextSizeNumberSeekbar.setProgressMin(10) // 10%
-        centerTextSizeNumberSeekbar.setProgressMax(150) // 150%
+        centerTextSizeNumberSeekbar.setProgressMin(10)
+        centerTextSizeNumberSeekbar.setProgressMax(150)
         centerTextSizeNumberSeekbar.setValueWithNoCallBack(this.centerTextSizePercent)
         centerTextSizeNumberSeekbar.setOnNumberSeekbarChangeListener(object : NumberSeekbar.OnNumberSeekbarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 centerTextSizePercent = progress
-                invalidate()
+                invalidateWheel()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -907,31 +1517,31 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         CrownColorPickerBinder.bind(this, normalTextColorElementEditText, { this.normalTextColor }) { color ->
             this.normalTextColor = color
-            invalidate()
+            invalidateWheel()
         }
         CrownColorPickerBinder.bind(this, pressedTextColorElementEditText, { this.pressedTextColor }) { color ->
             this.pressedTextColor = color
-            invalidate()
+            invalidateWheel()
         }
         CrownColorPickerBinder.bind(this, centerTextColorElementEditText, { this.centerTextColor }) { color ->
             this.centerTextColor = color
-            invalidate()
+            invalidateWheel()
         }
-        // --- 设置触发器文字大小的 seekbar ---
+
         triggerTextSizeNumberSeekbar.setProgressMin(5)
         triggerTextSizeNumberSeekbar.setProgressMax(150)
         triggerTextSizeNumberSeekbar.setValueWithNoCallBack(this.triggerTextSizePercent)
         triggerTextSizeNumberSeekbar.setOnNumberSeekbarChangeListener(object : NumberSeekbar.OnNumberSeekbarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 triggerTextSizePercent = progress
-                invalidate() // 实时预览
+                invalidateWheel()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-                save() // 保存设置
+                save()
             }
         })
 
@@ -940,9 +1550,10 @@ class WheelPad(attributesMap: Map<String, Any>,
     }
 
     override fun save() {
+        val viewSize = getExpectedViewSize()
         val contentValues = ContentValues()
-        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, this.diameter)
-        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, this.diameter)
+        contentValues.put(COLUMN_INT_ELEMENT_WIDTH, viewSize)
+        contentValues.put(COLUMN_INT_ELEMENT_HEIGHT, viewSize)
         contentValues.put(COLUMN_STRING_ELEMENT_TEXT, this.centerText)
         contentValues.put(COLUMN_INT_ELEMENT_LAYER, layer)
         contentValues.put(COLUMN_INT_ELEMENT_CENTRAL_X, getElementCentralX())
@@ -957,17 +1568,7 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         contentValues.put("extra_attributes", Gson().toJson(buildExtraAttributes()))
 
-        val combinedSegments = ArrayList<String>()
-        for (i in segmentValues.indices) {
-            val value = segmentValues[i]
-            val name = if (i < segmentNames.size) segmentNames[i] else ""
-            if (name != null && !name.isEmpty()) {
-                combinedSegments.add("$value|$name")
-            } else {
-                combinedSegments.add(value)
-            }
-        }
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, combinedSegments.joinToString(","))
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, serializeSegmentValues())
         elementController.updateElement(elementId!!, contentValues)
     }
 
@@ -975,7 +1576,6 @@ class WheelPad(attributesMap: Map<String, Any>,
                                     normalColor: ElementEditText, pressedColor: ElementEditText, backgroundColor: ElementEditText,
                                     copy: Button, delete: Button) {
         centerTextInput.setTextWithNoTextChangedCallBack(this.centerText)
-        // NOTE: The listener is set/overridden in getInfoPage() to handle the switch logic
         centerTextInput.setOnTextChangedListener { text ->
             setCenterText(text)
             save()
@@ -1012,7 +1612,7 @@ class WheelPad(attributesMap: Map<String, Any>,
             }
         })
         size.setProgressMax(Math.min(widthMax, heightMax))
-        size.setProgressMin(widthMin)
+        size.setProgressMin(WHEEL_MIN_DIAMETER)
         size.setValueWithNoCallBack(this.diameter)
         size.setOnNumberSeekbarChangeListener(object : NumberSeekbar.OnNumberSeekbarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, p: Int, f: Boolean) {
@@ -1058,13 +1658,14 @@ class WheelPad(attributesMap: Map<String, Any>,
         CrownColorPickerBinder.bind(this, backgroundColor, { this.backgroundColor }, this::setElementBackgroundColor)
 
         copy.setOnClickListener {
+            val viewSize = getExpectedViewSize()
             val cv = ContentValues()
             cv.put(COLUMN_INT_ELEMENT_TYPE, ELEMENT_TYPE_WHEEL_PAD)
-            cv.put(COLUMN_INT_ELEMENT_WIDTH, this.diameter)
-            cv.put(COLUMN_INT_ELEMENT_HEIGHT, this.diameter)
+            cv.put(COLUMN_INT_ELEMENT_WIDTH, viewSize)
+            cv.put(COLUMN_INT_ELEMENT_HEIGHT, viewSize)
             cv.put(COLUMN_STRING_ELEMENT_TEXT, this.centerText)
             cv.put(COLUMN_INT_ELEMENT_LAYER, this.layer)
-            cv.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + getElementWidth() / 2, centralXMax), centralXMin))
+            cv.put(COLUMN_INT_ELEMENT_CENTRAL_X, Math.max(Math.min(getElementCentralX() + viewSize / 2, centralXMax), centralXMin))
             cv.put(COLUMN_INT_ELEMENT_CENTRAL_Y, getElementCentralY())
             cv.put(COLUMN_INT_ELEMENT_THICK, this.thick)
             cv.put(COLUMN_INT_ELEMENT_NORMAL_COLOR, this.normalColor)
@@ -1076,17 +1677,7 @@ class WheelPad(attributesMap: Map<String, Any>,
 
             cv.put("extra_attributes", Gson().toJson(buildExtraAttributes()))
 
-            val combinedSegments = ArrayList<String>()
-            for (i in segmentValues.indices) {
-                val value = segmentValues[i]
-                val name = if (i < segmentNames.size) segmentNames[i] else ""
-                if (name != null && !name.isEmpty()) {
-                    combinedSegments.add("$value|$name")
-                } else {
-                    combinedSegments.add(value)
-                }
-            }
-            cv.put(COLUMN_STRING_ELEMENT_VALUE, combinedSegments.joinToString(","))
+            cv.put(COLUMN_STRING_ELEMENT_VALUE, serializeSegmentValues())
             elementController.addElement(cv)
         }
         delete.setOnClickListener {
@@ -1096,10 +1687,15 @@ class WheelPad(attributesMap: Map<String, Any>,
     }
 
     protected fun setDiameter(newDiameter: Int) {
-        this.diameter = newDiameter
-        setElementWidth(newDiameter)
-        setElementHeight(newDiameter)
-        invalidate()
+        this.diameter = clampWheelDiameter(newDiameter)
+        syncViewSizeForCurrentMode()
+        invalidateWheel()
+    }
+
+    protected fun setTriggerDiameter(newTriggerDiameter: Int) {
+        this.triggerDiameter = clampTriggerDiameter(newTriggerDiameter)
+        syncViewSizeForCurrentMode()
+        invalidateWheel()
     }
 
     private fun buildExtraAttributes(): JsonObject {
@@ -1113,13 +1709,31 @@ class WheelPad(attributesMap: Map<String, Any>,
         extraAttrs.addProperty("previewGroupChildren", this.previewGroupChildren)
         extraAttrs.addProperty(EXTRA_SEGMENT_ALIGNMENT,
             if (this.alignSegmentEdge) SEGMENT_ALIGNMENT_EDGE else SEGMENT_ALIGNMENT_CENTER)
+        extraAttrs.addProperty(EXTRA_WHEEL_DIAMETER, this.diameter)
+        extraAttrs.addProperty(EXTRA_TRIGGER_DIAMETER, this.triggerDiameter)
+        // 名称单独存 JSON 数组，避免用户输入逗号把 element_value 的分区结构撑坏
+        val namesArray = com.google.gson.JsonArray()
+        for (i in 0 until segmentCount) {
+            namesArray.add(if (i < segmentNames.size) segmentNames[i] else "")
+        }
+        extraAttrs.add(EXTRA_SEGMENT_NAMES, namesArray)
         return extraAttrs
+    }
+
+    /** element_value 只存纯键位，空位保留为空串，保证索引与分区一一对应。 */
+    private fun serializeSegmentValues(): String {
+        val list = ArrayList<String>(segmentCount)
+        for (i in 0 until segmentCount) {
+            list.add(if (i < segmentValues.size) segmentValues[i] else "")
+        }
+        return list.joinToString(",")
     }
 
     protected fun setSegmentCount(count: Int) {
         var count = count
         if (count < 2) count = 2
         this.segmentCount = count
+        ensureSegPopCapacity(count)
         while (segmentValues.size < count) {
             segmentValues.add("null")
             segmentNames.add("")
@@ -1128,60 +1742,61 @@ class WheelPad(attributesMap: Map<String, Any>,
             segmentValues.removeAt(segmentValues.size - 1)
             segmentNames.removeAt(segmentNames.size - 1)
         }
-        invalidate()
+        invalidateWheel()
     }
 
     protected fun setSegmentValue(index: Int, value: String?) {
         if (index >= 0 && index < segmentValues.size) {
             segmentValues[index] = value!!
-            invalidate()
+            invalidateWheel()
         }
     }
 
     protected fun setInnerRadiusPercent(percent: Int) {
         this.innerRadiusPercent = percent
-        invalidate()
+        invalidateWheel()
     }
 
     protected fun setElementThick(thick: Int) {
         this.thick = thick
-        invalidate()
+        invalidateWheel()
     }
 
     fun setElementNormalColor(normalColor: Int) {
         this.normalColor = normalColor
-        invalidate()
+        invalidateWheel()
     }
 
     fun setElementPressedColor(pressedColor: Int) {
         this.pressedColor = pressedColor
-        invalidate()
+        invalidateWheel()
     }
 
     fun setElementBackgroundColor(backgroundColor: Int) {
         this.backgroundColor = backgroundColor
-        invalidate()
+        invalidateWheel()
     }
 
     fun setElementNormalTextColor(normalTextColor: Int) {
         this.normalTextColor = normalTextColor
-        invalidate()
+        invalidateWheel()
     }
 
     fun setElementPressedTextColor(pressedTextColor: Int) {
         this.pressedTextColor = pressedTextColor
-        invalidate()
+        invalidateWheel()
     }
 
     fun setElementCenterTextColor(centerTextColor: Int) {
         this.centerTextColor = centerTextColor
-        invalidate()
+        invalidateWheel()
     }
 
     protected fun setCenterText(text: String?) {
         this.centerText = text ?: ""
         this.isPopupMode = !this.centerText.isEmpty()
-        invalidate()
+        syncViewSizeForCurrentMode()
+        invalidateWheel()
     }
 
     override fun updatePage() {
@@ -1223,7 +1838,6 @@ class WheelPad(attributesMap: Map<String, Any>,
         val context = keysContainer.context
         val isGroup = !currentKeys.isEmpty() && currentKeys[0].startsWith("gb")
 
-        // 根据是否已选择组按键，更新按钮的可见性
         if (isGroup) {
             addButton.visibility = View.GONE
             addGroupButton.visibility = View.GONE
@@ -1238,7 +1852,6 @@ class WheelPad(attributesMap: Map<String, Any>,
             emptyText.setPadding(0, 10, 0, 10)
             keysContainer.addView(emptyText)
         } else if (isGroup) {
-            // --- 显示组按键 ---
             try {
                 val elementId = currentKeys[0].substring(2).toLong()
                 val element = elementController.findElementById(elementId)
@@ -1251,7 +1864,6 @@ class WheelPad(attributesMap: Map<String, Any>,
                         context.getString(R.string.wheel_value_group, groupButton.getText()))
                     groupBtnDisplay.isAllCaps = false
 
-                    // 单击打开组按键设置页
                     groupBtnDisplay.setOnClickListener {
                         if (dialog != null) {
                             dialog.dismiss()
@@ -1266,36 +1878,30 @@ class WheelPad(attributesMap: Map<String, Any>,
                         elementController.superPagesController.openNewPage(groupButtonSettingsPage)
                     }
 
-                    // 长按删除
                     groupBtnDisplay.setOnLongClickListener {
-                        // 清空当前分区的按键设置
                         currentKeys.clear()
-
-                        // 更新UI以反映移除
                         updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog)
-
                         Toast.makeText(context, R.string.wheel_group_removed, Toast.LENGTH_SHORT).show()
-
-                        true // 返回true表示事件已被消费
+                        true
                     }
                     keysContainer.addView(groupBtnDisplay)
                 } else {
-                    // 如果找到了元素但类型不对，也显示错误
                     currentKeys.clear()
+                    addButton.visibility = View.VISIBLE
+                    addGroupButton.visibility = View.VISIBLE
                     val errorText = TextView(context)
                     errorText.text = context.getString(R.string.wheel_group_wrong_type, elementId)
                     keysContainer.addView(errorText)
-                    updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog)
                 }
             } catch (e: Exception) {
-                // 如果解析或查找失败，显示错误信息并允许重新选择
                 currentKeys.clear()
+                addButton.visibility = View.VISIBLE
+                addGroupButton.visibility = View.VISIBLE
                 val errorText = TextView(context)
                 errorText.setText(R.string.wheel_group_missing)
                 keysContainer.addView(errorText)
             }
         } else {
-            // --- 显示普通按键列表 ---
             for (i in currentKeys.indices) {
                 val keyIndex = i
                 val keyView = TextView(context)
@@ -1344,8 +1950,7 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         val currentValue = segmentValues[index]
         val currentKeys = ArrayList<String>()
-        if (currentValue != null && !currentValue.isEmpty() && currentValue != "null") {
-            // 组按键只有一个值 "gb<ID>", 普通按键用 "+" 分隔
+        if (currentValue.isNotEmpty() && currentValue != "null") {
             if (currentValue.startsWith("gb")) {
                 currentKeys.add(currentValue)
             } else {
@@ -1353,7 +1958,6 @@ class WheelPad(attributesMap: Map<String, Any>,
             }
         }
 
-        // --- 新增按钮布局和按钮 ---
         val buttonContainer = LinearLayout(context)
         buttonContainer.orientation = LinearLayout.HORIZONTAL
         buttonContainer.gravity = Gravity.CENTER
@@ -1378,7 +1982,6 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         val dialog = builder.create()
 
-        // 初始状态更新
         updateKeyCombinationDisplay(keysContainer, currentKeys, addButton, addGroupButton, dialog)
         dialog.setView(dialogLayout)
 
@@ -1397,9 +2000,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
         dialog.setButton(AlertDialog.BUTTON_NEGATIVE, context.getString(R.string.dialog_button_cancel)) { d, which -> d.dismiss() }
 
-        // "添加组按键" 的点击逻辑
         addGroupButton.setOnClickListener {
-            // 1. 查找所有现有的 GroupButton
             val groupButtons = ArrayList<GroupButton>()
             for (el in elementController.elements) {
                 if (el is GroupButton) {
@@ -1407,14 +2008,12 @@ class WheelPad(attributesMap: Map<String, Any>,
                 }
             }
 
-            // 2. 创建选项列表
             val options = ArrayList<String>()
             for (gb in groupButtons) {
                 options.add("${gb.getText()} (ID: ${gb.elementId})")
             }
             options.add(context.getString(R.string.wheel_create_new_group))
 
-            // 3. 显示选择对话框
             val groupSelectionDialog = AlertDialog.Builder(context, R.style.AppDialogStyle)
                 .setTitle(R.string.wheel_select_group_title)
                 .setItems(options.toTypedArray()) { selectionDialog, which ->
@@ -1423,31 +2022,23 @@ class WheelPad(attributesMap: Map<String, Any>,
                     var newElementToEdit: Element? = null
 
                     if (which == options.size - 1) {
-                        // --- 用户选择 "创建新的" ---
                         val cv = GroupButton.getInitialInfo()
                         val newElement = elementController.addElement(cv)
                         if (newElement != null) {
                             selectedValue = "gb" + newElement.elementId
-                            newElementToEdit = newElement // 记录下来，以便后续打开其设置页
+                            newElementToEdit = newElement
                         }
                     } else {
-                        // --- 用户选择一个现有的 ---
                         val selectedGb = groupButtons[which]
                         selectedValue = "gb" + selectedGb.elementId
                     }
 
                     if (selectedValue != null) {
-                        // 立即设置值并保存
                         setSegmentValue(index, selectedValue)
                         save()
-
-                        // 更新主设置页面上该分区的显示文本
                         valueText.text = getDisplayStringForValue(selectedValue)
-
-                        // 关闭“编辑按键”这个主弹窗
                         dialog.dismiss()
 
-                        // 如果是新创建的，提示用户去配置
                         if (newElementToEdit != null) {
                             Toast.makeText(context, R.string.wheel_new_group_created, Toast.LENGTH_LONG).show()
                             elementController.toggleInfoPage(newElementToEdit.getInfoPage())
@@ -1491,7 +2082,7 @@ class WheelPad(attributesMap: Map<String, Any>,
             nameInput.setOnTextChangedListener { text ->
                 if (index < segmentNames.size) {
                     segmentNames[index] = text
-                    invalidate()
+                    invalidateWheel()
                     save()
                 }
             }

@@ -1948,6 +1948,7 @@ Tap again to replace it.</string>
     <string name="wheel_alignment_title">Alignment</string>
     <string name="wheel_alignment_center">Segment center faces up</string>
     <string name="wheel_alignment_edge">Segment edge faces up</string>
+    <string name="wheel_trigger_size">Trigger Button Size</string>
     <string name="page_section_key_values">Key Values</string>
     <string name="page_label_combo_keys">Combo Keys</string>
     <string name="page_label_coord_x">X Coord</string>
