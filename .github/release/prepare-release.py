@@ -4,6 +4,7 @@
 import argparse
 import datetime
 import hashlib
+from itertools import zip_longest
 import json
 import os
 import re
@@ -45,6 +46,55 @@ def older(candidate_tag, candidate_pre, target_tag, target_pre):
     return candidate_pre and bool(candidate[1]) and candidate[1] < target[1]
 
 
+def update_version_parts(tag):
+    """Match the Android updater's versionName comparison, including legacy tags."""
+    normalized = re.sub(r'^[Vv]', '', tag).split('+', 1)[0]
+    qualifier_match = re.search(r'[-_\s]', normalized)
+    number_part = normalized[:qualifier_match.start()] if qualifier_match else normalized
+    qualifier = normalized[qualifier_match.end():] if qualifier_match else ''
+
+    def android_int(text):
+        if not re.fullmatch(r'[0-9]+', text):
+            return 0
+        value = int(text)
+        return value if value <= 2_147_483_647 else 0
+
+    numbers = [android_int(part) for part in number_part.split('.')]
+    tokens = [part for part in re.split(r'[.\-_\s]+', qualifier.lower()) if part]
+    name = next((part for part in tokens if re.search(r'[a-z]', part)), '')
+    rank = {'hotfix': 1, 'fix': 1, 'patch': 1, '': 0, 'stable': 0,
+            'release': 0, 'final': 0, 'rc': -1, 'beta': -2, 'alpha': -3}.get(name, -1)
+    qualifier_numbers = [android_int(match.group()) for token in tokens
+                         if (match := re.search(r'\d+', token))]
+    return numbers, rank, qualifier_numbers
+
+
+def newer_than(target, previous):
+    left = update_version_parts(target)
+    right = update_version_parts(previous)
+    for left_num, right_num in zip_longest(left[0], right[0], fillvalue=0):
+        if left_num != right_num:
+            return left_num > right_num
+    if left[1] != right[1]:
+        return left[1] > right[1]
+    for left_num, right_num in zip_longest(left[2], right[2], fillvalue=0):
+        if left_num != right_num:
+            return left_num > right_num
+    return False
+
+
+def ensure_stable_is_newer(tag, releases):
+    # Both channels use the same package. A formal release must be detected as
+    # newer by devices already running any publicly released preview version.
+    for release in releases:
+        if release['draft']:
+            continue
+        previous = release['tag_name']
+        if newer_than(tag, previous) is False:
+            raise ValueError(f'stable release {tag} is not newer than published {previous}; '
+                             'choose a higher version')
+
+
 def releases_from_json(payload):
     if not isinstance(payload, list):
         raise ValueError('GitHub releases response must be an array')
@@ -84,10 +134,18 @@ def select_previous(releases, tag, prerelease):
             continue
         candidates.append((published, name))
     for _, name in sorted(candidates, reverse=True):
-        ref = f'refs/tags/{name}^{{commit}}'
+        tag_ref = f'refs/tags/{name}'
+        ref = f'{tag_ref}^{{commit}}'
         if subprocess.run(['git', 'rev-parse', '--quiet', '--verify', ref],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
-            raise ValueError(f'published release tag is missing locally: {name}')
+            # A release may have appeared after the initial checkout. Fetch only
+            # the missing tag, without forcing an existing local tag to move.
+            fetched = subprocess.run(['git', 'fetch', '--quiet', '--no-tags', 'origin',
+                                      f'{tag_ref}:{tag_ref}'])
+            if fetched.returncode or subprocess.run(
+                    ['git', 'rev-parse', '--quiet', '--verify', ref],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+                raise ValueError(f'cannot fetch published release tag: {name}')
         result = subprocess.run(['git', 'merge-base', '--is-ancestor', ref,
                                  f'refs/tags/{tag}^{{commit}}'])
         if result.returncode == 0:
@@ -108,6 +166,8 @@ def render(tag, prerelease, apk, repo, releases):
         raise ValueError('prerelease tags must include a suffix, such as -beta.1')
     if not prerelease and version(tag)[1]:
         raise ValueError('stable tags must not contain a prerelease suffix')
+    if not prerelease:
+        ensure_stable_is_newer(tag, releases)
     if not os.path.isfile(apk):
         raise ValueError(f'APK not found: {apk}')
     run('git', 'rev-parse', '--verify', f'refs/tags/{tag}^{{commit}}')

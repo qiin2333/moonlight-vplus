@@ -1,138 +1,130 @@
 #!/usr/bin/env bash
+# Reserve immutable, monotonically increasing versionCodes in an isolated branch.
+# Usage: version-code.sh TAG
+set -euo pipefail
 
-# Each semantic
-# MAJOR.MINOR.PATCH base gets 999 release slots (ordinals 1-999), assigned in
-# tag creation order. This keeps feature previews, hotfixes, and stable tags
-# for the same base unique without trying to interpret their free-form suffixes.
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 TAG" >&2
+  exit 2
+fi
+tag=$1
+if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]]; then
+  echo "ERROR: invalid release tag: $tag" >&2
+  exit 1
+fi
+commit=$(git rev-parse --verify "refs/tags/$tag^{commit}")
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=gradle-version.sh
 source "$SCRIPT_DIR/gradle-version.sh"
+tmp=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/release-versions.XXXXXX")
+trap 'rm -rf "$tmp"' EXIT
+export GIT_INDEX_FILE="$tmp/index"
 
-readonly RELEASE_SLOTS_PER_BASE=1000
-
-# Converts a supported release tag prefix into its numeric semantic base.
-parse_version_base() {
-  local tag=${1-}
-  local version=${tag#v}
-  local major minor patch
-
-  if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)($|[-.].*) ]]; then
-    major=$((10#${BASH_REMATCH[1]}))
-    minor=$((10#${BASH_REMATCH[2]}))
-    patch=$((10#${BASH_REMATCH[3]}))
-  elif [[ "$version" =~ ^([0-9]+)\.([0-9]+)($|-.*) ]]; then
-    major=$((10#${BASH_REMATCH[1]}))
-    minor=$((10#${BASH_REMATCH[2]}))
-    patch=0
-  else
-    return 1
-  fi
-
-  if [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ]; then
-    return 2
-  fi
-
-  printf '%d\n' "$((major * 10000 + minor * 100 + patch))"
-}
-
-# Derives the target tag's versionCode and the highest published floor.
-calculate_release_version() {
-  local target_tag=${1-}
-  local gradle_file=${2-}
-  local target_base parse_rc
-  local gradle_version gradle_floor
-  local tag base ordinal code
-  local target_code=
-  local floor floor_source
-  declare -A release_ordinals=()
-
-  parse_rc=0
-  target_base=$(parse_version_base "$target_tag") || parse_rc=$?
-  if [ "$parse_rc" -eq 1 ]; then
-    echo "ERROR: tag '$target_tag' must start with MAJOR.MINOR[.PATCH]" >&2
-    return 1
-  elif [ "$parse_rc" -eq 2 ]; then
-    echo "ERROR: tag '$target_tag' has a MINOR or PATCH component greater than 99" >&2
-    return 1
-  fi
-
-  if ! git rev-parse --quiet --verify "refs/tags/$target_tag" >/dev/null; then
-    echo "ERROR: tag '$target_tag' does not exist in the checked-out repository" >&2
-    return 1
-  fi
-
-  gradle_version=$(read_gradle_version "$gradle_file") || return
-  gradle_floor=${gradle_version##*$'\t'}
-
-  floor=$gradle_floor
-  floor_source=$gradle_file
-
-  # Lightweight tags share their target commit's timestamp. When a preview and
-  # its stable release point at the same commit, put previews first so the
-  # stable APK gets the greater code. Natural ordering also places beta.2
-  # before beta.10 when both tags point at the same commit.
-  while IFS= read -r tag; do
-    [[ "$tag" == v* ]] || continue
-    parse_rc=0
-    base=$(parse_version_base "$tag") || parse_rc=$?
-    [ "$parse_rc" -eq 0 ] || continue
-
-    ordinal=$((${release_ordinals[$base]:-0} + 1))
-    release_ordinals[$base]=$ordinal
-    if [ "$ordinal" -ge "$RELEASE_SLOTS_PER_BASE" ]; then
-      if [ "$tag" = "$target_tag" ]; then
-        echo "ERROR: version base '$target_base' has exhausted its 999 release slots" >&2
-        return 1
-      fi
-      continue
-    fi
-
-    code=$((base * RELEASE_SLOTS_PER_BASE + ordinal))
-    if [ "$code" -gt "$ANDROID_VERSION_CODE_MAX" ]; then
-      if [ "$tag" = "$target_tag" ]; then
-        echo "ERROR: derived versionCode $code exceeds Android's maximum" >&2
-        return 1
-      fi
-      continue
-    fi
-
-    if [ "$code" -gt "$floor" ]; then
-      floor=$code
-      floor_source="tag $tag"
-    fi
-    if [ "$tag" = "$target_tag" ]; then
-      target_code=$code
-    fi
-  done < <(git for-each-ref \
-    --format='%(creatordate:unix) %(refname:short)' refs/tags |
-    python3 -c 'import re, sys
-rows = [line.split(" ", 1) for line in sys.stdin.read().splitlines()]
-stable = re.compile(r"^v[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
-def natural(tag):
-    return tuple((1, int(part)) if part.isdigit() else (0, part)
-                 for part in re.split(r"(\d+)", tag))
-rows.sort(key=lambda row: (int(row[0]), bool(stable.fullmatch(row[1])), natural(row[1]), row[1]))
-for _, tag in rows:
-    print(tag)')
-
-  if [ -z "$target_code" ]; then
-    echo "ERROR: no versionCode could be derived for tag '$target_tag'" >&2
-    return 1
-  fi
-
-  printf '%s\t%s\t%s\n' "$target_code" "$floor" "$floor_source"
-}
-
-# Validates CLI arguments and prints the calculated release version data.
-main() {
-  if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <tag> <build.gradle>" >&2
-    return 2
-  fi
-  calculate_release_version "$1" "$2"
-}
-
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  set -euo pipefail
-  main "$@"
+# At migration v12.15.31 was the highest published build (121531001). Fetch
+# current master as well so another release or manual version update cannot
+# cause an allocation below the installed version. This floor does not depend on
+# unissued tags or the potentially old commit being released.
+git fetch --quiet --no-tags origin refs/heads/master
+git show FETCH_HEAD:app/build.gradle > "$tmp/master.gradle"
+master_version=$(read_gradle_version "$tmp/master.gradle")
+master_name=${master_version%$'\t'*}
+master_code=${master_version##*$'\t'}
+legacy_floor=121531001
+floor=$legacy_floor
+floor_source='verified v12.15.31 migration floor'
+if [ "$master_code" -gt "$floor" ]; then
+  floor=$master_code
+  floor_source='origin/master'
 fi
+
+for retry in 1 2 3 4 5; do
+  rm -f "$GIT_INDEX_FILE"
+  if git ls-remote --exit-code --heads origin refs/heads/release-versions > /dev/null; then
+    git fetch --quiet --no-tags origin refs/heads/release-versions
+    parent=$(git rev-parse FETCH_HEAD)
+    git read-tree "$parent"
+    git show "$parent:version-codes.json" > "$tmp/previous.json"
+  else
+    status=$?
+    if [ "$status" -ne 2 ]; then
+      echo 'ERROR: unable to inspect release version ledger' >&2
+      exit "$status"
+    fi
+    parent=''
+    git read-tree --empty
+    printf '{"schema":1,"assignments":{}}\n' > "$tmp/previous.json"
+  fi
+
+  # The tag/commit binding and stored code never change. A failed run leaves a
+  # reservation, so its retry uses the same code and later builds skip it.
+  allocation=$(python3 - "$tmp/previous.json" "$tmp/updated.json" "$tag" "$commit" "$floor" "$ANDROID_VERSION_CODE_MAX" <<'PY'
+import json
+import re
+import sys
+
+source, output, tag, commit, floor, maximum = sys.argv[1:]
+floor, maximum = int(floor), int(maximum)
+with open(source, encoding='utf-8') as stream:
+    data = json.load(stream)
+if not isinstance(data, dict) or data.get('schema') != 1 or not isinstance(data.get('assignments'), dict):
+    raise SystemExit('ERROR: invalid release version ledger')
+assignments = data['assignments']
+codes = []
+for key, entry in assignments.items():
+    if (not isinstance(key, str) or not isinstance(entry, dict)
+            or type(entry.get('versionCode')) is not int
+            or not 1 <= entry['versionCode'] <= maximum
+            or not isinstance(entry.get('commit'), str)
+            or not re.fullmatch(r'[0-9a-f]{40,64}', entry['commit'])):
+        raise SystemExit('ERROR: invalid release version ledger entry')
+    codes.append(entry['versionCode'])
+if len(codes) != len(set(codes)):
+    raise SystemExit('ERROR: duplicate versionCodes in release version ledger')
+ledger_floor = max(codes, default=0)
+if tag in assignments:
+    entry = assignments[tag]
+    if entry['commit'] != commit:
+        raise SystemExit('ERROR: release tag has moved since its versionCode was reserved')
+    print(f"{entry['versionCode']}\texisting\t{ledger_floor}")
+else:
+    code = max([floor, *codes]) + 1
+    if code > maximum:
+        raise SystemExit('ERROR: Android versionCode limit exceeded')
+    assignments[tag] = {'commit': commit, 'versionCode': code}
+    with open(output, 'w', encoding='utf-8') as stream:
+        json.dump(data, stream, indent=2, sort_keys=True)
+        stream.write('\n')
+    print(f'{code}\tnew\t{ledger_floor}')
+PY
+  )
+  IFS=$'\t' read -r code state ledger_floor <<< "$allocation"
+  if [ "$code" -eq "$master_code" ] && [ "$master_name" != "${tag#v}" ]; then
+    echo "ERROR: versionCode $code already belongs to $master_name on master" >&2
+    exit 1
+  fi
+  # A later reservation may have been published even if master synchronization
+  # failed. Conservatively block earlier reservations from being published later.
+  if [ "$ledger_floor" -gt "$floor" ]; then
+    floor=$ledger_floor
+    floor_source='release-versions ledger'
+  fi
+  if [ "$state" = existing ]; then
+    printf '%s\t%s\t%s\n' "$code" "$floor" "$floor_source"
+    exit 0
+  fi
+  blob=$(git hash-object -w "$tmp/updated.json")
+  git update-index --add --cacheinfo "100644,$blob,version-codes.json"
+  tree=$(git write-tree)
+  if [ -n "$parent" ]; then
+    next=$(printf 'Reserve versionCode %s for %s\n' "$code" "$tag" | git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$tree" -p "$parent")
+  else
+    next=$(printf 'Reserve versionCode %s for %s\n' "$code" "$tag" | git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$tree")
+  fi
+  if git push --quiet origin "$next:refs/heads/release-versions"; then
+    printf '%s\t%s\t%s\n' "$code" "$floor" "$floor_source"
+    exit 0
+  fi
+  echo "Version reservation push failed; retrying ($retry/5)" >&2
+done
+echo 'ERROR: could not reserve a versionCode after 5 attempts' >&2
+exit 1

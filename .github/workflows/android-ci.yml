@@ -16,10 +16,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 permissions:
-  contents: write
+  contents: read
   packages: read
 
 env:
@@ -234,6 +234,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: read
+    concurrency:
+      group: moonlight-release-publication
+      queue: max
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -249,6 +255,9 @@ jobs:
         run: |
           prerelease=$(python3 .github/release/prepare-release.py check "$GITHUB_REF_NAME")
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release tag
+        run: bash .github/release/verify-release-tag.sh "$GITHUB_REF_NAME"
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -272,10 +281,27 @@ jobs:
       - name: Accept Android licenses
         run: yes | sdkmanager --licenses > /dev/null
 
+      - name: Recover published release
+        id: existing_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=$(python3 .github/release/publish-release.py recover "$GITHUB_REF_NAME" "$RUNNER_TEMP/recovered.apk")
+          published=$(python3 -c 'import json,sys; print(str(json.load(sys.stdin)["published"]).lower())' <<< "$state")
+          echo "published=$published" >> "$GITHUB_OUTPUT"
+          if [ "$published" = true ]; then
+            code=$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RUNNER_TEMP/recovered.apk" | \
+              python3 -c 'import re,sys; m=re.search(r"^package: .*\bversionCode=\x27([0-9]+)\x27",sys.stdin.read(),re.M); print(m.group(1) if m else ""); sys.exit(0 if m else 1)')
+            echo "REL_APK=$RUNNER_TEMP/recovered.apk" >> "$GITHUB_ENV"
+            echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
+          fi
+
       - name: Remove local.properties (if present)
         run: rm -f local.properties
 
       - name: Create google-services.json from secrets
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: |
           if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
@@ -302,6 +328,7 @@ jobs:
           echo "Using version from tag: $VERSION"
 
       - name: Update version in build.gradle
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: |
           set -e
@@ -310,10 +337,8 @@ jobs:
           VERSION=${TAG#v}
           echo "Updating version to: $VERSION"
 
-          # 每个 MAJOR.MINOR.PATCH 基础版本有 999 个发布槽位，按 tag 创建时间分配。
-          # 这样同一基础版本下的稳定版、hotfix 和不同功能预览 tag 也不会撞号。
-          # PATCH 可省略；历史 tag、前导零、Android 上限和回退基准都由脚本统一校验。
-          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG" app/build.gradle)
+          # Reserve a stable versionCode once for this tag and commit.
+          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG")
           IFS=$'\t' read -r NEW_VERSION_CODE FLOOR FLOOR_SRC <<< "$VERSION_INFO"
           echo "Version floor: $FLOOR (from $FLOOR_SRC)"
 
@@ -332,6 +357,7 @@ jobs:
           echo "Updated release version (floor was $FLOOR from $FLOOR_SRC)"
 
       - name: Decode keystore for Release
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -340,6 +366,7 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
+        if: steps.existing_release.outputs.published != 'true'
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -348,6 +375,7 @@ jobs:
         run: ./gradlew :app:assembleNonRootRelease --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: |
           set -e
@@ -370,6 +398,7 @@ jobs:
         run: python3 .github/release/verify-release-apk.py "$REL_APK" "$VERSION_NAME" "$VERSION_CODE"
 
       - name: Generate release notes
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -378,32 +407,65 @@ jobs:
             "$GITHUB_REF_NAME" "$REL_APK" > release_notes.md
 
       - name: Archive release mapping
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: >-
           bash .github/release/archive-mapping.sh
           app/build/outputs/mapping/nonRootRelease/mapping.txt "$REL_APK"
           "$GITHUB_REF_NAME" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Moonlight V+ ${{ env.VERSION_NAME }}
-          draft: false
-          prerelease: ${{ steps.release_kind.outputs.prerelease == 'true' }}
-          body_path: release_notes.md
-          files: ${{ env.REL_APK }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload Release APK and mapping
+        if: steps.existing_release.outputs.published != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: app-nonroot-release-signed
+          name: app-nonroot-release-signed-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           path: |
             app/build/outputs/apk/nonRoot/release/Moonlight.V+.*.apk
             app/build/outputs/mapping/nonRootRelease/mapping.txt
+
+      - name: Check release draft
+        if: steps.existing_release.outputs.published != 'true'
+        id: draft_check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CHANNEL: ${{ steps.release_kind.outputs.prerelease == 'true' && 'prerelease' || 'stable' }}
+        run: |
+          state=$(python3 .github/release/publish-release.py preflight "$GITHUB_REF_NAME" "$REL_APK" release_notes.md "$RELEASE_CHANNEL")
+          needs_upload=$(python3 -c 'import json,sys; print(str(json.load(sys.stdin)["needs_upload"]).lower())' <<< "$state")
+          echo "needs_upload=$needs_upload" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK to release draft
+        if: steps.existing_release.outputs.published != 'true'
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
+        with:
+          tag: ${{ github.ref_name }}
+          name: Moonlight V+ ${{ env.VERSION_NAME }}
+          draft: true
+          prerelease: ${{ steps.release_kind.outputs.prerelease == 'true' }}
+          bodyFile: release_notes.md
+          artifacts: ${{ steps.draft_check.outputs.needs_upload == 'true' && env.REL_APK || '' }}
+          allowUpdates: true
+          skipIfReleaseExists: true
+          replacesArtifacts: false
+          artifactErrorsFailBuild: true
+          artifactContentType: application/vnd.android.package-archive
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          omitDraftDuringUpdate: true
+
+      - name: Verify and publish release draft
+        if: steps.existing_release.outputs.published != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CHANNEL: ${{ steps.release_kind.outputs.prerelease == 'true' && 'prerelease' || 'stable' }}
+        run: |
+          python3 .github/release/publish-release.py verify-draft "$GITHUB_REF_NAME" "$REL_APK" release_notes.md "$RELEASE_CHANNEL"
+          bash .github/release/verify-release-tag.sh "$GITHUB_REF_NAME"
+          gh release edit "$GITHUB_REF_NAME" --draft=false -R "$GITHUB_REPOSITORY"
 
       - name: Sync released version to master
         shell: bash
