@@ -56,6 +56,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         private const val SEGMENT_ALIGNMENT_EDGE = "edge"
         private const val EXTRA_WHEEL_DIAMETER = "wheelDiameter"
         private const val EXTRA_TRIGGER_DIAMETER = "triggerDiameter"
+        private const val EXTRA_SEGMENT_NAMES = "segmentNames"
 
         private const val WHEEL_MIN_DIAMETER = 150
         private const val TRIGGER_MIN_DIAMETER = 60
@@ -133,6 +134,7 @@ class WheelPad(attributesMap: Map<String, Any>,
     private val paintAccentArc = Paint(Paint.ANTI_ALIAS_FLAG)
     private val paintPointer = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textMeasurePaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private val tempFontMetrics = Paint.FontMetrics()
 
     private val rect = RectF()
     private val tempOuterRect = RectF()
@@ -231,6 +233,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         this.popupAtScreenCenter = popupFlagObj == null || (popupFlagObj as Long).toInt() == 1
 
         this.triggerDiameter = 0
+        var segmentNamesFromExtra: List<String>? = null
 
         if (attributesMap.containsKey("extra_attributes")) {
             val extraAttrsJsonString = attributesMap.get("extra_attributes") as String?
@@ -261,6 +264,14 @@ class WheelPad(attributesMap: Map<String, Any>,
                     if (extraAttrs.has(EXTRA_TRIGGER_DIAMETER)) {
                         this.triggerDiameter = clampTriggerDiameter(extraAttrs.get(EXTRA_TRIGGER_DIAMETER).asInt)
                     }
+                    segmentNamesFromExtra = if (extraAttrs.has(EXTRA_SEGMENT_NAMES) &&
+                        extraAttrs.get(EXTRA_SEGMENT_NAMES).isJsonArray) {
+                        extraAttrs.getAsJsonArray(EXTRA_SEGMENT_NAMES).map {
+                            if (it.isJsonNull) "" else it.asString
+                        }
+                    } else {
+                        null
+                    }
                 } catch (e: Exception) {
                     initializeDefaultFontAttributes()
                 }
@@ -278,18 +289,27 @@ class WheelPad(attributesMap: Map<String, Any>,
         val valuesString = attributesMap.get(COLUMN_STRING_ELEMENT_VALUE) as String?
         segmentValues = ArrayList()
         segmentNames = ArrayList()
+        val legacyNames = ArrayList<String>()
         if (valuesString != null && !valuesString.isEmpty()) {
             val segments = valuesString.split(",")
             for (segment in segments) {
                 // 保留空位，避免 k51,,k47 这类配置在加载后整体前移错位
                 val parts = segment.split("|", limit = 2)
                 segmentValues.add(parts[0])
-                segmentNames.add(if (parts.size > 1) parts[1] else "")
+                legacyNames.add(if (parts.size > 1) parts[1] else "")
             }
         }
         while (segmentValues.size < segmentCount) {
             segmentValues.add("null")
-            segmentNames.add("")
+        }
+        // 名称优先读 extra_attributes（不含分隔符冲突），旧数据回退到 value|name 里的名称
+        for (i in 0 until segmentCount) {
+            val name = when {
+                segmentNamesFromExtra != null -> segmentNamesFromExtra!!.getOrElse(i) { "" }
+                i < legacyNames.size -> legacyNames[i]
+                else -> ""
+            }
+            segmentNames.add(name)
         }
 
         ensureSegPopCapacity(segmentCount)
@@ -473,6 +493,13 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
     }
 
+    /** 让玻璃描边的透明度跟随用户选色的 Alpha，全透明颜色不会仍有描边显示。 */
+    private fun scaleAlpha(color: Int, targetOpaqueAlpha: Int): Int {
+        val scaled = (Color.alpha(color) * targetOpaqueAlpha) / 255
+        return Color.argb(scaled.coerceIn(0, 255),
+            Color.red(color), Color.green(color), Color.blue(color))
+    }
+
     private fun drawInactivePopupCenter(canvas: Canvas) {
         val centerX = width / 2.0f
         val centerY = height / 2.0f
@@ -504,8 +531,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         // 微透外边
         val glassStroke = Math.max(1.5f, thick * 0.45f)
         paintGlassStroke.strokeWidth = glassStroke
-        paintGlassStroke.color = Color.argb(150,
-            Color.red(normalColor), Color.green(normalColor), Color.blue(normalColor))
+        paintGlassStroke.color = scaleAlpha(normalColor, 150)
         canvas.drawCircle(centerX, centerY, Math.max(1f, triggerRadius - glassStroke / 2f), paintGlassStroke)
 
         // 内沿微弱白色高光环（玻璃质感）
@@ -618,13 +644,7 @@ class WheelPad(attributesMap: Map<String, Any>,
             paintGlassFill.shader = null
 
             paintGlassStroke.strokeWidth = if (isAct) Math.max(1.8f, glassStroke * 1.4f) else glassStroke
-            if (isAct) {
-                paintGlassStroke.color = Color.argb(215,
-                    Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
-            } else {
-                paintGlassStroke.color = Color.argb(130,
-                    Color.red(normalColor), Color.green(normalColor), Color.blue(normalColor))
-            }
+            paintGlassStroke.color = if (isAct) scaleAlpha(pressedColor, 215) else scaleAlpha(normalColor, 130)
             canvas.drawPath(segmentPath, paintGlassStroke)
 
             if (pop > 0.05f) {
@@ -646,9 +666,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         canvas.drawCircle(centerX, centerY, innerDiscR, paintBackground)
 
         paintGlassStroke.strokeWidth = Math.max(1.2f, glassStroke)
-        paintGlassStroke.color = if (activeIndex != -1)
-            Color.argb(190, Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
-        else Color.argb(130, Color.red(normalColor), Color.green(normalColor), Color.blue(normalColor))
+        paintGlassStroke.color = if (activeIndex != -1) scaleAlpha(pressedColor, 190) else scaleAlpha(normalColor, 130)
         canvas.drawCircle(centerX, centerY, innerDiscR, paintGlassStroke)
 
         // 3. 中心随动方向指针
@@ -676,12 +694,16 @@ class WheelPad(attributesMap: Map<String, Any>,
             paintText.color = if (i == activeIndex) this.pressedTextColor else this.normalTextColor
             paintText.isFakeBoldText = (i == activeIndex)
 
-            val segInnerR = fillInnerRadius + 2.5f
-            val segOuterR = (fillOuterRadius + pop * (popOutMax * 0.65f) - 2.5f).coerceAtLeast(segInnerR + 2f)
-            // 放到 0.50 环中线，内外两侧留白对称
+            val drawInnerR = fillInnerRadius + 1.5f
+            val drawOuterR = (fillOuterRadius + pop * (popOutMax * 0.65f)).coerceAtLeast(drawInnerR + 1f)
+            // 内边距随可绘环带厚度缩放，极薄环不会被固定 2.5px 挤没
+            val radialInset = minOf(2.5f, (drawOuterR - drawInnerR) * 0.12f)
+            val segInnerR = drawInnerR + radialInset
+            val segOuterR = (drawOuterR - radialInset).coerceAtLeast(segInnerR + 0.5f)
+            // 放到环带中线，内外两侧留白对称
             val textRadius = fillInnerRadius + ringThickness * 0.50f + pop * (popOutMax * 0.35f)
             val targetSize = baseSegmentTextSize + pop * 2.0f
-            val maxHeight = (ringThickness * 0.84f).coerceAtLeast(6f)
+            val maxHeight = ((segOuterR - segInnerR) * 0.90f).coerceAtLeast(2f)
 
             val textRad = Math.toRadians(textAngle.toDouble())
             val tx = (textRadius * Math.cos(textRad)).toFloat()
@@ -689,8 +711,8 @@ class WheelPad(attributesMap: Map<String, Any>,
 
             drawAdaptiveSectorText(
                 canvas, displayName, centerX, centerY, tx, ty,
-                segInnerR, segOuterR, startAngle, drawSweep,
-                targetSize, maxHeight, ringThickness
+                segInnerR, segOuterR, drawInnerR, drawOuterR,
+                startAngle, drawSweep, targetSize, maxHeight
             )
         }
 
@@ -853,6 +875,32 @@ class WheelPad(attributesMap: Map<String, Any>,
         return 2f * minOf(tx - xMin, xMax - tx)
     }
 
+    private fun computeLineGlyphHeight(paint: Paint): Float {
+        paint.getFontMetrics(tempFontMetrics)
+        return (tempFontMetrics.descent - tempFontMetrics.ascent).coerceAtLeast(1f)
+    }
+
+    private fun computeTwoLineStep(paint: Paint): Float = computeLineGlyphHeight(paint) * 1.08f
+
+    /** 带内边距的扫描线算不出宽度时，回退到真实可绘环带重试一次。 */
+    private fun computeSectorLineMaxWidthWithFallback(
+        tx: Float,
+        lineCenterYOffset: Float,
+        lineHeight: Float,
+        segInnerR: Float,
+        segOuterR: Float,
+        drawInnerR: Float,
+        drawOuterR: Float,
+        startAngleDeg: Float,
+        sweepAngleDeg: Float
+    ): Float {
+        val padded = computeSectorLineMaxWidth(
+            tx, lineCenterYOffset, lineHeight, segInnerR, segOuterR, startAngleDeg, sweepAngleDeg)
+        if (padded > 0f) return padded
+        return computeSectorLineMaxWidth(
+            tx, lineCenterYOffset, lineHeight, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+    }
+
     private fun drawAdaptiveSectorText(
         canvas: Canvas,
         text: String,
@@ -860,45 +908,56 @@ class WheelPad(attributesMap: Map<String, Any>,
         cy: Float,
         tx: Float,
         ty: Float,
-        innerR: Float,
-        outerR: Float,
+        segInnerR: Float,
+        segOuterR: Float,
+        drawInnerR: Float,
+        drawOuterR: Float,
         startAngleDeg: Float,
         sweepAngleDeg: Float,
         targetSize: Float,
-        maxHeight: Float,
-        ringThickness: Float
+        maxHeight: Float
     ) {
-        if (text.isEmpty() || outerR <= innerR) return
+        if (text.isEmpty() || drawOuterR <= drawInnerR) return
 
-        val minSize = minOf(targetSize, maxOf(6f, minOf(20f, ringThickness * 0.45f)))
+        val bandThickness = (segOuterR - segInnerR).coerceAtLeast(0.5f)
+        val minSize = minOf(targetSize, maxOf(2f, minOf(20f, bandThickness * 0.75f)))
+
         var size1 = minOf(targetSize, maxHeight)
-        var maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
-
         paintText.textSize = size1
+        var glyphH1 = computeLineGlyphHeight(paintText)
+        var maxW1 = computeSectorLineMaxWidthWithFallback(
+            tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
         var measured1 = paintText.measureText(text)
+
         if (measured1 > maxW1) {
             if (maxW1 > 1f) {
                 size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
                 paintText.textSize = size1
-                maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                glyphH1 = computeLineGlyphHeight(paintText)
+                maxW1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
                 measured1 = paintText.measureText(text)
                 if (measured1 > maxW1 && size1 > minSize && maxW1 > 1f) {
                     size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
                     paintText.textSize = size1
-                    maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                    glyphH1 = computeLineGlyphHeight(paintText)
+                    maxW1 = computeSectorLineMaxWidthWithFallback(
+                        tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
                     measured1 = paintText.measureText(text)
                 }
             } else {
                 size1 = minSize
                 paintText.textSize = size1
-                maxW1 = computeSectorLineMaxWidth(tx, ty, size1, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                glyphH1 = computeLineGlyphHeight(paintText)
+                maxW1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty, glyphH1, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
                 measured1 = paintText.measureText(text)
             }
         }
 
         val drawX = cx + tx
         val drawY = cy + ty
-        val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.25f
+        val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.4f
         val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
         if (!canTryTwoLines || preferOneLine) {
             val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
@@ -913,11 +972,14 @@ class WheelPad(attributesMap: Map<String, Any>,
             return
         }
 
-        var size2 = minOf(targetSize * 0.85f, maxHeight / 2.25f)
+        var size2 = minOf(targetSize * 0.85f, maxHeight / 2.45f)
         paintText.textSize = size2
-        var step2 = size2 * 1.12f
-        var wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
-        var wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+        var glyphH2 = computeLineGlyphHeight(paintText)
+        var step2 = computeTwoLineStep(paintText)
+        var wLine1 = computeSectorLineMaxWidthWithFallback(
+            tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+        var wLine2 = computeSectorLineMaxWidthWithFallback(
+            tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
         var maxW2 = minOf(wLine1, wLine2)
         var maxLineW2 = maxOf(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
 
@@ -925,31 +987,40 @@ class WheelPad(attributesMap: Map<String, Any>,
             if (maxW2 > 1f) {
                 size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
                 paintText.textSize = size2
-                step2 = size2 * 1.12f
-                wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
-                wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                glyphH2 = computeLineGlyphHeight(paintText)
+                step2 = computeTwoLineStep(paintText)
+                wLine1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                wLine2 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
                 maxW2 = minOf(wLine1, wLine2)
                 maxLineW2 = maxOf(paintText.measureText(lines[0]), paintText.measureText(lines[1]))
                 if (maxLineW2 > maxW2 && size2 > minSize && maxW2 > 1f) {
                     size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
                     paintText.textSize = size2
-                    step2 = size2 * 1.12f
-                    wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
-                    wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                    glyphH2 = computeLineGlyphHeight(paintText)
+                    step2 = computeTwoLineStep(paintText)
+                    wLine1 = computeSectorLineMaxWidthWithFallback(
+                        tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                    wLine2 = computeSectorLineMaxWidthWithFallback(
+                        tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
                 }
             } else {
                 size2 = minSize
                 paintText.textSize = size2
-                step2 = size2 * 1.12f
-                wLine1 = computeSectorLineMaxWidth(tx, ty - step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
-                wLine2 = computeSectorLineMaxWidth(tx, ty + step2 / 2f, size2, innerR, outerR, startAngleDeg, sweepAngleDeg)
+                glyphH2 = computeLineGlyphHeight(paintText)
+                step2 = computeTwoLineStep(paintText)
+                wLine1 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty - step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
+                wLine2 = computeSectorLineMaxWidthWithFallback(
+                    tx, ty + step2 / 2f, glyphH2, segInnerR, segOuterR, drawInnerR, drawOuterR, startAngleDeg, sweepAngleDeg)
             }
         }
 
         if (size2 > size1 * 1.15f || measured1 > maxW1) {
             val l1 = ellipsizeWithFallback(lines[0], paintText, wLine1, size2)
             val l2 = ellipsizeWithFallback(lines[1], paintText, wLine2, size2)
-            drawTwoLinesCentered(canvas, l1, l2, drawX, drawY, paintText)
+            drawTwoLinesCentered(canvas, l1, l2, drawX, drawY, step2, paintText)
         } else {
             paintText.textSize = size1
             val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
@@ -963,27 +1034,30 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         val safeRadius = discRadius * 0.86f
         val maxHeight = safeRadius * 1.50f
-        val minSize = Math.min(targetSize, Math.max(12f, Math.min(18f, discRadius * 0.16f)))
+        val minSize = minOf(targetSize, maxOf(12f, minOf(18f, discRadius * 0.16f)))
 
-        var size1 = Math.min(targetSize, maxHeight)
-        var maxW1 = computeCircleChordWidth(safeRadius, size1)
+        var size1 = minOf(targetSize, maxHeight)
         paint.textSize = size1
+        var glyphH1 = computeLineGlyphHeight(paint)
+        var maxW1 = computeCircleChordWidth(safeRadius, glyphH1)
         var measured1 = paint.measureText(text)
 
         if (measured1 > maxW1 && maxW1 > 4f) {
-            size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+            size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
             paint.textSize = size1
-            maxW1 = computeCircleChordWidth(safeRadius, size1)
+            glyphH1 = computeLineGlyphHeight(paint)
+            maxW1 = computeCircleChordWidth(safeRadius, glyphH1)
             measured1 = paint.measureText(text)
             if (measured1 > maxW1 && size1 > minSize) {
-                size1 = Math.max(minSize, size1 * ((maxW1 * 0.94f) / measured1))
+                size1 = maxOf(minSize, size1 * ((maxW1 * 0.94f) / measured1))
                 paint.textSize = size1
-                maxW1 = computeCircleChordWidth(safeRadius, size1)
+                glyphH1 = computeLineGlyphHeight(paint)
+                maxW1 = computeCircleChordWidth(safeRadius, glyphH1)
                 measured1 = paint.measureText(text)
             }
         }
 
-        val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.25f
+        val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.4f
         val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
         if (!canTryTwoLines || preferOneLine) {
             val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
@@ -998,27 +1072,34 @@ class WheelPad(attributesMap: Map<String, Any>,
             return
         }
 
-        var size2 = Math.min(targetSize * 0.85f, maxHeight / 2.25f)
+        var size2 = minOf(targetSize * 0.85f, maxHeight / 2.45f)
         paint.textSize = size2
-        var maxLineW2 = Math.max(paint.measureText(lines[0]), paint.measureText(lines[1]))
-        var maxW2 = computeCircleChordWidth(safeRadius, size2 * 2.15f)
+        var glyphH2 = computeLineGlyphHeight(paint)
+        var step2 = computeTwoLineStep(paint)
+        // 两行文本总高度 = 行距 + 单行字形高
+        var maxW2 = computeCircleChordWidth(safeRadius, step2 + glyphH2)
+        var maxLineW2 = maxOf(paint.measureText(lines[0]), paint.measureText(lines[1]))
 
         if (maxLineW2 > maxW2 && maxW2 > 4f) {
-            size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+            size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
             paint.textSize = size2
-            maxW2 = computeCircleChordWidth(safeRadius, size2 * 2.15f)
-            maxLineW2 = Math.max(paint.measureText(lines[0]), paint.measureText(lines[1]))
+            glyphH2 = computeLineGlyphHeight(paint)
+            step2 = computeTwoLineStep(paint)
+            maxW2 = computeCircleChordWidth(safeRadius, step2 + glyphH2)
+            maxLineW2 = maxOf(paint.measureText(lines[0]), paint.measureText(lines[1]))
             if (maxLineW2 > maxW2 && size2 > minSize) {
-                size2 = Math.max(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
+                size2 = maxOf(minSize, size2 * ((maxW2 * 0.94f) / maxLineW2))
                 paint.textSize = size2
-                maxW2 = computeCircleChordWidth(safeRadius, size2 * 2.15f)
+                glyphH2 = computeLineGlyphHeight(paint)
+                step2 = computeTwoLineStep(paint)
+                maxW2 = computeCircleChordWidth(safeRadius, step2 + glyphH2)
             }
         }
 
         if (size2 > size1 * 1.15f || measured1 > maxW1) {
             val l1 = ellipsizeWithFallback(lines[0], paint, maxW2, size2)
             val l2 = ellipsizeWithFallback(lines[1], paint, maxW2, size2)
-            drawTwoLinesCentered(canvas, l1, l2, cx, cy, paint)
+            drawTwoLinesCentered(canvas, l1, l2, cx, cy, step2, paint)
         } else {
             paint.textSize = size1
             val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
@@ -1092,10 +1173,10 @@ class WheelPad(attributesMap: Map<String, Any>,
         canvas.drawText(text, cx, baselineY, paint)
     }
 
-    private fun drawTwoLinesCentered(canvas: Canvas, l1: String, l2: String, cx: Float, cy: Float, paint: Paint) {
-        val fm = paint.fontMetrics
-        val lineStep = (fm.descent - fm.ascent) * 1.08f
-        val baseCenter = cy - (fm.ascent + fm.descent) / 2.0f
+    private fun drawTwoLinesCentered(canvas: Canvas, l1: String, l2: String, cx: Float, cy: Float,
+                                    lineStep: Float, paint: Paint) {
+        paint.getFontMetrics(tempFontMetrics)
+        val baseCenter = cy - (tempFontMetrics.ascent + tempFontMetrics.descent) / 2.0f
         canvas.drawText(l1, cx, baseCenter - lineStep / 2.0f, paint)
         canvas.drawText(l2, cx, baseCenter + lineStep / 2.0f, paint)
     }
@@ -1487,17 +1568,7 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         contentValues.put("extra_attributes", Gson().toJson(buildExtraAttributes()))
 
-        val combinedSegments = ArrayList<String>()
-        for (i in segmentValues.indices) {
-            val value = segmentValues[i]
-            val name = if (i < segmentNames.size) segmentNames[i] else ""
-            if (name.isNotEmpty()) {
-                combinedSegments.add("$value|$name")
-            } else {
-                combinedSegments.add(value)
-            }
-        }
-        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, combinedSegments.joinToString(","))
+        contentValues.put(COLUMN_STRING_ELEMENT_VALUE, serializeSegmentValues())
         elementController.updateElement(elementId!!, contentValues)
     }
 
@@ -1606,17 +1677,7 @@ class WheelPad(attributesMap: Map<String, Any>,
 
             cv.put("extra_attributes", Gson().toJson(buildExtraAttributes()))
 
-            val combinedSegments = ArrayList<String>()
-            for (i in segmentValues.indices) {
-                val value = segmentValues[i]
-                val name = if (i < segmentNames.size) segmentNames[i] else ""
-                if (name.isNotEmpty()) {
-                    combinedSegments.add("$value|$name")
-                } else {
-                    combinedSegments.add(value)
-                }
-            }
-            cv.put(COLUMN_STRING_ELEMENT_VALUE, combinedSegments.joinToString(","))
+            cv.put(COLUMN_STRING_ELEMENT_VALUE, serializeSegmentValues())
             elementController.addElement(cv)
         }
         delete.setOnClickListener {
@@ -1650,7 +1711,22 @@ class WheelPad(attributesMap: Map<String, Any>,
             if (this.alignSegmentEdge) SEGMENT_ALIGNMENT_EDGE else SEGMENT_ALIGNMENT_CENTER)
         extraAttrs.addProperty(EXTRA_WHEEL_DIAMETER, this.diameter)
         extraAttrs.addProperty(EXTRA_TRIGGER_DIAMETER, this.triggerDiameter)
+        // 名称单独存 JSON 数组，避免用户输入逗号把 element_value 的分区结构撑坏
+        val namesArray = com.google.gson.JsonArray()
+        for (i in 0 until segmentCount) {
+            namesArray.add(if (i < segmentNames.size) segmentNames[i] else "")
+        }
+        extraAttrs.add(EXTRA_SEGMENT_NAMES, namesArray)
         return extraAttrs
+    }
+
+    /** element_value 只存纯键位，空位保留为空串，保证索引与分区一一对应。 */
+    private fun serializeSegmentValues(): String {
+        val list = ArrayList<String>(segmentCount)
+        for (i in 0 until segmentCount) {
+            list.add(if (i < segmentValues.size) segmentValues[i] else "")
+        }
+        return list.joinToString(",")
     }
 
     protected fun setSegmentCount(count: Int) {
