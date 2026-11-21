@@ -869,7 +869,7 @@
     <string name="crown_menu_current_plan">当前方案</string>
     <string name="crown_config_segment_layout">布局</string>
     <string name="crown_config_segment_touch">触控</string>
-    <string name="crown_config_segment_feedback">反馈</string>
+    <string name="crown_config_segment_feedback">振动</string>
     <string name="crown_menu_settings_summary">触控灵敏度、滚轮速度、震动</string>
     <string name="crown_menu_exit_crown">关闭王冠</string>
     <string name="crown_menu_edit_layout">编辑布局</string>
