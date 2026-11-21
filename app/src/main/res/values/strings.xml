@@ -966,7 +966,6 @@
     <string name="crown_store_empty_state_message">Once a profile is merged into the GitHub Store repo, it will pop up here.</string>
     <string name="crown_store_my_empty_message">No local profiles yet. Import or create a Crown profile and it will appear here.</string>
     <string name="crown_store_local_tools">Local toolkit</string>
-    <string name="crown_store_local_profile_id">Local ID: %1$s</string>
     <string name="crown_store_action_use_profile">Use this profile</string>
     <string name="crown_store_layout_basis">Fit: %1$s</string>
     <string name="crown_store_layout_orientation_landscape">landscape</string>

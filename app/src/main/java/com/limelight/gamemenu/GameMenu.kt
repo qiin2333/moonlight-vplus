@@ -1928,7 +1928,6 @@ class GameMenu(
         }
     }
 
-    private fun dpToPx(dp: Int): Int = (dp * game.resources.displayMetrics.density).toInt()
 
     /** 解析 action id → Triple(label, iconRes, iconText)，无效返回 null。 */
     private fun resolveAction(id: String): Triple<String, Int, String?>? {

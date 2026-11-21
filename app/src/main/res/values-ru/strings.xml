@@ -827,7 +827,6 @@
     <string name="crown_store_empty_state_message">Профиль появится здесь после принятия в репозиторий каталога на GitHub.</string>
     <string name="crown_store_my_empty_message">Локальных профилей нет. Импортируйте или создайте Crown.</string>
     <string name="crown_store_local_tools">Инструменты</string>
-    <string name="crown_store_local_profile_id">Локальный ID: %1$s</string>
     <string name="crown_store_layout_basis">Экран: %1$s</string>
     <string name="crown_store_layout_orientation_landscape">альбомный</string>
     <string name="crown_store_layout_orientation_portrait">книжный</string>

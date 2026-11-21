@@ -1896,7 +1896,6 @@
     <string name="crown_store_empty_state_message">等配置被合并进 GitHub Store 后，就会乖乖出现在这里。</string>
     <string name="crown_store_my_empty_message">还没有本地配置。导入或创建一套王冠配置后，它会显示在这里。</string>
     <string name="crown_store_local_tools">本地小工具</string>
-    <string name="crown_store_local_profile_id">本地 ID：%1$s</string>
     <string name="crown_store_action_use_profile">使用这套配置</string>
     <string name="crown_store_layout_basis">适配：%1$s</string>
     <string name="crown_store_layout_orientation_landscape">横屏</string>

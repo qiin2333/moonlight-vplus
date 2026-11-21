@@ -71,7 +71,6 @@ class ElementController(private val controllerManager: ControllerManager, layout
     private var mode: Mode = Mode.Normal
     private var returnToGameMenuAfterEdit: (() -> Unit)? = null
     private var pageEdit: SuperPageLayout
-    private var lastElementSettingPage: SuperPageLayout? = null
     private val bottomViewAmount: Int
     private var editGridView: EditGridView
     private var editGridWidth = 1
