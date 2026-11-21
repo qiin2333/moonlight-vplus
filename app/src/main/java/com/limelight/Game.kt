@@ -796,7 +796,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun refreshVirtualControllerLayout() {
         val vc = virtualController ?: return
         vc.refreshLayout()
-        vc.show()
     }
 
     /** Whether the resume-stream preference is enabled. */
@@ -882,6 +881,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             conn!!,
             this,
             prefConfig,
+            screenGamepadEnabled = prefConfig.onscreenController || virtualController != null,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
             onExitStream = ::exitStreamFromDriverShortcut
         )
@@ -1245,7 +1245,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (!prefConfig.multiController) {
             gamepadMask = 1
         }
-        if (prefConfig.onscreenController) {
+        if (prefConfig.onscreenController || virtualController != null) {
             gamepadMask = gamepadMask or 1
         }
 
@@ -1449,7 +1449,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         touchInputHandler.initTouchContexts(conn!!, streamView, prefConfig)
 
-        if (virtualController != null && prefConfig.onscreenController) {
+        if (virtualController != null) {
             refreshVirtualControllerLayout()
         }
 
@@ -1630,7 +1630,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             schedulePipOverlayRestore(snapshot)
         }
 
-        if (snapshot.virtualControllerVisible && prefConfig.onscreenController) {
+        if (snapshot.virtualControllerVisible) {
             virtualController?.show()
         } else {
             virtualController?.hide()
@@ -2716,7 +2716,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     private fun finalizeVirtualControllerAfterStop(wasVisible: Boolean?) {
         if (wasVisible == null) return
-        if (wasVisible && prefConfig.onscreenController) {
+        if (wasVisible) {
             virtualController?.show()
         } else {
             virtualController?.hide()
@@ -3780,21 +3780,26 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun toggleVirtualController() {
-        if (virtualController != null && virtualController?.elements?.isNotEmpty() == true) {
-            if (isVirtualControllerVisible()) {
-                virtualController?.hide()
-                Toast.makeText(this, getString(R.string.toast_virtual_controller_hidden), Toast.LENGTH_SHORT).show()
-            } else {
-                virtualController?.show()
-                Toast.makeText(this, getString(R.string.toast_virtual_controller_shown), Toast.LENGTH_SHORT).show()
-            }
+        var vc = virtualController
+        if (vc == null) {
+            vc = VirtualController(controllerHandler, streamView.parent as FrameLayout, this)
+            virtualController = vc
+            controllerHandler.enableScreenGamepad()
+            vc.refreshLayout()
+            Toast.makeText(this, getString(R.string.toast_virtual_controller_shown), Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (vc.isVisible) {
+            vc.hide()
+            Toast.makeText(this, getString(R.string.toast_virtual_controller_hidden), Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, getString(R.string.toast_virtual_controller_not_enabled), Toast.LENGTH_SHORT).show()
+            vc.show()
+            Toast.makeText(this, getString(R.string.toast_virtual_controller_shown), Toast.LENGTH_SHORT).show()
         }
     }
 
     fun isVirtualControllerVisible(): Boolean =
-        virtualController?.elements?.firstOrNull()?.visibility == View.VISIBLE
+        virtualController?.isVisible == true
 
     fun initializeControllerManager() {
         val manager = controllerManager ?: ControllerManager(streamView.parent as FrameLayout, this)

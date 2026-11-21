@@ -63,6 +63,7 @@ class ControllerHandler(
     internal val conn: NvConnection,
     private val gestures: GameGestures,
     internal val prefConfig: PreferenceConfiguration,
+    screenGamepadEnabled: Boolean = prefConfig.onscreenController,
     private val onTogglePerformanceOverlay: () -> Unit = {},
     private val onExitStream: () -> Unit = { activityContext.finish() }
 ) : InputManager.InputDeviceListener, UsbDriverListener {
@@ -385,6 +386,9 @@ class ControllerHandler(
     }
     private var hasGameController = false
     @Volatile internal var stopped = false
+    @Volatile internal var screenGamepadEnabled = screenGamepadEnabled
+        private set
+    @Volatile private var runtimeScreenGamepadActivated = screenGamepadEnabled && !prefConfig.onscreenController
 
     private val currentControllers = AtomicInteger()
     private val initialControllerSlots = InitialControllerSlots()
@@ -669,9 +673,8 @@ class ControllerHandler(
                             }
                             sendControllerInputPacketLocked(survivor)
                         } else if (number.toInt() == 0 &&
-                            (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad)) {
-                            val screenMetadata = ControllerArrivalMetadata(
-                                MoonBridge.LI_CTYPE_XBOX, STANDARD_GAMEPAD_BUTTON_FLAGS, 0)
+                            (screenGamepadEnabled || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad)) {
+                            val screenMetadata = screenGamepadFallbackMetadata()
                             controllerArrivalMetadata[0] = screenMetadata
                             check(sendControllerArrivalMetadataLocked(0, screenMetadata) == 0)
                             sendControllerInputPacketLocked(defaultContext)
@@ -1407,8 +1410,7 @@ class ControllerHandler(
 
             val result = if (context === defaultContext) synchronized(arrivalMetadataLock) {
                 if (!isControllerSlotEnabled(0)) -2 else sendControllerArrivalMetadataLocked(
-                    0, controllerArrivalMetadata[0] ?: ControllerArrivalMetadata(
-                        MoonBridge.LI_CTYPE_XBOX, STANDARD_GAMEPAD_BUTTON_FLAGS, 0))
+                    0, controllerArrivalMetadata[0] ?: screenGamepadFallbackMetadata())
             } else context.sendControllerArrival()
             context.controllerArrival.recordAttempt(result).also { reported ->
                 if (reported && context is InputDeviceContext) {
@@ -1446,6 +1448,12 @@ class ControllerHandler(
                 ) {
                     sendControllerInputPacket(context)
                 }
+            }
+
+            if (screenGamepadEnabled && !defaultContext.controllerArrival.isReported &&
+                reportControllerArrival(defaultContext)
+            ) {
+                sendControllerInputPacket(defaultContext)
             }
 
             // Driver contexts are owned by their transport threads and continuously
@@ -1925,8 +1933,36 @@ class ControllerHandler(
     internal fun getActiveControllerMask(): Short {
         val local = localControllerContexts().filter { isContextUsable(it) && it.assignedControllerNumber }
             .fold(0) { mask, context -> mask or (1 shl context.controllerNumber.toInt()) }
-        val screen = if (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad) 1 else 0
+        val screen = if (screenGamepadEnabled || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad) 1 else 0
         return usbHandoff.activeMask(prefConfig.multiController, currentControllers.get(), initialControllers.toInt(), local, screen)
+    }
+
+    /** Reserve player 1 for the screen gamepad for the rest of this connection. */
+    fun enableScreenGamepad() {
+        if (screenGamepadEnabled || stopped) return
+        val primaryAlreadyActive = isControllerSlotEnabled(0)
+        runtimeScreenGamepadActivated = true
+        screenGamepadEnabled = true
+        if (!primaryAlreadyActive) {
+            // A previously absent slot needs an arrival. An existing slot must be
+            // left alone: Sunshine may reject an arrival for an allocated pad.
+            synchronized(defaultContext.controllerArrival) {
+                defaultContext.controllerArrival.reset()
+            }
+        }
+        sendControllerInputPacket(defaultContext)
+    }
+
+    private fun screenGamepadFallbackMetadata(): ControllerArrivalMetadata {
+        var capabilities = 0
+        if (runtimeScreenGamepadActivated) {
+            capabilities = MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt()
+            if (deviceVibrator.hasVibrator()) {
+                capabilities = capabilities or MoonBridge.LI_CCAP_RUMBLE.toInt()
+            }
+        }
+        return ControllerArrivalMetadata(
+            MoonBridge.LI_CTYPE_XBOX, STANDARD_GAMEPAD_BUTTON_FLAGS, capabilities.toShort())
     }
 
     /**
