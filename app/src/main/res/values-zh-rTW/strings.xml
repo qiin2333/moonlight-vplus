@@ -1255,4 +1255,7 @@
     <string name="perf_sheet_previous_page">上一頁</string>
     <string name="perf_sheet_next_page">下一頁</string>
     <string name="perf_sheet_settings">設定</string>
+    <string name="crown_config_segment_layout">佈局</string>
+    <string name="crown_config_segment_touch">觸控</string>
+    <string name="crown_config_segment_feedback">振動</string>
 </resources>

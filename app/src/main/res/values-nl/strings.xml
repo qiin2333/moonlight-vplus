@@ -293,4 +293,7 @@
     <string name="game_menu_perf_gestures_long_only">Alleen lang indrukken</string>
     <string name="game_menu_perf_gestures_custom">Huidige gebaren zijn aangepast</string>
     <string name="game_menu_perf_moon">Maanfase</string>
+    <string name="crown_config_segment_layout">Indeling</string>
+    <string name="crown_config_segment_touch">Aanraking</string>
+    <string name="crown_config_segment_feedback">Trilling</string>
 </resources>

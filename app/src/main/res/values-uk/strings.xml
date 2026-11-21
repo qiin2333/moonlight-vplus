@@ -362,4 +362,7 @@
     <string name="game_menu_perf_gestures_long_only">Лише утримання</string>
     <string name="game_menu_perf_gestures_custom">Поточні жести налаштовано вручну</string>
     <string name="game_menu_perf_moon">Фаза місяця</string>
+    <string name="crown_config_segment_layout">Розкладка</string>
+    <string name="crown_config_segment_touch">Дотик</string>
+    <string name="crown_config_segment_feedback">Вібрація</string>
 </resources>

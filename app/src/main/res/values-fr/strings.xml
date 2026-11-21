@@ -364,4 +364,7 @@
     <string name="game_menu_perf_gestures_long_only">Appui long</string>
     <string name="game_menu_perf_gestures_custom">Les gestes actuels sont personnalisés</string>
     <string name="game_menu_perf_moon">Phase lunaire</string>
+    <string name="crown_config_segment_layout">Disposition</string>
+    <string name="crown_config_segment_touch">Tactile</string>
+    <string name="crown_config_segment_feedback">Vibration</string>
 </resources>

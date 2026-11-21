@@ -264,4 +264,7 @@
     <string name="game_menu_perf_gestures_long_only">Yalnızca uzun basma</string>
     <string name="game_menu_perf_gestures_custom">Geçerli hareketler özelleştirilmiş</string>
     <string name="game_menu_perf_moon">Ay evresi</string>
+    <string name="crown_config_segment_layout">Düzen</string>
+    <string name="crown_config_segment_touch">Dokunma</string>
+    <string name="crown_config_segment_feedback">Titreşim</string>
 </resources>

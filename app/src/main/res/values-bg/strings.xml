@@ -234,4 +234,7 @@
     <string name="game_menu_perf_gestures_long_only">Само задържане</string>
     <string name="game_menu_perf_gestures_custom">Текущите жестове са персонализирани</string>
     <string name="game_menu_perf_moon">Фаза на луната</string>
+    <string name="crown_config_segment_layout">Подредба</string>
+    <string name="crown_config_segment_touch">Докосване</string>
+    <string name="crown_config_segment_feedback">Вибрация</string>
 </resources>

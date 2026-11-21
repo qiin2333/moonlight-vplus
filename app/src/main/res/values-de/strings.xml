@@ -354,4 +354,7 @@
     <string name="game_menu_perf_gestures_long_only">Nur Halten</string>
     <string name="game_menu_perf_gestures_custom">Aktuelle Gesten sind benutzerdefiniert</string>
     <string name="game_menu_perf_moon">Mondphase</string>
+    <string name="crown_config_segment_layout">Layout</string>
+    <string name="crown_config_segment_touch">Berührung</string>
+    <string name="crown_config_segment_feedback">Vibration</string>
 </resources>

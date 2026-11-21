@@ -78,4 +78,7 @@
     <string name="game_menu_perf_gestures_long_only">تەنها فشاری درێژ</string>
     <string name="game_menu_perf_gestures_custom">ئاماژەکان بە دلخوازن</string>
     <string name="game_menu_perf_moon">قۆناغی مانگ</string>
+    <string name="crown_config_segment_layout">ڕێکخستن</string>
+    <string name="crown_config_segment_touch">دەستدان</string>
+    <string name="crown_config_segment_feedback">لەرزین</string>
 </resources>

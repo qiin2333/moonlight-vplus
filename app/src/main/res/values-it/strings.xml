@@ -358,4 +358,7 @@
     <string name="game_menu_perf_gestures_long_only">Solo pressione lunga</string>
     <string name="game_menu_perf_gestures_custom">I gesti attuali sono personalizzati</string>
     <string name="game_menu_perf_moon">Fase lunare</string>
+    <string name="crown_config_segment_layout">Layout</string>
+    <string name="crown_config_segment_touch">Tocco</string>
+    <string name="crown_config_segment_feedback">Vibrazione</string>
 </resources>

@@ -605,4 +605,7 @@
     <string name="game_menu_perf_gestures_long_only">Solo pulsación larga</string>
     <string name="game_menu_perf_gestures_custom">Los gestos actuales son personalizados</string>
     <string name="game_menu_perf_moon">Fase lunar</string>
+    <string name="crown_config_segment_layout">Diseño</string>
+    <string name="crown_config_segment_touch">Táctil</string>
+    <string name="crown_config_segment_feedback">Vibración</string>
 </resources>
