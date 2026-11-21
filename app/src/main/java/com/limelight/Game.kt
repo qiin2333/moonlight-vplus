@@ -1431,8 +1431,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             decoderRenderer = null
         }
 
-        // Refresh controller motion settings before rebuilding the handler.
+        // A background resume may reuse this Activity after input settings changed.
         val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+        prefConfig.absoluteMouseMode = latestConfig.absoluteMouseMode
         prefConfig.refreshControllerMotionPreferencesFrom(latestConfig)
 
         createConnectionAndHandler()
@@ -2309,7 +2310,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
             keyboardInputHandler.releaseForwardedKeys()
         }
-        if (grab && !prefConfig.enableNativeMousePointer) {
+        if (grab && !prefConfig.usesSystemMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
                 inputCaptureProvider.showCursor()
@@ -2438,18 +2439,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         LimeLog.info("Setting native mouse pointer: $enable")
         prefConfig.enableNativeMousePointer = enable
 
-        if (enable) {
-            setInputGrabState(grabbedInput)
-            cursorVisible = true
-            inputCaptureProvider.showCursor()
+        cursorVisible = prefConfig.usesSystemMousePointer
+        setInputGrabState(if (enable) grabbedInput else true)
+        if (cursorVisible) {
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.hide()
-        } else {
-            cursorVisible = false
-            inputCaptureProvider.hideCursor()
-            setInputGrabState(true)
         }
         cursorServiceManager.refreshCursorMode()
+    }
+
+    fun setExternalMouseDesktopMode(enabled: Boolean) {
+        prefConfig.absoluteMouseMode = enabled
+        defaultPreferences().edit().putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled).apply()
+        enableNativeMousePointer(true)
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {

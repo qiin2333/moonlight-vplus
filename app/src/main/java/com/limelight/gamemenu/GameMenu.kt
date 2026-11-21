@@ -723,6 +723,26 @@ class GameMenu(
             )
         }
 
+        if (game.prefConfig.enableNativeMousePointer && game.prefConfig.supportsDesktopMouseMode &&
+            !game.prefConfig.screenDs5Touchpad) {
+            val toggleDesktopMode = Runnable {
+                game.setExternalMouseDesktopMode(!game.prefConfig.absoluteMouseMode)
+            }
+            touchModeOptionsList.add(
+                MenuOption(
+                    label = getString(R.string.title_checkbox_absolute_mouse_mode),
+                    isWithGameFocus = false,
+                    runnable = toggleDesktopMode,
+                    iconKey = null,
+                    isShowIcon = false,
+                    isKeepDialog = true,
+                    subtitle = getString(R.string.game_menu_external_mouse_desktop_summary),
+                    inlineControl = InlineControl.Toggle(game.prefConfig.absoluteMouseMode, toggleAction = toggleDesktopMode),
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
+                )
+            )
+        }
+
         if (game.prefConfig.screenDs5Touchpad) {
             val toggleSingleTap = Runnable {
                 game.screenDs5Touchpad.setSingleTapToClick(!game.prefConfig.screenDs5SingleTapToClick)

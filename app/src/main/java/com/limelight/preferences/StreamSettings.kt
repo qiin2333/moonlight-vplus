@@ -3297,9 +3297,8 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             // Hide remote desktop mouse mode on pre-Oreo (which doesn't have pointer capture)
             // and NVIDIA SHIELD devices (which support raw mouse input in pointer capture mode)
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                    requireActivity().packageManager.hasSystemFeature("com.nvidia.feature.shield")) {
-                findPreference<Preference>("checkbox_absolute_mouse_mode")?.let { it.parent?.removePreference(it) }
+            if (!PreferenceConfiguration.supportsDesktopMouseMode(requireContext())) {
+                findPreference<Preference>(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING)?.let { it.parent?.removePreference(it) }
             }
 
             // Keep the controller-sensor option visible on Android 12/12L as an explicit

@@ -7,7 +7,9 @@ import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.preference.PreferenceManager
 import com.limelight.binding.input.capture.InputCaptureProvider
+import com.limelight.preferences.PreferenceConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,6 +19,35 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class NativeKeyboardCaptureTest {
+    @Test
+    fun switchingDesktopMouseModeReconfiguresCaptureWithoutChangingPreset() {
+        KeyboardTestScenario.launch().use { scenario ->
+            scenario.onActivity { game ->
+                assumeTrue(game.prefConfig.supportsDesktopMouseMode)
+                val prefs = PreferenceManager.getDefaultSharedPreferences(game)
+                val key = PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING
+                val original = prefs.all[key] as? Boolean
+                try {
+                    game.setTouchMode(false)
+                    game.setInputGrabState(true)
+                    game.enableNativeMousePointer(true)
+                    for (desktop in listOf(true, false, true)) {
+                        game.setExternalMouseDesktopMode(desktop)
+                        assertEquals(!desktop, game.inputCaptureProvider.isCapturingEnabled())
+                        assertEquals(desktop, game.cursorVisible)
+                        assertEquals(desktop, PreferenceConfiguration.readPreferences(game).absoluteMouseMode)
+                        assertTrue(game.prefConfig.enableNativeMousePointer)
+                        assertFalse(game.prefConfig.touchscreenTrackpad)
+                    }
+                } finally {
+                    val editor = prefs.edit()
+                    if (original == null) editor.remove(key) else editor.putBoolean(key, original)
+                    editor.apply()
+                }
+            }
+        }
+    }
+
     @Test
     fun captureFlagIsAvailableAndGrabWaitsForAConnection() {
         assumeTrue(
@@ -46,6 +77,7 @@ class NativeKeyboardCaptureTest {
                 val captureState = InputCaptureProvider::class.java.getDeclaredField("isCapturing").apply {
                     isAccessible = true
                 }
+                game.prefConfig.absoluteMouseMode = true
                 game.enableNativeMousePointer(true)
                 sendCursorShortcut(game)
                 assertTrue(game.grabbedInput)

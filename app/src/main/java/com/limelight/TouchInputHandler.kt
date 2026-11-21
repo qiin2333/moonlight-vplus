@@ -27,6 +27,7 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.ExternalMouseMode
 import com.limelight.ui.StreamView
 import kotlin.math.*
 
@@ -250,7 +251,7 @@ class TouchInputHandler(private val game: Game) {
         val deviceSources = event.device?.sources ?: 0
 
         // 本地鼠标指针模式
-        if (game.prefConfig.enableNativeMousePointer && (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0) {
+        if (game.prefConfig.usesSystemMousePointer && (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0) {
             val isActualMouse = eventSource == InputDevice.SOURCE_MOUSE ||
                 eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
                 (event.pointerCount >= 1 && event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
@@ -357,7 +358,8 @@ class TouchInputHandler(private val game: Game) {
                             game.conn?.sendMouseMove(deltaX, deltaY)
                         }
                     }
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
+                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 &&
+                    allowAbsoluteMouseFallback(event)) {
                     val device = event.device
                     if (device != null) {
                         val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
@@ -373,7 +375,7 @@ class TouchInputHandler(private val game: Game) {
                             }
                         }
                     }
-                } else if (view != null) {
+                } else if (view != null && allowAbsoluteMouseFallback(event)) {
                     updateMousePosition(view, event)
                 }
 
@@ -785,6 +787,11 @@ class TouchInputHandler(private val game: Game) {
 
         return true
     }
+
+    // Ignore stale absolute motion during capture transitions, but still forward buttons and scrolling.
+    private fun allowAbsoluteMouseFallback(event: MotionEvent): Boolean =
+        game.prefConfig.externalMouseMode != ExternalMouseMode.RELATIVE_CAPTURE ||
+            event.getToolType(0) != MotionEvent.TOOL_TYPE_MOUSE
 
     // ---- updateMousePosition ----
 

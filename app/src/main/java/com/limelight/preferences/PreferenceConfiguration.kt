@@ -29,7 +29,21 @@ import kotlin.math.sqrt
 private fun SharedPreferences.getBooleanOrNull(key: String): Boolean? =
     if (contains(key)) getBoolean(key, false) else null
 
-class PreferenceConfiguration {
+internal enum class ExternalMouseMode {
+    OTHER_PRESET, SYSTEM_POINTER, RELATIVE_CAPTURE;
+
+    companion object {
+        fun resolve(externalMouseSelected: Boolean, desktopModeSupported: Boolean, desktopModeEnabled: Boolean) = when {
+            !externalMouseSelected -> OTHER_PRESET
+            // Preserve the native pointer on devices which don't expose the switch.
+            desktopModeEnabled || !desktopModeSupported -> SYSTEM_POINTER
+            else -> RELATIVE_CAPTURE
+        }
+    }
+}
+
+class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode: Boolean) {
+    constructor() : this(false)
 
     internal fun refreshControllerMotionPreferencesFrom(latest: PreferenceConfiguration) {
         gamepadMotionSensors = latest.gamepadMotionSensors
@@ -212,6 +226,10 @@ class PreferenceConfiguration {
     var framePacing = 0
     var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
+    internal val externalMouseMode: ExternalMouseMode
+        get() = ExternalMouseMode.resolve(enableNativeMousePointer, supportsDesktopMouseMode, absoluteMouseMode)
+    internal val usesSystemMousePointer: Boolean
+        get() = externalMouseMode == ExternalMouseMode.SYSTEM_POINTER
     var mouseAxisCorrection = MouseAxisCorrection.OFF
     var enableNativeMousePointer = false
     var enableAudioFx = false
@@ -548,7 +566,7 @@ class PreferenceConfiguration {
     }
 
     fun copy(): PreferenceConfiguration {
-        val copy = PreferenceConfiguration()
+        val copy = PreferenceConfiguration(supportsDesktopMouseMode)
         copy.width = this.width
         copy.height = this.height
         copy.isNativeResolution = this.isNativeResolution
@@ -604,6 +622,7 @@ class PreferenceConfiguration {
         copy.escMenuKey = this.escMenuKey
         copy.enableStartKeyMenu = this.enableStartKeyMenu
         copy.enableNativeMousePointer = this.enableNativeMousePointer
+        copy.absoluteMouseMode = absoluteMouseMode
         copy.mouseAxisCorrection = this.mouseAxisCorrection
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
         copy.hevcLowLatencyMode = this.hevcLowLatencyMode
@@ -706,7 +725,10 @@ class PreferenceConfiguration {
         const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
         const val FRAME_PACING_PREF_STRING = "frame_pacing"
         const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
-        private const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
+        internal const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
+        internal fun supportsDesktopMouseMode(context: Context): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                !context.packageManager.hasSystemFeature("com.nvidia.feature.shield")
         private const val MOUSE_AXIS_CORRECTION_PREF_STRING = "list_mouse_axis_correction"
         // Card visibility preferences
         private const val SHOW_BITRATE_CARD_PREF_STRING = "checkbox_show_bitrate_card"
@@ -1409,7 +1431,7 @@ class PreferenceConfiguration {
         @JvmStatic
         fun readPreferences(context: Context, nativeDisplay: Display?): PreferenceConfiguration {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val config = PreferenceConfiguration()
+            val config = PreferenceConfiguration(supportsDesktopMouseMode(context))
 
             // Migrate legacy preferences to the new locations
             if (prefs.contains(LEGACY_ENABLE_51_SURROUND_PREF_STRING)) {

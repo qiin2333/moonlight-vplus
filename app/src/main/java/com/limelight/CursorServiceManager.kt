@@ -238,7 +238,7 @@ class CursorServiceManager(
     private fun shouldUseLocalMode(): Boolean {
         return CursorModePolicy.shouldUseLocalMode(
             nativePointerSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N,
-            nativePointerEnabled = prefConfig.enableNativeMousePointer,
+            nativePointerEnabled = prefConfig.usesSystemMousePointer,
             touchpadEnabled = prefConfig.touchscreenTrackpad,
             localCursorEnabled = prefConfig.enableLocalCursorRendering,
             hasCursorOverlay = cursorOverlay != null,
@@ -252,7 +252,7 @@ class CursorServiceManager(
             nativePointerSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N,
             touchpadEnabled = prefConfig.touchscreenTrackpad,
             localCursorEnabled = prefConfig.enableLocalCursorRendering,
-            nativePointerEnabled = prefConfig.enableNativeMousePointer
+            nativePointerEnabled = prefConfig.usesSystemMousePointer
         )
     }
 
@@ -386,7 +386,7 @@ class CursorServiceManager(
         }
         val shape = scaleShapeForView(shapeId, source)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
             try {
                 streamView.pointerIcon = PointerIcon.create(
                     shape.bitmap,
@@ -432,7 +432,7 @@ class CursorServiceManager(
     }
 
     private fun hideLocalPresentation() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
             try {
                 streamView.pointerIcon = PointerIcon.getSystemIcon(
                     streamView.context,
@@ -447,7 +447,7 @@ class CursorServiceManager(
     private fun restoreDefaultCursor() {
         uiCallback.runOnUi {
             if (!uiCallback.isActivityAlive()) return@runOnUi
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.enableNativeMousePointer) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
                 try {
                     streamView.pointerIcon = PointerIcon.getSystemIcon(
                         streamView.context,

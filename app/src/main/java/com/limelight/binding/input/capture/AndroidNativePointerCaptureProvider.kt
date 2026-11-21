@@ -64,7 +64,7 @@ class AndroidNativePointerCaptureProvider(
         }
 
         Handler(Looper.getMainLooper()).postDelayed({
-            if (hasCaptureCompatibleInputDevice()) {
+            if (isCapturing && !isCursorVisible && targetView.hasWindowFocus() && hasCaptureCompatibleInputDevice()) {
                 targetView.requestPointerCapture()
             }
         }, 500)
