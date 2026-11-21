@@ -16,10 +16,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 permissions:
-  contents: write
+  contents: read
   packages: read
 
 env:
@@ -40,9 +40,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-          # 全量历史 + tags 只有 tag 构建需要（release notes diff / version floor 推导），PR 用浅克隆提速
-          fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
-          fetch-tags: ${{ github.ref_type == 'tag' }}
+          # History and tags are only needed by the separate release job.
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -60,8 +60,20 @@ jobs:
 
       # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
       # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
-      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      # Branch/PR runs keep rolling snapshots; tag runs only restore to avoid
+      # storing large snapshots scoped to a single tag.
+      - name: Restore Gradle task cache for tag
+        if: github.ref_type == 'tag'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
+
       - name: Cache Gradle build cache (rolling)
+        if: github.ref_type != 'tag'
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/build-cache-1
@@ -127,8 +139,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-          fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
-          fetch-tags: ${{ github.ref_type == 'tag' }}
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -146,8 +158,20 @@ jobs:
 
       # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
       # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
-      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      # Branch/PR runs keep rolling snapshots; tag runs only restore to avoid
+      # storing large snapshots scoped to a single tag.
+      - name: Restore Gradle task cache for tag
+        if: github.ref_type == 'tag'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
+
       - name: Cache Gradle build cache (rolling)
+        if: github.ref_type != 'tag'
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/build-cache-1
@@ -234,6 +258,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: read
+    concurrency:
+      group: moonlight-release-publication
+      queue: max
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -242,6 +272,16 @@ jobs:
           # 发版需要全量历史与 tags：version floor 推导和 release notes diff 都按 tag 检索
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Validate release tag
+        id: release_kind
+        shell: bash
+        run: |
+          prerelease=$(python3 .github/release/prepare-release.py check "$GITHUB_REF_NAME")
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release tag
+        run: bash .github/release/verify-release-tag.sh "$GITHUB_REF_NAME"
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -265,10 +305,27 @@ jobs:
       - name: Accept Android licenses
         run: yes | sdkmanager --licenses > /dev/null
 
+      - name: Recover published release
+        id: existing_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=$(python3 .github/release/publish-release.py recover "$GITHUB_REF_NAME" "$RUNNER_TEMP/recovered.apk")
+          published=$(python3 -c 'import json,sys; print(str(json.load(sys.stdin)["published"]).lower())' <<< "$state")
+          echo "published=$published" >> "$GITHUB_OUTPUT"
+          if [ "$published" = true ]; then
+            code=$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RUNNER_TEMP/recovered.apk" | \
+              python3 -c 'import re,sys; m=re.search(r"^package: .*\bversionCode=\x27([0-9]+)\x27",sys.stdin.read(),re.M); print(m.group(1) if m else ""); sys.exit(0 if m else 1)')
+            echo "REL_APK=$RUNNER_TEMP/recovered.apk" >> "$GITHUB_ENV"
+            echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
+          fi
+
       - name: Remove local.properties (if present)
         run: rm -f local.properties
 
       - name: Create google-services.json from secrets
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: |
           if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
@@ -295,6 +352,7 @@ jobs:
           echo "Using version from tag: $VERSION"
 
       - name: Update version in build.gradle
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: |
           set -e
@@ -303,10 +361,8 @@ jobs:
           VERSION=${TAG#v}
           echo "Updating version to: $VERSION"
 
-          # 每个 MAJOR.MINOR.PATCH 基础版本有 999 个发布槽位，按 tag 创建时间分配。
-          # 这样同一基础版本下的稳定版、hotfix 和不同功能预览 tag 也不会撞号。
-          # PATCH 可省略；历史 tag、前导零、Android 上限和回退基准都由脚本统一校验。
-          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG" app/build.gradle)
+          # Reserve a stable versionCode once for this tag and commit.
+          VERSION_INFO=$(bash .github/release/version-code.sh "$TAG")
           IFS=$'\t' read -r NEW_VERSION_CODE FLOOR FLOOR_SRC <<< "$VERSION_INFO"
           echo "Version floor: $FLOOR (from $FLOOR_SRC)"
 
@@ -325,6 +381,7 @@ jobs:
           echo "Updated release version (floor was $FLOOR from $FLOOR_SRC)"
 
       - name: Decode keystore for Release
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -333,6 +390,7 @@ jobs:
           ls -l my-release.keystore
 
       - name: Build signed NonRoot Release APK
+        if: steps.existing_release.outputs.published != 'true'
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/my-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -341,140 +399,89 @@ jobs:
         run: ./gradlew :app:assembleNonRootRelease --stacktrace
 
       - name: Rename Release APK to Moonlight.V+.<version>.apk
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
         run: |
           set -e
           REL_DIR=app/build/outputs/apk/nonRoot/release
-          # 优先使用 tag 版本号，否则从 metadata 读取
-          if [ -n "$VERSION_NAME" ]; then
-            VERSION="$VERSION_NAME"
-            echo "Using tag version: $VERSION"
-          else
-            VERSION=$(python3 -c "import json; data=json.load(open('$REL_DIR/output-metadata.json')); print(data['elements'][0]['versionName'])")
-            echo "Using metadata version: $VERSION"
-          fi
           SRC_APK=$(ls "$REL_DIR"/*.apk | head -n 1)
-          DEST="$REL_DIR/Moonlight.V+.${VERSION}.apk"
+          DEST="$REL_DIR/Moonlight.V+.${VERSION_NAME}.apk"
           mv "$SRC_APK" "$DEST"
           echo "Renamed APK to: $DEST"
           echo "REL_APK=$DEST" >> $GITHUB_ENV
 
+      - name: Verify release APK
+        run: python3 .github/release/verify-release-apk.py "$REL_APK" "$VERSION_NAME" "$VERSION_CODE"
+
       - name: Generate release notes
+        if: steps.existing_release.outputs.published != 'true'
         shell: bash
-        run: |
-          set -e
-          DATE=$(date +'%Y-%m-%d')
-          V="${VERSION_NAME:-${GITHUB_REF#refs/tags/}}"; V="${V#v}"
-          CUR_TAG="${GITHUB_REF#refs/tags/}"
-          # 只在发版 tag（v*）里找上一个版本，并显式排除当前 tag。
-          # 直接取 `git tag | sed -n 2p` 会选中 issue-*-test-* 这类临时 tag，changelog 区间就错了。
-          PREV_TAG=$(git tag --list 'v*' --sort=-creatordate | grep -Fxv "$CUR_TAG" | head -n 1 || true)
-          echo "Previous release tag: ${PREV_TAG:-<none>}"
-          APK_SHA256=$(sha256sum "$REL_APK" | awk '{print $1}')
-
-          # 定制发布说明一律在 GitHub Release 页面发布后直接编辑，
-          # 不再从仓库根目录读取 RELEASE_NOTES_V*.md 文件。
-          if [ -n "$PREV_TAG" ]; then
-            LOG=$(git log --pretty=format:'%s' "${PREV_TAG}..${CUR_TAG}" --no-merges || true)
-          else
-            LOG=$(git log --pretty=format:'%s' -n 100 --no-merges || true)
-          fi
-
-          # 按 conventional commit 前缀分类
-          FEAT="" FIX="" PERF="" OTHER=""
-          # 正则存入变量，避免 bash [[ =~ ]] 的括号解析问题
-          RE='^(feat|fix|perf|refactor|remove|chore|ci|docs|style|test|build)(\([^)]*\))?:[[:space:]](.+)$'
-          while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            # 提取前缀和描述（支持 type(scope): desc 和 type: desc）
-            if [[ "$line" =~ $RE ]]; then
-              prefix="${BASH_REMATCH[1]}"
-              desc="${BASH_REMATCH[3]}"
-              case "$prefix" in
-                feat)           FEAT+="- ✨ ${desc}"$'\n' ;;
-                fix)            FIX+="- 🐛 ${desc}"$'\n' ;;
-                perf|refactor)  PERF+="- ⚡ ${desc}"$'\n' ;;
-                remove)         OTHER+="- 🗑️ ${desc}"$'\n' ;;
-                # chore/ci/docs/style/test/build → 跳过
-              esac
-            fi
-          done <<< "$LOG"
-
-          # 拼装 release notes
-          {
-            echo "## 🌙 Moonlight V+ ${V}"
-            echo ""
-            echo "感谢你使用 Moonlight V+！如果喜欢，记得点亮一颗 ⭐～"
-            echo ""
-
-            if [ -n "$FEAT" ]; then
-              echo "### 新增"
-              printf '%s' "$FEAT"
-              echo ""
-            fi
-            if [ -n "$PERF" ]; then
-              echo "### 优化"
-              printf '%s' "$PERF"
-              echo ""
-            fi
-            if [ -n "$FIX" ]; then
-              echo "### 修复"
-              printf '%s' "$FIX"
-              echo ""
-            fi
-            if [ -n "$OTHER" ]; then
-              echo "### 其他"
-              printf '%s' "$OTHER"
-              echo ""
-            fi
-
-            # 如果所有分类都为空，列出原始提交
-            if [ -z "$FEAT" ] && [ -z "$FIX" ] && [ -z "$PERF" ] && [ -z "$OTHER" ]; then
-              echo "### 更新内容"
-              if [ -n "$PREV_TAG" ]; then
-                git log --pretty=format:'- %s' "${PREV_TAG}..${CUR_TAG}" --no-merges || true
-              else
-                echo "- 初始发布"
-              fi
-              echo ""
-            fi
-
-            echo "### 📦 下载"
-            echo "- APK 文件：\`Moonlight.V+.${V}.apk\`"
-            echo ""
-            echo "### SHA256"
-            echo ""
-            echo '```text'
-            echo "${APK_SHA256}  Moonlight.V+.${V}.apk"
-            echo '```'
-            echo ""
-            echo "---"
-            echo "如遇到问题，请在 [Issues](../../issues) 反馈。祝你游戏顺利、低延迟满帧！🎮"
-            echo ""
-            echo "*发布于 ${DATE}*"
-          } > release_notes.md
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Moonlight V+ ${{ env.VERSION_NAME }}
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
-          body_path: release_notes.md
-          files: |
-            ${{ env.REL_APK }}
-            app/build/outputs/mapping/nonRootRelease/mapping.txt
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 .github/release/prepare-release.py notes \
+            "$GITHUB_REF_NAME" "$REL_APK" > release_notes.md
+
+      - name: Archive release mapping
+        if: steps.existing_release.outputs.published != 'true'
+        shell: bash
+        run: >-
+          bash .github/release/archive-mapping.sh
+          app/build/outputs/mapping/nonRootRelease/mapping.txt "$REL_APK"
+          "$GITHUB_REF_NAME" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
       - name: Upload Release APK and mapping
+        if: steps.existing_release.outputs.published != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: app-nonroot-release-signed
+          name: app-nonroot-release-signed-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
           path: |
             app/build/outputs/apk/nonRoot/release/Moonlight.V+.*.apk
             app/build/outputs/mapping/nonRootRelease/mapping.txt
+
+      - name: Check release draft
+        if: steps.existing_release.outputs.published != 'true'
+        id: draft_check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CHANNEL: ${{ steps.release_kind.outputs.prerelease == 'true' && 'prerelease' || 'stable' }}
+        run: |
+          state=$(python3 .github/release/publish-release.py preflight "$GITHUB_REF_NAME" "$REL_APK" release_notes.md "$RELEASE_CHANNEL")
+          needs_upload=$(python3 -c 'import json,sys; print(str(json.load(sys.stdin)["needs_upload"]).lower())' <<< "$state")
+          echo "needs_upload=$needs_upload" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK to release draft
+        if: steps.existing_release.outputs.published != 'true'
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
+        with:
+          tag: ${{ github.ref_name }}
+          name: Moonlight V+ ${{ env.VERSION_NAME }}
+          draft: true
+          prerelease: ${{ steps.release_kind.outputs.prerelease == 'true' }}
+          bodyFile: release_notes.md
+          artifacts: ${{ steps.draft_check.outputs.needs_upload == 'true' && env.REL_APK || '' }}
+          allowUpdates: true
+          skipIfReleaseExists: true
+          replacesArtifacts: false
+          artifactErrorsFailBuild: true
+          artifactContentType: application/vnd.android.package-archive
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          omitDraftDuringUpdate: true
+
+      - name: Verify and publish release draft
+        if: steps.existing_release.outputs.published != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CHANNEL: ${{ steps.release_kind.outputs.prerelease == 'true' && 'prerelease' || 'stable' }}
+        run: |
+          python3 .github/release/publish-release.py verify-draft "$GITHUB_REF_NAME" "$REL_APK" release_notes.md "$RELEASE_CHANNEL"
+          bash .github/release/verify-release-tag.sh "$GITHUB_REF_NAME"
+          gh release edit "$GITHUB_REF_NAME" --draft=false -R "$GITHUB_REPOSITORY"
 
       - name: Sync released version to master
         shell: bash
