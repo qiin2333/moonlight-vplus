@@ -23,7 +23,7 @@
             android:layout_gravity="center"
             android:importantForAccessibility="no"
             android:src="@drawable/phc_crown"
-            android:tint="@color/crown_section_label" />
+            app:tint="@color/crown_section_label" />
     </FrameLayout>
 
     <TextView

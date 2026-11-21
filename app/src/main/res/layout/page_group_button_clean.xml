@@ -310,7 +310,7 @@
                         android:layout_height="24dp"
                         android:importantForAccessibility="no"
                         android:src="@drawable/phc_caret_right"
-                        android:tint="@color/crown_text_secondary"/>
+                        app:tint="@color/crown_text_secondary"/>
                 </LinearLayout>
             </LinearLayout>
             

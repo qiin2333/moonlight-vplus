@@ -2,7 +2,7 @@ package com.limelight.binding.input.advance_setting.superpage
 
 import android.content.Context
 import android.util.AttributeSet
-import android.widget.TextView
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import com.limelight.R
@@ -12,7 +12,7 @@ class CrownSectionTextView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = android.R.attr.textViewStyle
-) : TextView(context, attrs, defStyleAttr) {
+) : AppCompatTextView(context, attrs, defStyleAttr) {
     init {
         val attributes = context.obtainStyledAttributes(attrs, R.styleable.CrownSectionTextView, defStyleAttr, 0)
         val iconRes = attributes.getResourceId(R.styleable.CrownSectionTextView_crownSectionIcon, 0)
