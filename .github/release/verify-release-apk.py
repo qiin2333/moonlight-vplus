@@ -3,9 +3,8 @@
 
 Usage: verify-release-apk.py APK VERSION_NAME VERSION_CODE
 
-Uses the pinned release signing certificate in signing-cert.sha256. To exercise
-the verifier in tests, APK_VERIFY_APKSIGNER and APK_VERIFY_AAPT can override
-the Android SDK tool paths. Both tools must still successfully validate the APK.
+To exercise the verifier in tests, APK_VERIFY_APKSIGNER and APK_VERIFY_AAPT
+can override the Android SDK tool paths.
 """
 
 import os
@@ -14,6 +13,11 @@ import re
 import subprocess
 import sys
 import zipfile
+
+# Public certificate fingerprint verified against official v12.15.17 and
+# v12.15.31 releases. Key rotation requires reviewing Android signing lineage
+# and installation compatibility before updating this pin.
+SIGNING_CERT_SHA256 = 'fd582390f042145bea22433299b657ce79be69f23c17171232f55d6cfc12d7ad'
 
 
 def fail(message):
@@ -36,11 +40,6 @@ def main():
     if not apk.is_file() or not re.fullmatch(r'[1-9][0-9]*', expected_code):
         fail('APK must exist and VERSION_CODE must be a positive integer')
 
-    cert_path = Path(__file__).with_name('signing-cert.sha256')
-    expected_cert = cert_path.read_text(encoding='ascii').strip().lower()
-    if not re.fullmatch(r'[0-9a-f]{64}', expected_cert):
-        fail(f'invalid pinned certificate fingerprint: {cert_path}')
-
     sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
     bin_dir = Path(sdk) / 'build-tools' / '36.0.0' if sdk else None
     apksigner = os.environ.get('APK_VERIFY_APKSIGNER') or (str(bin_dir / 'apksigner') if bin_dir else '')
@@ -50,7 +49,7 @@ def main():
 
     signature, signature_stderr = run([apksigner, 'verify', '--print-certs', str(apk)])
     signers = re.findall(r'^Signer #(\d+) certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$', signature, re.MULTILINE)
-    if len(signers) != 1 or signers[0][0] != '1' or signers[0][1].lower() != expected_cert:
+    if len(signers) != 1 or signers[0][0] != '1' or signers[0][1].lower() != SIGNING_CERT_SHA256:
         fail('APK signing certificate does not match the pinned release certificate, or multiple signers are present')
     warnings = [line for line in (signature + '\n' + signature_stderr).splitlines() if line.startswith('WARNING:')]
     if warnings:

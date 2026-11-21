@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate release notes from published releases and the current tag's history."""
+"""Classify a release tag and generate notes from published releases."""
 
 import argparse
 import datetime
@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 TAG_RE = re.compile(r'^v(\d+)\.(\d+)(?:\.(\d+))?(?:[-.]([A-Za-z0-9][A-Za-z0-9.-]*))?$', re.I)
+RELEASE_TAG_RE = re.compile(r'^v[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-(beta\.[0-9]+|beta\.mat\.[0-9]+|rc\.[0-9]+|rc[0-9]+))?$')
 COMMIT_RE = re.compile(r'^(feat|fix|perf|refactor|remove|chore|ci|docs|style|test|build)(?:\([^)]*\))?!?:\s+(.+)$')
 
 
@@ -48,10 +49,25 @@ def releases_from_json(payload):
     if not isinstance(payload, list):
         raise ValueError('GitHub releases response must be an array')
     if payload and isinstance(payload[0], list):
+        if not all(isinstance(page, list) for page in payload):
+            raise ValueError('invalid release page')
         payload = [release for page in payload for release in page]
-    if not all(isinstance(release, dict) for release in payload):
-        raise ValueError('invalid release record')
+    for release in payload:
+        if (not isinstance(release, dict) or not isinstance(release.get('tag_name'), str)
+                or not isinstance(release.get('draft'), bool)
+                or not isinstance(release.get('prerelease'), bool)
+                or (not release['draft'] and not isinstance(release.get('published_at'), str))):
+            raise ValueError('invalid release record')
     return payload
+
+
+def classify(tag, releases):
+    match = RELEASE_TAG_RE.fullmatch(tag)
+    if not match:
+        raise ValueError(f'unsupported tag {tag!r}; use vMAJOR.MINOR.PATCH, -beta.N, or -rc.N')
+    if any(release['tag_name'] == tag and not release['draft'] for release in releases):
+        raise ValueError(f'release {tag} is already published; refusing to overwrite it')
+    return bool(match.group(1))
 
 
 def select_previous(releases, tag, prerelease):
@@ -145,25 +161,28 @@ def render(tag, prerelease, apk, repo, releases):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('tag')
-    parser.add_argument('channel', choices=('stable', 'prerelease'))
-    parser.add_argument('apk')
-    parser.add_argument('--releases-json', help='read GitHub release records from a JSON file')
+    subparsers = parser.add_subparsers(dest='command', required=True)
+    check = subparsers.add_parser('check', help='classify a release tag')
+    check.add_argument('tag')
+    notes = subparsers.add_parser('notes', help='check existing releases and render notes')
+    notes.add_argument('tag')
+    notes.add_argument('apk')
     args = parser.parse_args()
-    repo = os.environ.get('GITHUB_REPOSITORY', '')
     try:
-        if args.releases_json:
-            with open(args.releases_json, encoding='utf-8') as stream:
-                payload = json.load(stream)
+        prerelease = classify(args.tag, [])
+        if args.command == 'check':
+            print(str(prerelease).lower())
         else:
+            repo = os.environ.get('GITHUB_REPOSITORY', '')
             if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo):
                 raise ValueError('GITHUB_REPOSITORY must be set to owner/repository')
             payload = json.loads(run('gh', 'api', '--paginate', '--slurp',
                                      f'repos/{repo}/releases?per_page=100'))
-        print(render(args.tag, args.channel == 'prerelease', args.apk, repo,
-                     releases_from_json(payload)), end='')
+            releases = releases_from_json(payload)
+            classify(args.tag, releases)
+            print(render(args.tag, prerelease, args.apk, repo, releases), end='')
     except (ValueError, OSError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
-        print(f'ERROR: could not generate release notes: {exc}', file=sys.stderr)
+        print(f'ERROR: could not prepare release: {exc}', file=sys.stderr)
         return 1
     return 0
 

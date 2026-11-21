@@ -246,10 +246,8 @@ jobs:
       - name: Validate release tag
         id: release_kind
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          prerelease=$(bash .github/release/release-kind.sh "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY")
+          prerelease=$(python3 .github/release/prepare-release.py check "$GITHUB_REF_NAME")
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
       - name: Checkout audio haptics SDK
@@ -375,15 +373,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          IS_PRERELEASE: ${{ steps.release_kind.outputs.prerelease }}
         run: |
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            channel=prerelease
-          else
-            channel=stable
-          fi
-          python3 .github/release/generate-release-notes.py \
-            "$GITHUB_REF_NAME" "$channel" "$REL_APK" > release_notes.md
+          python3 .github/release/prepare-release.py notes \
+            "$GITHUB_REF_NAME" "$REL_APK" > release_notes.md
 
       - name: Archive release mapping
         shell: bash

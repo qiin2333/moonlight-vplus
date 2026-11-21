@@ -21,7 +21,7 @@ EOF
 chmod +x "$tmp/apksigner" "$tmp/aapt"
 export APK_VERIFY_APKSIGNER="$tmp/apksigner" APK_VERIFY_AAPT="$tmp/aapt"
 export MOCK_SIGNER_DIGEST
-MOCK_SIGNER_DIGEST=$(cat "$script_dir/signing-cert.sha256")
+MOCK_SIGNER_DIGEST=$(python3 -c 'import runpy, sys; print(runpy.run_path(sys.argv[1])["SIGNING_CERT_SHA256"])' "$verifier")
 export MOCK_AAPT_OUTPUT="package: name='com.limelight.qiin' versionCode='121531001' versionName='12.15.31' platformBuildVersionName='16' compileSdkVersionCodename='16'"
 
 python3 - "$tmp" <<'PY'
