@@ -40,9 +40,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-          # 全量历史 + tags 只有 tag 构建需要（release notes diff / version floor 推导），PR 用浅克隆提速
-          fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
-          fetch-tags: ${{ github.ref_type == 'tag' }}
+          # History and tags are only needed by the separate release job.
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -60,8 +60,20 @@ jobs:
 
       # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
       # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
-      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      # Branch/PR runs keep rolling snapshots; tag runs only restore to avoid
+      # storing large snapshots scoped to a single tag.
+      - name: Restore Gradle task cache for tag
+        if: github.ref_type == 'tag'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
+
       - name: Cache Gradle build cache (rolling)
+        if: github.ref_type != 'tag'
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/build-cache-1
@@ -127,8 +139,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-          fetch-depth: ${{ github.ref_type == 'tag' && '0' || '1' }}
-          fetch-tags: ${{ github.ref_type == 'tag' }}
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Checkout audio haptics SDK
         uses: actions/checkout@v5
@@ -146,8 +158,20 @@ jobs:
 
       # setup-java 的 gradle 缓存以构建脚本哈希为 key，精确命中后不再保存新快照，
       # 且并行 job 共用同一 key 只留一份——build cache 的跨 run 续存会被封顶。
-      # 对 build-cache-1 单独做滚动快照：每次运行存一份新条目，restore-keys 取最近可用的一份
+      # Branch/PR runs keep rolling snapshots; tag runs only restore to avoid
+      # storing large snapshots scoped to a single tag.
+      - name: Restore Gradle task cache for tag
+        if: github.ref_type == 'tag'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: buildcache-${{ github.job }}-${{ github.run_id }}
+          restore-keys: |
+            buildcache-${{ github.job }}-
+            buildcache-
+
       - name: Cache Gradle build cache (rolling)
+        if: github.ref_type != 'tag'
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/build-cache-1
