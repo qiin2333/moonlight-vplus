@@ -36,10 +36,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_basic_settings"
+                    app:crownSectionIcon="@drawable/phc_settings"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
@@ -93,41 +94,36 @@
                 
                 <!-- 启用触摸 -->
                 <LinearLayout
-                    android:id="@+id/page_digital_movable_button_joystick_mode_container"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
+                    style="@style/CrownSwitchRow"
+                    android:id="@+id/page_digital_movable_button_joystick_mode_container">
                     <TextView
+                        android:labelFor="@id/page_digital_movable_button_enable_touch"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/layout_page_digital_movable_button_text_3d9c9"
                         android:textSize="13sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/page_digital_movable_button_enable_touch"
                         android:checked="true"/>
                 </LinearLayout>
                 
                 <!-- 触控板模式 -->
                 <LinearLayout
-                    android:id="@+id/page_digital_movable_button_trackpad_mode_container"
-                    android:orientation="horizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical">
+                    style="@style/CrownSwitchRow"
+                    android:id="@+id/page_digital_movable_button_trackpad_mode_container">
                     <TextView
+                        android:labelFor="@id/page_digital_movable_button_trackpad_mode"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/layout_page_config_text_f4b7c"
                         android:textSize="13sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/page_digital_movable_button_trackpad_mode"/>
                 </LinearLayout>
             </LinearLayout>
@@ -141,10 +137,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_position_size"
+                    app:crownSectionIcon="@drawable/phc_bounding_box"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
@@ -197,10 +194,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_appearance"
+                    app:crownSectionIcon="@drawable/phc_stack"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
@@ -252,10 +250,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_color_config"
+                    app:crownSectionIcon="@drawable/phc_palette"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
@@ -346,10 +345,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_text_settings"
+                    app:crownSectionIcon="@drawable/phc_action_edit"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 

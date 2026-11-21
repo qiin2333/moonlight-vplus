@@ -98,7 +98,7 @@
                     android:layout_height="wrap_content"
                     android:background="@drawable/crown_config_section_bg"
                     android:orientation="vertical"
-                    android:padding="8dp">
+                    android:padding="12dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -162,18 +162,19 @@
                                 android:textSize="10sp" />
                         </LinearLayout>
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:layout_marginStart="8dp"
-                            android:text="›"
-                            android:textColor="@color/crown_text_secondary"
-                            android:textSize="26sp" />
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/phc_caret_right"
+                            android:tint="@color/crown_text_secondary" />
                     </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
+                        android:layout_marginTop="4dp"
                         android:gravity="end|center_vertical"
                         android:orientation="horizontal">
 
@@ -231,72 +232,60 @@
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/crown_config_section_bg"
                 android:orientation="vertical"
-                android:paddingHorizontal="8dp"
+                android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow">
 
                     <TextView
+                        android:labelFor="@id/mouse_enable_switch"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         android:text="@string/layout_page_config_text_83a23"
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/mouse_enable_switch"
                         android:checked="true" />
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow">
 
                     <TextView
+                        android:labelFor="@id/trackpad_enable_switch"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         android:text="@string/layout_page_config_text_f4b7c"
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/trackpad_enable_switch"
                         android:checked="true" />
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/enhanced_touch_layout"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow"
+                    android:id="@+id/enhanced_touch_layout">
 
                     <TextView
+                        android:labelFor="@id/enhanced_touch_switch"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         android:text="@string/layout_page_config_text_8ea81"
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/enhanced_touch_switch"
                         android:checked="false" />
                 </LinearLayout>
@@ -305,6 +294,7 @@
                     style="@style/AppSwitchWidget"
                     android:id="@+id/apply_touchpad_sensitivity_switch"
                     android:layout_width="match_parent"
+                    app:switchPadding="12dp"
                     android:minHeight="48dp"
                     android:text="@string/game_menu_touchpad_sensitivity"
                     android:textColor="@color/crown_text_primary"
@@ -324,6 +314,7 @@
                     style="@style/AppSwitchWidget"
                     android:id="@+id/apply_mouse_wheel_speed_switch"
                     android:layout_width="match_parent"
+                    app:switchPadding="12dp"
                     android:minHeight="48dp"
                     android:text="@string/apptext_pg_config_3f729"
                     android:textColor="@color/crown_text_primary"
@@ -355,49 +346,41 @@
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/crown_config_section_bg"
                 android:orientation="vertical"
-                android:paddingHorizontal="8dp"
+                android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow">
 
                     <TextView
+                        android:labelFor="@id/game_vibrator_enable_switch"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         android:text="@string/layout_page_config_text_cd2c1"
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/game_vibrator_enable_switch"
                         android:checked="true" />
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow">
 
                     <TextView
+                        android:labelFor="@id/button_vibrator_enable_switch"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         android:text="@string/layout_page_config_text_f4651"
                         android:textColor="@color/crown_text_primary"
                         android:textSize="13sp" />
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/button_vibrator_enable_switch"
                         android:checked="true" />
                 </LinearLayout>

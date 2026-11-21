@@ -152,6 +152,14 @@
     "licenseFile": "pe-parse-LICENSE.txt"
   },
   {
+    "id": "phosphor-icons",
+    "name": "Phosphor Icons",
+    "version": "2b75f3ad12b420c9504ef05df8d2564a28f8500e (regular icons snapshot)",
+    "url": "https://github.com/phosphor-icons/core",
+    "license": "MIT",
+    "licenseFile": "phosphor-icons-LICENSE.txt"
+  },
+  {
     "id": "pyrowave",
     "name": "PyroWave",
     "version": "43c8316c31f9bbe4b26822e70ff73254ebba7fcc",

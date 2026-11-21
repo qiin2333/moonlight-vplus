@@ -69,6 +69,7 @@ class ElementController(private val controllerManager: ControllerManager, layout
     private var mouseEventRunnableMap: MutableMap<Int, Runnable> = HashMap()
     private var elementsLayout: FrameLayout = layout
     private var mode: Mode = Mode.Normal
+    private var returnToGameMenuAfterEdit: (() -> Unit)? = null
     private var pageEdit: SuperPageLayout
     private var lastElementSettingPage: SuperPageLayout? = null
     private val bottomViewAmount: Int
@@ -359,16 +360,25 @@ class ElementController(private val controllerManager: ControllerManager, layout
     }
 
     private fun exitCrownEditMode() {
+        if (mode !== Mode.Edit) return
+        val returnToGameMenu = returnToGameMenuAfterEdit
+        returnToGameMenuAfterEdit = null
         changeMode(Mode.Normal)
         controllerManager.pageSuperMenuController!!.open()
         val pages = controllerManager.superPagesController!!
-        if (pages.pageNow === pages.pageNull) {
-            handler.post { pages.returnOperation() }
-        }
-        if (game.getCurrentBackKeyMenuMode() === Game.BackKeyMenuMode.NO_MENU) {
+        if (returnToGameMenu != null) {
             game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.GAME_MENU)
-        } else {
-            game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.CROWN_MODE)
+            returnToGameMenu()
+            return
+        }
+        val returnMode = if (game.getCurrentBackKeyMenuMode() === Game.BackKeyMenuMode.NO_MENU)
+            Game.BackKeyMenuMode.GAME_MENU else Game.BackKeyMenuMode.CROWN_MODE
+        game.setcurrentBackKeyMenu(returnMode)
+        if (pages.pageNow === pages.pageNull) {
+            handler.post {
+                if (mode === Mode.Normal && pages.pageNow === pages.pageNull &&
+                    game.getCurrentBackKeyMenuMode() === returnMode) pages.returnOperation()
+            }
         }
     }
 
@@ -1175,6 +1185,13 @@ class ElementController(private val controllerManager: ControllerManager, layout
     val currentEditingPage: SuperPageLayout
         get() = controllerManager.superPagesController!!.pageNow
 
+    /** Starts a new edit session; reopening a detail page does not change its return destination. */
+    fun enterEditMode(onReturnToGameMenu: (() -> Unit)? = null) {
+        returnToGameMenuAfterEdit = onReturnToGameMenu
+        changeMode(Mode.Edit)
+        open()
+    }
+
     fun open() {
         val superPagesController = controllerManager.superPagesController!!
         val pageNull = superPagesController.pageNull
@@ -1644,8 +1661,7 @@ class ElementController(private val controllerManager: ControllerManager, layout
                     if (down) {
                         buttonVibrator()
                         game.toggleBackKeyMenuType()
-                        changeMode(Mode.Edit)
-                        open()
+                        enterEditMode()
                     }
                 }
 

@@ -3454,6 +3454,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
     }
 
+    internal fun reopenCrownGameMenu(device: GameInputDevice?): Boolean {
+        if (destroying || isFinishing || isDestroyed || conn == null) return false
+        // This is a new menu opening, not an active USB shortcut request: restore
+        // controller capture for all devices, including the original opener.
+        return showGameMenuInternal(device, openedFromUsbShortcut = false) { menu ->
+            menu.showCrownFunctionMenu()
+        }
+    }
+
     private fun showGameMenuInternal(
         device: GameInputDevice?,
         openedFromUsbShortcut: Boolean,

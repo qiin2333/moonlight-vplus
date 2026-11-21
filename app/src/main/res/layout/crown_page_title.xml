@@ -21,7 +21,7 @@
             android:layout_gravity="center"
             android:importantForAccessibility="no"
             android:src="@drawable/phc_crown"
-            app:tint="@color/crown_section_label" />
+            android:tint="@color/crown_section_label" />
     </FrameLayout>
 
     <LinearLayout

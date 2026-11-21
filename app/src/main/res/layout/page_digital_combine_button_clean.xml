@@ -36,10 +36,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_basic_settings"
+                    app:crownSectionIcon="@drawable/phc_settings"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
@@ -89,7 +90,7 @@
                         android:layout_weight="1"
                         android:text="@string/layout_page_digital_combine_button_text_0c4af"
                         android:textSize="12sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <TextView
                         android:id="@+id/page_digital_combine_button_value_1"
                         android:layout_width="90dp"
@@ -114,7 +115,7 @@
                         android:layout_weight="1"
                         android:text="@string/layout_page_digital_combine_button_text_ec25a"
                         android:textSize="12sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <TextView
                         android:id="@+id/page_digital_combine_button_value_2"
                         android:layout_width="90dp"
@@ -138,7 +139,7 @@
                         android:layout_weight="1"
                         android:text="@string/layout_page_digital_combine_button_text_001d1"
                         android:textSize="12sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <TextView
                         android:id="@+id/page_digital_combine_button_value_3"
                         android:layout_width="90dp"
@@ -162,7 +163,7 @@
                         android:layout_weight="1"
                         android:text="@string/layout_page_digital_combine_button_text_2c072"
                         android:textSize="12sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <TextView
                         android:id="@+id/page_digital_combine_button_value_4"
                         android:layout_width="90dp"
@@ -185,7 +186,7 @@
                         android:layout_weight="1"
                         android:text="@string/layout_page_digital_combine_button_text_a388b"
                         android:textSize="12sp"
-                        android:textColor="#CCFFFFFF"/>
+                        android:textColor="@color/crown_text_primary"/>
                     <TextView
                         android:id="@+id/page_digital_combine_button_value_5"
                         android:layout_width="90dp"
@@ -206,10 +207,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_position_size"
+                    app:crownSectionIcon="@drawable/phc_bounding_box"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
@@ -262,10 +264,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_appearance"
+                    app:crownSectionIcon="@drawable/phc_stack"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
@@ -307,10 +310,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_color_config"
+                    app:crownSectionIcon="@drawable/phc_palette"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="10dp"/>
                 
@@ -401,10 +405,11 @@
                 android:padding="12dp"
                 android:layout_marginBottom="10dp">
                 
-                <TextView
+                <com.limelight.binding.input.advance_setting.superpage.CrownSectionTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/page_section_text_settings"
+                    app:crownSectionIcon="@drawable/phc_action_edit"
                     style="@style/CrownSectionLabel"
                     android:layout_marginBottom="8dp"/>
                 
