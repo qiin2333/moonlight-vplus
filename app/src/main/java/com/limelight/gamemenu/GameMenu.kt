@@ -53,7 +53,6 @@ import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.binding.input.advance_setting.KeyboardKeyPickerController
 import com.limelight.binding.input.advance_setting.config.PageConfigController
-import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.http.NvApp
 import com.limelight.perfhud.PerfHudDensity
@@ -1051,7 +1050,7 @@ class GameMenu(
     /**
      * 显示"王冠功能"的二级菜单
      */
-    private fun showCrownFunctionMenu() {
+    internal fun showCrownFunctionMenu() {
         if (!game.isCrownFeatureEnabled) return
         showSubMenu(
             getString(R.string.game_menu_crown_function_title),
@@ -1126,8 +1125,11 @@ class GameMenu(
                 controllerManager?.let { cm ->
                     game.toggleBackKeyMenuType()
                     game.setcurrentBackKeyMenu(Game.BackKeyMenuMode.NO_MENU)
-                    cm.elementController?.changeMode(ElementController.Mode.Edit)
-                    cm.elementController?.open()
+                    val sourceGame = game
+                    val sourceDevice = device
+                    cm.elementController?.enterEditMode {
+                        sourceGame.reopenCrownGameMenu(sourceDevice)
+                    }
                     cm.superPagesController?.let { spc ->
                         if (spc.pageNow === spc.pageNull) {
                             spc.returnOperation()
@@ -1926,7 +1928,6 @@ class GameMenu(
         }
     }
 
-    private fun dpToPx(dp: Int): Int = (dp * game.resources.displayMetrics.density).toInt()
 
     /** 解析 action id → Triple(label, iconRes, iconText)，无效返回 null。 */
     private fun resolveAction(id: String): Triple<String, Int, String?>? {

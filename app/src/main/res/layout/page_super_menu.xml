@@ -116,28 +116,26 @@
                 android:paddingVertical="4dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow.Descriptive">
 
-                    <ImageView
+                    <androidx.appcompat.widget.AppCompatImageView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_marginEnd="10dp"
                         android:background="@drawable/crown_config_input_bg"
                         android:padding="7dp"
-                        android:src="@drawable/phc_game_controller"
+                        android:src="@drawable/phc_hand_tap"
                         app:tint="?attr/appAccent" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical"
-                android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="vertical">
 
                         <TextView
+                            android:labelFor="@id/page_super_menu_touch_input_switch"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/crown_menu_touch_input"
@@ -147,13 +145,14 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
                             android:text="@string/crown_menu_touch_input_summary"
                             android:textColor="@color/crown_text_secondary"
                             android:textSize="10sp" />
                     </LinearLayout>
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/page_super_menu_touch_input_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -166,28 +165,26 @@
                     android:background="@color/ui_shell_outline" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    style="@style/CrownSwitchRow.Descriptive">
 
-                    <ImageView
+                    <androidx.appcompat.widget.AppCompatImageView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_marginEnd="10dp"
                         android:background="@drawable/crown_config_input_bg"
                         android:padding="7dp"
-                        android:src="@drawable/phc_audio"
+                        android:src="@drawable/phc_vibrate"
                         app:tint="@color/crown_text_secondary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical"
-                android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="vertical">
 
                         <TextView
+                            android:labelFor="@id/page_super_menu_vibration_switch"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/crown_menu_vibration"
@@ -197,13 +194,14 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
                             android:text="@string/crown_menu_vibration_summary"
                             android:textColor="@color/crown_text_secondary"
                             android:textSize="10sp" />
                     </LinearLayout>
 
                     <com.limelight.utils.AppSwitchView
-                        style="@style/AppSwitchWidget"
+                        style="@style/CrownSwitchRowControl"
                         android:id="@+id/page_super_menu_vibration_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -222,14 +220,17 @@
             <LinearLayout
                 android:id="@+id/page_super_menu_config_page"
                 android:layout_width="match_parent"
-                android:layout_height="58dp"
+                android:layout_height="wrap_content"
+                android:minHeight="58dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
                 android:layout_marginBottom="8dp"
                 android:background="@drawable/crown_config_action_button_bg"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingHorizontal="12dp">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="28dp"
                     android:layout_height="28dp"
                     android:layout_marginEnd="10dp"
@@ -254,15 +255,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
                         android:text="@string/crown_menu_settings_summary"
                         android:textColor="@color/crown_text_secondary"
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="18dp"
                     android:layout_height="18dp"
-                    android:src="@drawable/ic_arrow_right"
+                    android:src="@drawable/phc_caret_right"
                     app:tint="@color/crown_text_secondary" />
             </LinearLayout>
 
@@ -275,11 +277,11 @@
                 android:orientation="horizontal"
                 android:paddingHorizontal="12dp">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:layout_marginEnd="10dp"
-                    android:src="@drawable/ic_disconnect_cute"
+                    android:src="@drawable/phc_action_disconnect"
                     app:tint="@color/app_action_sheet_danger" />
 
                 <TextView
@@ -338,7 +340,7 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <ImageView
+            <androidx.appcompat.widget.AppCompatImageView
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:layout_marginEnd="8dp"

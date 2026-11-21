@@ -60,9 +60,10 @@ object CrownColorPickerBinder {
         colorDisplay.setTextWithNoTextChangedCallBack(hex)
         colorDisplay.setBackgroundResource(R.drawable.crown_color_input_bg)
         val swatch = ColorSwatchDrawable(colorDisplay.context, color)
-        val arrow = ContextCompat.getDrawable(colorDisplay.context, R.drawable.ic_chevron_right)
+        val arrow = ContextCompat.getDrawable(colorDisplay.context, R.drawable.phc_caret_right)?.mutate()
         if (arrow != null) {
             DrawableCompat.setTint(arrow, ContextCompat.getColor(colorDisplay.context, R.color.crown_text_secondary))
+            arrow.setBounds(0, 0, arrow.intrinsicWidth, arrow.intrinsicHeight)
         }
         colorDisplay.setCompoundDrawablesRelative(swatch, null, arrow, null)
         colorDisplay.setTextColor(ContextCompat.getColor(colorDisplay.context, R.color.crown_text_primary))

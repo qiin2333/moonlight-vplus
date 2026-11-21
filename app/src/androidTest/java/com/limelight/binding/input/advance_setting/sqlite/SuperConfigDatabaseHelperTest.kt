@@ -232,6 +232,53 @@ class SuperConfigDatabaseHelperTest {
     }
 
     @Test
+    fun failedElementInsertRollsBackTheEntireImportOrMerge() {
+        for (mode in listOf("import", "backup", "merge")) {
+            SuperConfigDatabaseHelper(context).use { helper ->
+                val db = helper.writableDatabase
+                db.execSQL("INSERT INTO config (config_id, config_name) VALUES (42, 'source'), (43, 'target')")
+                db.execSQL("INSERT INTO element (config_id, element_id, element_layer, element_text) VALUES (42, 1, 0, 'ok'), (42, 2, 0, 'fail')")
+                val payload = helper.exportConfig(42)
+                db.execSQL("""
+                    CREATE TRIGGER reject_import BEFORE INSERT ON element
+                    WHEN NEW.element_text = 'fail'
+                    BEGIN SELECT RAISE(ABORT, 'test import failure'); END
+                """.trimIndent())
+
+                val configsBefore = helper.queryAllConfigIds().toList()
+                val targetBefore = helper.queryAllElementIds(43).toList()
+                val result = when (mode) {
+                    "backup" -> helper.importConfigForBackup(payload)
+                    "merge" -> helper.mergeConfig(payload, 43)
+                    else -> helper.importConfig(payload)
+                }
+
+                assertEquals(-1, result)
+                assertEquals(configsBefore, helper.queryAllConfigIds())
+                assertEquals(targetBefore, helper.queryAllElementIds(43))
+                assertEquals(listOf(1L, 2L), helper.queryAllElementIds(42))
+            }
+            cleanup()
+        }
+    }
+
+    @Test
+    fun malformedElementsAndMissingMergeTargetDoNotChangeProfiles() {
+        SuperConfigDatabaseHelper(context).use { helper ->
+            helper.writableDatabase.execSQL("INSERT INTO config (config_id, config_name) VALUES (42, 'source')")
+            val settings = JSONObject().put("config_id", 42).put("config_name", "broken").toString()
+            val elements = "null"
+            val malformed = JSONObject().put("version", 10).put("settings", settings).put("elements", elements)
+                .put("md5", MathUtils.computeMD5("10$settings$elements")).toString()
+
+            assertEquals(-1, helper.importConfig(malformed))
+            assertEquals(-1, helper.mergeConfig(helper.exportConfig(42), 999))
+            assertEquals(listOf(42L), helper.queryAllConfigIds())
+            assertEquals(emptyList<Long>(), helper.queryAllElementIds(999))
+        }
+    }
+
+    @Test
     fun blobElementValuesRoundTripWithoutChangingTheirType() {
         for (bytes in listOf(byteArrayOf(), byteArrayOf(42), byteArrayOf(0, 127, -1))) {
             SuperConfigDatabaseHelper(context).use { helper ->
