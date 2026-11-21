@@ -16,6 +16,15 @@ class SettingsResourceHygieneTest {
     }
 
     @Test
+    fun floatBallLongPressPreferenceDefaultsToNoAction() {
+        val preferences = parse(File(resourceDir, "xml/preferences.xml"))
+        val item = preferences.documentElement.getElementsByTagName("ListPreference")
+            .asElementSequence()
+            .single { it.getAttributeNS(ANDROID_NAMESPACE, "key") == "list_float_ball_long_click_action" }
+        assertEquals("none", item.getAttributeNS(ANDROID_NAMESPACE, "defaultValue"))
+    }
+
+    @Test
     fun preferenceTextResourcesAreMeaningful() {
         val preferences = parse(File(resourceDir, "xml/preferences.xml"))
         val referencedText = preferences.documentElement

@@ -704,6 +704,7 @@ private fun GameMenuContent(
                     initialFocusIconKey = "microphone_input".takeIf { state.restoreMicrophoneEntry },
                     initialFocusOptionKey = state.initialFocusOptionKey,
                     inlineControlsFocusable = !performancePage,
+                    stableFocusKeys = state.pageLayout == GameMenuPageLayout.SPECIAL_KEYS,
                     optionFocusModifier = initialFocusModifier
                 )
                 if (state.pageLayout == GameMenuPageLayout.TOUCH_MODE) {

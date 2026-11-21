@@ -18,7 +18,6 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -141,6 +140,7 @@ internal fun resolveCustomKeyName(enteredName: String, selectedKeysName: String)
 
 internal fun createGameMenuBackOption(
     label: String,
+    focusKey: String? = null,
     onBack: () -> Unit
 ) = GameMenu.MenuOption(
     label = label,
@@ -148,7 +148,8 @@ internal fun createGameMenuBackOption(
     runnable = Runnable(onBack),
     iconKey = null,
     isShowIcon = false,
-    isKeepDialog = true
+    isKeepDialog = true,
+    focusKey = focusKey
 )
 
 internal fun isGameMenuDirectionalKey(keyCode: Int): Boolean =
@@ -1040,6 +1041,7 @@ class GameMenu(
     private fun refreshCurrentMenuPage() {
         when (composeUiState?.value?.pageLayout) {
             GameMenuPageLayout.MICROPHONE -> return
+            GameMenuPageLayout.SPECIAL_KEYS -> refreshComposeCustomKeys()
             GameMenuPageLayout.TOUCH_MODE -> showTouchModeMenu()
             GameMenuPageLayout.PERF_OVERLAY -> refreshPerformancePage()
             GameMenuPageLayout.PERF_METRICS -> refreshPerformanceMetricsPage()
@@ -1285,7 +1287,10 @@ class GameMenu(
                 touchpadSensitivity = touchpadSensitivityController.snapshot(),
                 customKeys = getSavedCustomKeys(),
                 usbForwardingEnabled = true, // Keep setup and unavailable reasons discoverable.
-                pageLayout = pageLayout
+                pageLayout = pageLayout,
+                initialFocusOptionKey = SPECIAL_KEY_ADD_FOCUS_KEY.takeIf {
+                    pageLayout == GameMenuPageLayout.SPECIAL_KEYS
+                }
             )
         )
         val hardwareFocusRequest = mutableIntStateOf(0)
@@ -1924,7 +1929,16 @@ class GameMenu(
 
     private fun refreshComposeCustomKeys() {
         composeUiState?.let { state ->
-            state.value = state.value.copy(customKeys = getSavedCustomKeys())
+            val keys = getSavedCustomKeys()
+            val current = state.value
+            state.value = current.copy(
+                customKeys = keys,
+                options = if (current.pageLayout == GameMenuPageLayout.SPECIAL_KEYS) {
+                    buildSpecialKeyOptions(keys)
+                } else {
+                    current.options
+                }
+            )
         }
     }
 
@@ -2083,7 +2097,11 @@ class GameMenu(
             } else {
                 page.generation
             },
-            initialFocusOptionKey = performancePageFocusKey(previousLayout, page.layout),
+            initialFocusOptionKey = if (page.layout == GameMenuPageLayout.SPECIAL_KEYS) {
+                SPECIAL_KEY_ADD_FOCUS_KEY
+            } else {
+                performancePageFocusKey(previousLayout, page.layout)
+            },
             pageFocusRequest = if (performanceTransition && state.value.controllerNavigationActive) {
                 state.value.pageFocusRequest + 1
             } else state.value.pageFocusRequest
@@ -2200,40 +2218,26 @@ class GameMenu(
      * 显示特殊按键菜单
      */
     private fun showSpecialKeysMenu() {
-        val options = mutableListOf<MenuOption>()
+        showSubMenu(
+            getString(R.string.game_menu_send_keys),
+            buildSpecialKeyOptions(getSavedCustomKeys()).toTypedArray(),
+            GameMenuPageLayout.SPECIAL_KEYS
+        )
+    }
 
-        val hasKeys = loadAndAddAllKeys(options)
-
-        options.add(gameMenuChildDialogOption(
-            label = getString(R.string.game_menu_add_custom_key),
-            action = Runnable { showAddCustomKeyDialog() }
-        ))
-
-        if (hasKeys) {
-            options.add(gameMenuChildDialogOption(
-                label = getString(R.string.game_menu_delete_custom_key),
-                action = Runnable { showDeleteKeysDialog() }
-            ))
-        }
-
-        options.add(
-            createGameMenuBackOption(getString(R.string.game_menu_cancel)) {
+    private fun buildSpecialKeyOptions(keys: List<CustomKeyData>): List<MenuOption> =
+        buildSpecialKeyMenuOptions(
+            keys = keys,
+            addLabel = getString(R.string.game_menu_add_custom_key),
+            deleteLabel = getString(R.string.game_menu_delete_custom_key),
+            backLabel = getString(R.string.game_menu_cancel),
+            onSend = ::sendKeys,
+            onAdd = ::showAddCustomKeyDialog,
+            onDelete = ::showDeleteKeysDialog,
+            onBack = {
                 if (!navigateBack()) activeDialog?.cancel()
             }
         )
-
-        showSubMenu(getString(R.string.game_menu_send_keys), options.toTypedArray())
-    }
-
-    private fun loadAndAddAllKeys(options: MutableList<MenuOption>): Boolean {
-        val loadedKeys = getSavedCustomKeys()
-        if (loadedKeys.isEmpty()) return false
-
-        for (keyData in loadedKeys) {
-            options.add(MenuOption(keyData.name, false, { sendKeys(keyData.keys) }, null, false))
-        }
-        return true
-    }
 
     private fun saveCustomKey(name: String, keysString: String) {
         val preferences = game.getSharedPreferences(PREF_NAME, Activity.MODE_PRIVATE)
@@ -2281,26 +2285,7 @@ class GameMenu(
         val clearButton = dialogView.findViewById<Button>(R.id.button_clear_keys)
         val closeButton = dialogView.findViewById<Button>(R.id.button_close_dialog)
         val saveButton = dialogView.findViewById<Button>(R.id.button_save_key)
-        var nameEditing = false
-
-        fun leaveNameEditing() {
-            if (!nameEditing) return
-            nameEditing = false
-            val inputMethodManager = game.getSystemService(Context.INPUT_METHOD_SERVICE)
-                as? InputMethodManager
-            inputMethodManager?.hideSoftInputFromWindow(nameInput.windowToken, 0)
-        }
-
-        fun enterNameEditing() {
-            nameEditing = true
-            nameInput.requestFocus()
-            nameInput.setSelection(nameInput.text.length)
-            nameInput.post {
-                val inputMethodManager = game.getSystemService(Context.INPUT_METHOD_SERVICE)
-                    as? InputMethodManager
-                inputMethodManager?.showSoftInput(nameInput, InputMethodManager.SHOW_IMPLICIT)
-            }
-        }
+        val nameEditor = CustomKeyNameEditor(nameInput)
 
         val dialog = builder.create()
         dialog.window?.apply {
@@ -2313,8 +2298,8 @@ class GameMenu(
             val editingDismissKey = keyCode == KeyEvent.KEYCODE_BACK ||
                 keyCode == KeyEvent.KEYCODE_ESCAPE ||
                 keyCode == KeyEvent.KEYCODE_BUTTON_B
-            if (nameEditing && editingDismissKey) {
-                if (event.action == KeyEvent.ACTION_UP) leaveNameEditing()
+            if (nameEditor.isEditing && editingDismissKey) {
+                if (event.action == KeyEvent.ACTION_UP) nameEditor.leave()
                 event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
             } else if (UiDismissKeyHandler.handle(event.action, keyCode, dialog::cancel)) {
                 true
@@ -2327,10 +2312,6 @@ class GameMenu(
         }
 
         closeButton?.setOnClickListener { dialog.dismiss() }
-        nameInput.setOnClickListener { enterNameEditing() }
-        nameInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) leaveNameEditing()
-        }
 
         // 点击背景关闭对话框
         if (dialogView is FrameLayout) {
@@ -2376,8 +2357,8 @@ class GameMenu(
             },
             externalViews = listOfNotNull(saveButton, closeButton, nameInput, clearButton),
             editableView = nameInput,
-            isEditing = { nameEditing },
-            onEnterEditing = ::enterNameEditing
+            isEditing = { nameEditor.isEditing },
+            onEnterEditing = nameEditor::enter
         )
 
         // 保存按钮事件

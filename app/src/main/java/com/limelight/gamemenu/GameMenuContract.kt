@@ -47,6 +47,7 @@ internal data class GameMenuComposeUiState(
 
 internal enum class GameMenuPageLayout {
     STANDARD,
+    SPECIAL_KEYS,
     TOUCH_MODE,
     MICROPHONE,
     PERF_OVERLAY,
@@ -61,14 +62,16 @@ enum class GameMenuOptionPresentation {
 
 internal fun gameMenuChildDialogOption(
     label: String,
-    action: Runnable
+    action: Runnable,
+    focusKey: String? = null
 ) = GameMenu.MenuOption(
     label = label,
     isWithGameFocus = false,
     runnable = action,
     iconKey = null,
     isShowIcon = false,
-    isKeepDialog = true
+    isKeepDialog = true,
+    focusKey = focusKey
 )
 
 internal class GameMenuGuideDismissController {
