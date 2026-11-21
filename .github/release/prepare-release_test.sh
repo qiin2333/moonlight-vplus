@@ -129,9 +129,8 @@ import runpy
 import sys
 from unittest.mock import patch
 
-module = runpy.run_path(sys.argv[1])
 with open(sys.argv[2], encoding='utf-8') as stream:
-    releases = module['releases_from_json'](json.load(stream))
+    payload = json.load(stream)
 real_datetime = datetime.datetime
 
 class FirstDay(real_datetime):
@@ -145,8 +144,11 @@ class NextDay(real_datetime):
         return real_datetime(2026, 11, 22, tzinfo=tz)
 
 with patch.object(datetime, 'datetime', FirstDay):
+    module = runpy.run_path(sys.argv[1])
+    releases = module['releases_from_json'](payload)
     first = module['render']('v12.15.31', False, sys.argv[3], 'example/project', releases)
 with patch.object(datetime, 'datetime', NextDay):
+    module = runpy.run_path(sys.argv[1])
     second = module['render']('v12.15.31', False, sys.argv[3], 'example/project', releases)
 assert first == second, 'release notes changed across UTC days'
 assert '发布于' not in first, 'GitHub supplies the actual publication date'
