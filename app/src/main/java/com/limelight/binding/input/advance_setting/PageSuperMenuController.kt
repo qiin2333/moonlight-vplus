@@ -12,7 +12,6 @@ import androidx.appcompat.widget.SwitchCompat
 
 import com.limelight.Game
 import com.limelight.R
-import com.limelight.binding.input.advance_setting.element.ElementController
 import com.limelight.binding.input.advance_setting.share.CrownProfileShareManager
 import com.limelight.binding.input.advance_setting.superpage.SuperPageLayout
 import com.limelight.binding.input.advance_setting.superpage.SuperPagesController
@@ -51,8 +50,7 @@ class PageSuperMenuController(
             controllerManager.pageConfigController?.open()
         }
         superMenuPage.findViewById<View>(R.id.page_super_menu_edit_mode).setOnClickListener {
-            controllerManager.elementController?.changeMode(ElementController.Mode.Edit)
-            controllerManager.elementController?.open()
+            controllerManager.elementController?.enterEditMode()
             controllerManager.superPagesController?.let { pages ->
                 Handler(Looper.getMainLooper()).post {
                     if (pages.pageNow === pages.pageNull) pages.returnOperation()

@@ -1249,6 +1249,10 @@
                 android:title="@string/title_perf_overlay_display_items"
                 android:summary="@string/summary_perf_overlay_display_items"
                 android:dependency="checkbox_enable_perf_overlay"/>
+            <com.limelight.preferences.PerfOverlayGesturePreference
+                android:key="perf_overlay_gesture_mode"
+                android:title="@string/game_menu_perf_gestures"
+                android:dependency="checkbox_enable_perf_overlay"/>
             <ListPreference
                 android:key="list_perf_overlay_clock_format"
                 android:title="@string/title_perf_overlay_clock_format"

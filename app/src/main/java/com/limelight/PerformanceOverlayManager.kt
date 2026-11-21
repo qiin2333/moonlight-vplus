@@ -47,6 +47,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.perfhud.LatencyChain
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.perfhud.PerfHudInfoSheets
+import com.limelight.perfhud.PerfOverlayGestures
 import com.limelight.perfhud.PerfHudLayout
 import com.limelight.perfhud.PerfHudLayoutPolicy
 import com.limelight.perfhud.PerfHudPalette
@@ -74,19 +75,6 @@ import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-
-/** Anchor positions shown as a 3x3 quick-placement grid. */
-enum class PerfOverlayAnchor {
-    TOP_LEFT,
-    TOP_CENTER,
-    TOP_RIGHT,
-    CENTER_LEFT,
-    CENTER,
-    CENTER_RIGHT,
-    BOTTOM_LEFT,
-    BOTTOM_CENTER,
-    BOTTOM_RIGHT
-}
 
 class PerformanceOverlayManager(
     private val activity: Activity,
@@ -223,24 +211,19 @@ class PerformanceOverlayManager(
     )
 
     val isPerfOverlayDocked: Boolean get() = currentHudLayout == PerfHudLayout.DOCK
-    val perfOverlayHealthVisible: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_HEALTH, true)
-    val perfOverlaySingleTapEnabled: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_SINGLE_TAP, false)
-    val perfOverlayDoubleTapEnabled: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_DOUBLE_TAP, false)
-    val perfOverlayLongPressEnabled: Boolean get() = overlayPrefs.getBoolean(KEY_HUD_LONG_PRESS, true)
+    val perfOverlayHealthVisible: Boolean get() = PerfOverlayDisplayItemsPreference.isItemEnabled(activity, "health")
+    val perfOverlayGestureState: PerfOverlayGestures.State get() = PerfOverlayGestures.read(activity)
+    val perfOverlaySingleTapEnabled: Boolean get() = perfOverlayGestureState.single
+    val perfOverlayDoubleTapEnabled: Boolean get() = perfOverlayGestureState.double
+    val perfOverlayLongPressEnabled: Boolean get() = perfOverlayGestureState.long
 
-    fun setPerfOverlayHealthVisible(enabled: Boolean) {
-        overlayPrefs.edit { putBoolean(KEY_HUD_HEALTH, enabled) }
-        refreshPerformanceOverlayConfig()
-    }
-
-    fun setPerfOverlaySingleTapEnabled(enabled: Boolean) = setGestureEnabled(KEY_HUD_SINGLE_TAP, enabled)
-    fun setPerfOverlayDoubleTapEnabled(enabled: Boolean) = setGestureEnabled(KEY_HUD_DOUBLE_TAP, enabled)
-    fun setPerfOverlayLongPressEnabled(enabled: Boolean) = setGestureEnabled(KEY_HUD_LONG_PRESS, enabled)
-
-    private fun setGestureEnabled(key: String, enabled: Boolean) {
+    fun setPerfOverlayGestureMode(mode: String) {
         cancelOverlayInteraction()
-        overlayPrefs.edit { putBoolean(key, enabled) }
+        PerfOverlayGestures.write(activity, mode)
     }
+
+    val hasCustomPerfOverlayPosition: Boolean
+        get() = overlayPrefs.getBoolean("has_custom_position", false)
 
     fun setPerfOverlayDisplayItems(items: Set<String>) {
         PerfOverlayDisplayItemsPreference.setDisplayItems(activity, items.toSet())
@@ -249,69 +232,6 @@ class PerformanceOverlayManager(
 
     val isPerfOverlayMovable: Boolean
         get() = performanceOverlayView != null && currentHudLayout != PerfHudLayout.DOCK
-
-    val perfOverlayAnchor: PerfOverlayAnchor?
-        get() {
-            if (hasRelativePosition()) {
-                val guideX = savedGuide(KEY_GUIDE_X)
-                val guideY = savedGuide(KEY_GUIDE_Y)
-                return PerfOverlayAnchor.entries.firstOrNull {
-                    it.horizontalGuide() == guideX && it.verticalGuide() == guideY
-                }
-            }
-            if (isPortrait()) return PerfOverlayAnchor.TOP_RIGHT
-            return when (prefConfig.perfOverlayPosition) {
-                PreferenceConfiguration.PerfOverlayPosition.TOP -> PerfOverlayAnchor.TOP_CENTER
-                PreferenceConfiguration.PerfOverlayPosition.BOTTOM -> PerfOverlayAnchor.BOTTOM_CENTER
-                PreferenceConfiguration.PerfOverlayPosition.TOP_LEFT -> PerfOverlayAnchor.TOP_LEFT
-                PreferenceConfiguration.PerfOverlayPosition.TOP_RIGHT -> PerfOverlayAnchor.TOP_RIGHT
-                PreferenceConfiguration.PerfOverlayPosition.BOTTOM_LEFT -> PerfOverlayAnchor.BOTTOM_LEFT
-                PreferenceConfiguration.PerfOverlayPosition.BOTTOM_RIGHT -> PerfOverlayAnchor.BOTTOM_RIGHT
-            }
-        }
-
-    fun setPerfOverlayAnchor(anchor: PerfOverlayAnchor) {
-        val overlay = performanceOverlayView ?: return
-        if (!isPerfOverlayMovable || isDraggingPerfOverlay) return
-
-        val parent = overlay.parent as? View ?: return
-        val lp = overlay.layoutParams as? FrameLayout.LayoutParams ?: return
-        if (parent.width <= 0 || parent.height <= 0) return
-        if (lp.gravity != Gravity.NO_GRAVITY) convertGravityToMargins(overlay, lp)
-
-        val (availableWidth, availableHeight) = measureOverlayInParent(overlay, parent, lp)
-        val maxLeft = maxOf(0, availableWidth - overlay.width)
-        val maxTop = maxOf(0, availableHeight - overlay.height)
-        val sideInset = if (isHudStyle()) dp(HUD_EDGE_INSET_DP) else 0
-        val topInset = if (isStickyBar()) 0 else sideInset
-        val guideX = anchor.horizontalGuide()
-        val guideY = anchor.verticalGuide()
-
-        val left = restoredMargin(
-            anchor.horizontalRelative(),
-            guideX,
-            maxLeft,
-            sideInset,
-            sideInset
-        )
-        val top = restoredMargin(
-            anchor.verticalRelative(),
-            guideY,
-            maxTop,
-            topInset,
-            sideInset
-        )
-
-        lp.leftMargin = left
-        lp.topMargin = top
-        dragGuideX = guideX
-        dragGuideY = guideY
-        dragRelativeX = anchor.horizontalRelative()
-        dragRelativeY = anchor.verticalRelative()
-        dragMaxLeft = maxLeft
-        dragMaxTop = maxTop
-        saveDragPosition(overlay)
-    }
 
     fun resetPerfOverlayPosition() {
         if (!isPerfOverlayMovable) return
@@ -335,41 +255,6 @@ class PerformanceOverlayManager(
         refreshOverlayNow()
     }
 
-    private fun PerfOverlayAnchor.horizontalGuide(): SnapGuide = when (this) {
-        PerfOverlayAnchor.TOP_LEFT,
-        PerfOverlayAnchor.CENTER_LEFT,
-        PerfOverlayAnchor.BOTTOM_LEFT -> SnapGuide.START
-        PerfOverlayAnchor.TOP_CENTER,
-        PerfOverlayAnchor.CENTER,
-        PerfOverlayAnchor.BOTTOM_CENTER -> SnapGuide.CENTER
-        PerfOverlayAnchor.TOP_RIGHT,
-        PerfOverlayAnchor.CENTER_RIGHT,
-        PerfOverlayAnchor.BOTTOM_RIGHT -> SnapGuide.END
-    }
-
-    private fun PerfOverlayAnchor.verticalGuide(): SnapGuide = when (this) {
-        PerfOverlayAnchor.TOP_LEFT,
-        PerfOverlayAnchor.TOP_CENTER,
-        PerfOverlayAnchor.TOP_RIGHT -> SnapGuide.START
-        PerfOverlayAnchor.CENTER_LEFT,
-        PerfOverlayAnchor.CENTER,
-        PerfOverlayAnchor.CENTER_RIGHT -> SnapGuide.CENTER
-        PerfOverlayAnchor.BOTTOM_LEFT,
-        PerfOverlayAnchor.BOTTOM_CENTER,
-        PerfOverlayAnchor.BOTTOM_RIGHT -> SnapGuide.END
-    }
-
-    private fun PerfOverlayAnchor.horizontalRelative(): Float = when (horizontalGuide()) {
-        SnapGuide.START -> 0f
-        SnapGuide.CENTER -> 0.5f
-        SnapGuide.END -> 1f
-    }
-
-    private fun PerfOverlayAnchor.verticalRelative(): Float = when (verticalGuide()) {
-        SnapGuide.START -> 0f
-        SnapGuide.CENTER -> 0.5f
-        SnapGuide.END -> 1f
-    }
     private val hudAnchorListener = View.OnLayoutChangeListener     { v, l, t, r, b, oL, oT, oR, oB ->
             onHudOverlayResized(v, l, t, r, b, oL, oT, oR, oB)
     }
@@ -2278,7 +2163,7 @@ class PerformanceOverlayManager(
     }
 
     private fun handleOverlayTouch(v: View, event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && isHudStyle()) {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             gestures.resolvePendingBeforeDown(
                 event.eventTime, event.rawX, event.rawY,
                 ViewConfiguration.get(activity).scaledDoubleTapSlop, perfOverlayDoubleTapEnabled
@@ -2301,9 +2186,9 @@ class PerformanceOverlayManager(
                 val configuration = ViewConfiguration.get(activity)
                 gestures.down(
                     event.eventTime, event.rawX, event.rawY, event.x, event.y, configuration.scaledDoubleTapSlop,
-                    single = !hud || perfOverlaySingleTapEnabled,
+                    single = perfOverlaySingleTapEnabled,
                     double = perfOverlayDoubleTapEnabled,
-                    longPress = hud && perfOverlayLongPressEnabled
+                    longPress = perfOverlayLongPressEnabled
                 )
                 return true
             }
@@ -2350,7 +2235,8 @@ class PerformanceOverlayManager(
 
     private fun onHudLongPress() {
         val overlay = performanceOverlayView ?: return
-        val hud = hudView ?: return
+        val hud = hudView.takeIf { isHudStyle() }
+        if (hud == null) currentPerformanceInfo?.let { lastHudSnapshot = buildHudSnapshot(it) }
         if (currentHudLayout != PerfHudLayout.DOCK && isDraggingPerfOverlay && !perfOverlayMoved) {
             restoreOverlayLayout(overlay)
         }
@@ -2358,8 +2244,8 @@ class PerformanceOverlayManager(
         hideSnapGuides()
         applyDraggingVisualFeedback(overlay, false)
         overlay.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-        val target = hud.targetAt(hudTouchX - hud.left, hudTouchY - hud.top) ?: PerfHudTarget.DIAGNOSIS
-        hud.clearPressed()
+        val target = hud?.targetAt(hudTouchX - hud.left, hudTouchY - hud.top) ?: PerfHudTarget.DIAGNOSIS
+        hud?.clearPressed()
         overlayPrefs.edit { putBoolean(KEY_HUD_LONG_PRESS_USED, true) }
         showHudTargetInfo(target)
     }
@@ -2403,10 +2289,6 @@ class PerformanceOverlayManager(
         private const val FULL_MOON_TOLERANCE = 1.0 / 29.53
         private const val KEY_HUD_HINT_SHOWN = "hud_hint_shown"
         private const val KEY_HUD_LONG_PRESS_USED = "hud_long_press_used"
-        private const val KEY_HUD_HEALTH = "hud_health_enabled"
-        private const val KEY_HUD_SINGLE_TAP = "hud_single_tap_style_enabled"
-        private const val KEY_HUD_DOUBLE_TAP = "hud_double_tap_layout_enabled"
-        private const val KEY_HUD_LONG_PRESS = "hud_long_press_info_enabled"
         private const val KEY_LEGACY_ORIENTATION = "layout_orientation"
         private const val KEY_DEFAULT_ORIENTATION = "list_perf_overlay_orientation"
 

@@ -254,15 +254,33 @@
         <item name="singleLineTitle">false</item>
         <item name="iconSpaceReserved">false</item>
     </style>
+    <!-- Shared rows keep Crown labels and controls aligned as text wraps. -->
+    <style name="CrownSwitchRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:baselineAligned">false</item>
+    </style>
+    <style name="CrownSwitchRow.Descriptive">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+    </style>
     <style name="AppSwitchWidget">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">48dp</item>
+        <item name="android:gravity">center_vertical</item>
         <!-- StreamTheme has no AppCompat switchStyle to supply input defaults. -->
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
         <item name="android:singleLine">false</item>
         <item name="android:background">@null</item>
+    </style>
+    <style name="CrownSwitchRowControl" parent="AppSwitchWidget">
+        <item name="android:layout_marginStart">12dp</item>
     </style>
     <!-- Keep row navigation while allowing accessibility activation of the switch node. -->
     <style name="SettingsSwitchWidget" parent="AppSwitchWidget">

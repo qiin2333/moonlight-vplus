@@ -71,20 +71,29 @@ class SelectionIndicatorAnimator(
         selectionIndicator.visibility = View.VISIBLE
     }
 
+    /**
+     * 用布局坐标(left/top 沿父链累加到 rootView)计算 item 相对焦点框容器的位置。
+     * 不能用 getLocationInWindow(): 它包含 view 自身的 scale/translate 矩阵,
+     * 而按压(0.97)或焦点缩放动画进行中该值是瞬态的,会把焦点框定位到错误位置。
+     */
+    private fun layoutPositionInRoot(v: View): IntArray {
+        val loc = intArrayOf(v.left, v.top)
+        var parent = v.parent
+        while (parent is View && parent !== rootView) {
+            loc[0] += parent.left - parent.scrollX
+            loc[1] += parent.top - parent.scrollY
+            parent = parent.parent
+        }
+        return loc
+    }
+
     private fun setIndicatorPositionFast(targetView: View) {
         updateCornerRadius(targetView)
 
-        val targetLocation = IntArray(2)
-        targetView.getLocationInWindow(targetLocation)
+        val targetLoc = layoutPositionInRoot(targetView)
 
-        val rootLocation = IntArray(2)
-        rootView.getLocationInWindow(rootLocation)
-
-        val targetX = (targetLocation[0] - rootLocation[0]).toFloat()
-        val targetY = (targetLocation[1] - rootLocation[1]).toFloat()
-
-        selectionIndicator.translationX = targetX
-        selectionIndicator.translationY = targetY
+        selectionIndicator.translationX = targetLoc[0].toFloat()
+        selectionIndicator.translationY = targetLoc[1].toFloat()
         selectionIndicator.visibility = View.VISIBLE
     }
 
@@ -132,14 +141,9 @@ class SelectionIndicatorAnimator(
     private fun setIndicatorPosition(targetView: View, withAnimation: Boolean) {
         updateCornerRadius(targetView)
 
-        val targetLocation = IntArray(2)
-        targetView.getLocationInWindow(targetLocation)
-
-        val rootLocation = IntArray(2)
-        rootView.getLocationInWindow(rootLocation)
-
-        val targetX = (targetLocation[0] - rootLocation[0]).toFloat()
-        val targetY = (targetLocation[1] - rootLocation[1]).toFloat()
+        val targetLoc = layoutPositionInRoot(targetView)
+        val targetX = targetLoc[0].toFloat()
+        val targetY = targetLoc[1].toFloat()
 
         val targetWidth = targetView.width
         val targetHeight = targetView.height

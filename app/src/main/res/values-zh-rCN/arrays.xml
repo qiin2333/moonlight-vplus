@@ -83,6 +83,7 @@
         <item>🔋 电池电量</item>
         <item>📉 1%Low帧 (帧率平滑性)</item>
         <item>时钟</item>
+        <item>@string/game_menu_perf_moon</item>
     </string-array>
     <string-array name="framegen_quality_preset_names">
         <item>@string/framegen_quality_performance</item>

@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
@@ -252,14 +253,18 @@ class SuperConfigDatabaseHelper(context: Context?) :
         }
 
     fun insertConfig(values: ContentValues) {
+        applyNewConfigDefaults(values)
+        writableDataBase.insert("config", null, values)
+        notifyConfigSyncChanged()
+    }
+
+    private fun applyNewConfigDefaults(values: ContentValues) {
         for (column in listOf(
             PageConfigController.COLUMN_APPLY_TOUCHPAD_SENSITIVITY,
             PageConfigController.COLUMN_APPLY_MOUSE_WHEEL_SPEED
         )) {
             if (!values.containsKey(column)) values.put(column, 0)
         }
-        writableDataBase.insert("config", null, values)
-        notifyConfigSyncChanged()
     }
 
     fun deleteConfig(configId: Long) {
@@ -349,26 +354,25 @@ class SuperConfigDatabaseHelper(context: Context?) :
             return -1
         }
         if (!hasValidChecksum(exportFile)) return -2
-        if (!upgradeExportedConfig(exportFile, gson)) return -3
-
-        val settings = gson.fromJson(exportFile.settings, ContentValues::class.java)
-        val elements = gson.fromJson(exportFile.elements, Array<ContentValues>::class.java)
-        sanitizeDirectConfigActions(elements, fromBackup)
-        val oldIdToObject = elements.filter { it.containsKey(Element.COLUMN_LONG_ELEMENT_ID) }
-            .associateBy { it.getAsLong(Element.COLUMN_LONG_ELEMENT_ID) }
-
-        val newConfigId = System.currentTimeMillis()
-        settings.put(PageConfigController.COLUMN_LONG_CONFIG_ID, newConfigId)
-        insertConfig(settings)
-        var nextElementId = System.currentTimeMillis()
-        for (element in elements) {
-            element.put(Element.COLUMN_LONG_ELEMENT_ID, nextElementId++)
-            element.put(Element.COLUMN_LONG_CONFIG_ID, newConfigId)
-            insertElement(element)
+        val settings: ContentValues
+        val elements: Array<ContentValues>
+        try {
+            if (!upgradeExportedConfig(exportFile, gson)) return -3
+            settings = gson.fromJson(exportFile.settings, ContentValues::class.java) ?: return -1
+            elements = gson.fromJson(exportFile.elements, Array<ContentValues>::class.java) ?: return -1
+            sanitizeDirectConfigActions(elements, fromBackup)
+        } catch (_: Exception) {
+            return -1
         }
-
-        remapElementReferences(newConfigId, elements, oldIdToObject)
-        return 0
+        return writeImportedConfig {
+            val existingConfigIds = queryAllConfigIds().toSet()
+            var newConfigId = System.currentTimeMillis()
+            while (newConfigId in existingConfigIds) newConfigId = incrementImportId(newConfigId)
+            settings.put(PageConfigController.COLUMN_LONG_CONFIG_ID, newConfigId)
+            applyNewConfigDefaults(settings)
+            writableDataBase.insertOrThrow("config", null, settings)
+            insertImportedElements(newConfigId, elements)
+        }
     }
 
     fun mergeConfig(configString: String, existConfigId: Long): Int {
@@ -379,20 +383,57 @@ class SuperConfigDatabaseHelper(context: Context?) :
             return -1
         }
         if (!hasValidChecksum(exportFile)) return -2
-        if (!upgradeExportedConfig(exportFile, gson)) return -3
+        val elements: Array<ContentValues>
+        try {
+            if (!upgradeExportedConfig(exportFile, gson)) return -3
+            elements = gson.fromJson(exportFile.elements, Array<ContentValues>::class.java) ?: return -1
+            sanitizeDirectConfigActions(elements, false)
+        } catch (_: Exception) {
+            return -1
+        }
+        return writeImportedConfig {
+            check(existConfigId in queryAllConfigIds()) { "Crown merge target no longer exists" }
+            insertImportedElements(existConfigId, elements)
+        }
+    }
 
-        val elements = gson.fromJson(exportFile.elements, Array<ContentValues>::class.java)
-        sanitizeDirectConfigActions(elements, false)
+    /** Persist an entire profile or merge atomically, and notify sync only after commit. */
+    private inline fun writeImportedConfig(write: () -> Unit): Int {
+        try {
+            writableDataBase.beginTransaction()
+            try {
+                write()
+                writableDataBase.setTransactionSuccessful()
+            } finally {
+                writableDataBase.endTransaction()
+            }
+        } catch (error: Exception) {
+            Log.e("CrownConfig", "Failed to import Crown configuration", error)
+            return -1
+        }
+        notifyConfigSyncChanged()
+        return 0
+    }
+
+    private fun insertImportedElements(configId: Long, elements: Array<ContentValues>) {
         val oldIdToObject = elements.filter { it.containsKey(Element.COLUMN_LONG_ELEMENT_ID) }
             .associateBy { it.getAsLong(Element.COLUMN_LONG_ELEMENT_ID) }
+        val existingElementIds = queryAllElementIds(configId).toHashSet()
         var nextElementId = System.currentTimeMillis()
         for (element in elements) {
-            element.put(Element.COLUMN_LONG_ELEMENT_ID, nextElementId++)
-            element.put(Element.COLUMN_LONG_CONFIG_ID, existConfigId)
-            insertElement(element)
+            while (nextElementId in existingElementIds) nextElementId = incrementImportId(nextElementId)
+            element.put(Element.COLUMN_LONG_ELEMENT_ID, nextElementId)
+            existingElementIds.add(nextElementId)
+            nextElementId = incrementImportId(nextElementId)
+            element.put(Element.COLUMN_LONG_CONFIG_ID, configId)
+            writableDataBase.insertOrThrow("element", null, element)
         }
-        remapElementReferences(existConfigId, elements, oldIdToObject)
-        return 0
+        remapElementReferences(configId, elements, oldIdToObject)
+    }
+
+    private fun incrementImportId(value: Long): Long {
+        check(value < Long.MAX_VALUE) { "No Crown ID available" }
+        return value + 1
     }
 
     /** Both entry points resolve source IDs against the newly assigned profile-local IDs. */
@@ -411,7 +452,11 @@ class SuperConfigDatabaseHelper(context: Context?) :
                 else -> continue
             }
             element.put(Element.COLUMN_STRING_ELEMENT_VALUE, newValue)
-            updateElement(configId, element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID), element)
+            val updated = writableDataBase.update(
+                "element", element, "config_id = ? AND element_id = ?",
+                arrayOf(configId.toString(), element.getAsLong(Element.COLUMN_LONG_ELEMENT_ID).toString())
+            )
+            check(updated == 1) { "Unable to repair Crown element references" }
         }
     }
 

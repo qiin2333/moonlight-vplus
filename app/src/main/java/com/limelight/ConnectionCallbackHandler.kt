@@ -200,7 +200,7 @@ class ConnectionCallbackHandler(private val game: Game) {
             val h = Handler(Looper.getMainLooper())
             val startedConnection = game.conn
             h.postDelayed({
-                if (game.conn !== startedConnection || !game.connected) return@postDelayed
+                if (game.conn !== startedConnection || !game.connected || !game.grabbedInput) return@postDelayed
                 if (game.prefConfig.enableNativeMousePointer) {
                     game.enableNativeMousePointer(true)
                 } else {

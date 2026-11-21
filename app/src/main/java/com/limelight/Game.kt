@@ -1533,12 +1533,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onKeyEvent(event: KeyEvent) {
         isEventFromAccessibilityService = true
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            onKeyDown(event.keyCode, event)
-        } else if (event.action == KeyEvent.ACTION_UP) {
-            onKeyUp(event.keyCode, event)
+        try {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                onKeyDown(event.keyCode, event)
+            } else if (event.action == KeyEvent.ACTION_UP) {
+                onKeyUp(event.keyCode, event)
+            }
+        } finally {
+            isEventFromAccessibilityService = false
         }
-        isEventFromAccessibilityService = false
+    }
+
+    override fun onKeyboardCaptureLost() {
+        if (::keyboardInputHandler.isInitialized) keyboardInputHandler.releaseAccessibilityKeys()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
@@ -1741,6 +1748,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setMetaKeyCaptureState(enabled: Boolean) {
+        externalDisplayManager?.setKeyboardCaptureEnabled(enabled)
+        if (com.limelight.binding.input.capture.NativeKeyboardCapture.apply(window, enabled)) {
+            return
+        }
+
+        // Older Samsung devices expose a proprietary API for Meta key capture.
         try {
             val semWindowManager = Class.forName("com.samsung.android.view.SemWindowManager")
             val getInstanceMethod = semWindowManager.getMethod("getInstance")
@@ -1757,6 +1770,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         } catch (_: NoSuchMethodException) {
         } catch (_: InvocationTargetException) {
         } catch (_: IllegalAccessException) {
+        } catch (_: SecurityException) {
+        } catch (_: IllegalArgumentException) {
+        } catch (_: ExceptionInInitializerError) {
+        } catch (_: NoClassDefFoundError) {
         }
     }
 
@@ -1978,7 +1995,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog() ||
             hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible
-        if (!intercepting && KeyboardAccessibilityService.interceptingEnabled) {
+        if (!intercepting && ::keyboardInputHandler.isInitialized) {
             keyboardInputHandler.releaseForwardedKeys()
         }
         KeyboardAccessibilityService.setIntercepting(intercepting)
@@ -2289,6 +2306,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
+        if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
         if (grab && !prefConfig.enableNativeMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
@@ -2300,7 +2320,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             }
             inputCaptureProvider.disableCapture()
         }
-        setMetaKeyCaptureState(grab)
+        setMetaKeyCaptureState(grab && connected)
         grabbedInput = grab
     }
 
@@ -2419,13 +2439,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         prefConfig.enableNativeMousePointer = enable
 
         if (enable) {
-            if (::touchInputHandler.isInitialized) {
-                touchInputHandler.cancelNonRootTouchpad()
-            }
-            inputCaptureProvider.disableCapture()
+            setInputGrabState(grabbedInput)
             cursorVisible = true
             inputCaptureProvider.showCursor()
-            setMetaKeyCaptureState(true)
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.hide()
         } else {
@@ -2501,6 +2517,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     /** Accepted on the UI thread, together with connection resources and PiP state. */
     private fun onConnectionEstablished(): Boolean {
         if (!streamSession.markConnectionEstablished()) return false
+        setMetaKeyCaptureState(grabbedInput)
         orientationManager.connected = true
         updatePipAutoEnter()
         return true
@@ -2511,6 +2528,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * 后台恢复保留保活服务，Surface 销毁和 onStop 的先后顺序不影响该决定。
      */
     private fun stopConnection(reason: StreamStopReason) {
+        if (::keyboardInputHandler.isInitialized) {
+            keyboardInputHandler.releaseForwardedKeys()
+        }
+        setMetaKeyCaptureState(false)
         val connection = conn
         connection?.requestStop()
 
@@ -3433,6 +3454,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
     }
 
+    internal fun reopenCrownGameMenu(device: GameInputDevice?): Boolean {
+        if (destroying || isFinishing || isDestroyed || conn == null) return false
+        // This is a new menu opening, not an active USB shortcut request: restore
+        // controller capture for all devices, including the original opener.
+        return showGameMenuInternal(device, openedFromUsbShortcut = false) { menu ->
+            menu.showCrownFunctionMenu()
+        }
+    }
+
     private fun showGameMenuInternal(
         device: GameInputDevice?,
         openedFromUsbShortcut: Boolean,
@@ -3705,51 +3735,23 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         get() = performanceOverlayMode != PerformanceOverlayMode.HIDDEN &&
             performanceOverlayManager?.isPerfOverlayMovable == true
 
-    val perfOverlayAnchor: PerfOverlayAnchor?
-        get() = performanceOverlayManager?.perfOverlayAnchor
-
     fun setPerfOverlayStyle(style: PerfHudDensity) {
         performanceOverlayManager?.setPerfOverlayStyle(style)
     }
 
-    val perfOverlayHealthVisible: Boolean
-        get() = performanceOverlayManager?.perfOverlayHealthVisible ?: true
+    val perfOverlayGestureMode: String
+        get() = performanceOverlayManager?.perfOverlayGestureState?.mode
+            ?: com.limelight.perfhud.PerfOverlayGestures.FULL
 
-    val perfOverlaySingleTapEnabled: Boolean
-        get() = performanceOverlayManager?.perfOverlaySingleTapEnabled ?: false
+    val hasCustomPerfOverlayPosition: Boolean
+        get() = performanceOverlayManager?.hasCustomPerfOverlayPosition == true
 
-    val perfOverlayDoubleTapEnabled: Boolean
-        get() = performanceOverlayManager?.perfOverlayDoubleTapEnabled ?: false
-
-    val perfOverlayLongPressEnabled: Boolean
-        get() = performanceOverlayManager?.perfOverlayLongPressEnabled ?: true
-
-    fun setPerfOverlayHealthVisible(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlayHealthVisible(enabled)
-    }
-
-    fun setPerfOverlaySingleTapEnabled(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlaySingleTapEnabled(enabled)
-    }
-
-    fun setPerfOverlayDoubleTapEnabled(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlayDoubleTapEnabled(enabled)
-    }
-
-    fun setPerfOverlayLongPressEnabled(enabled: Boolean) {
-        performanceOverlayManager?.setPerfOverlayLongPressEnabled(enabled)
-    }
-
-    fun setPerfOverlayOrientation(orientation: PreferenceConfiguration.PerfOverlayOrientation) {
-        performanceOverlayManager?.setPerfOverlayOrientation(orientation)
+    fun setPerfOverlayGestureMode(mode: String) {
+        performanceOverlayManager?.setPerfOverlayGestureMode(mode)
     }
 
     fun setPerfOverlayDisplayItems(items: Set<String>) {
         performanceOverlayManager?.setPerfOverlayDisplayItems(items)
-    }
-
-    fun setPerfOverlayAnchor(anchor: PerfOverlayAnchor) {
-        performanceOverlayManager?.setPerfOverlayAnchor(anchor)
     }
 
     fun resetPerfOverlayPosition() {

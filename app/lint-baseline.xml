@@ -3026,17 +3026,6 @@
     </issue>
 
     <issue
-        id="VectorRaster"
-        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
-        errorLine1="    android:width=&quot;256dp&quot;"
-        errorLine2="                   ~~~~~">
-        <location
-            file="src/main/res/drawable/ic_settings.xml"
-            line="2"
-            column="20"/>
-    </issue>
-
-    <issue
         id="AppCompatCustomView"
         message="This custom view should extend `androidx.appcompat.widget.AppCompatEditText` instead"
         errorLine1="class ElementEditText : EditText {"

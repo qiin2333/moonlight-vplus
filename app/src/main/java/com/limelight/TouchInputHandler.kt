@@ -40,7 +40,24 @@ internal inline fun containsStylusTool(pointerCount: Int, toolTypeAt: (Int) -> I
     return false
 }
 
+internal inline fun pointerZeroIsStylus(pointerCount: Int, toolTypeAt: (Int) -> Int): Boolean =
+    pointerCount > 0 && when (toolTypeAt(0)) {
+        MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER -> true
+        else -> false
+    }
+
 internal const val CURRENT_MOTION_SAMPLE = -1
+
+internal fun normalizeStreamPosition(
+    x: Float, y: Float, offsetX: Float, offsetY: Float,
+    scaleX: Float, scaleY: Float, width: Int, height: Int
+): FloatArray {
+    if (scaleX == 0f || scaleY == 0f || width <= 0 || height <= 0) return floatArrayOf(0f, 0f)
+    return floatArrayOf(
+        ((x - offsetX) / scaleX / width).coerceIn(0f, 1f),
+        ((y - offsetY) / scaleY / height).coerceIn(0f, 1f)
+    )
+}
 
 internal inline fun visitMotionEventSamples(
     historySize: Int,
@@ -788,10 +805,10 @@ class TouchInputHandler(private val game: Game) {
             eventY = event.getY(0) - activeStreamView.y
         }
 
-        if (event.pointerCount == 1 && event.actionIndex == 0 &&
-            (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
-        ) {
+        val isStylus = pointerZeroIsStylus(event.pointerCount) { event.getToolType(it) }
+        // Pan/zoom must not delay a fallback pen stroke after a local transform.
+        if (isStylus && event.pointerCount == 1 && event.actionIndex == 0 &&
+            !game.getisTouchOverrideEnabled()) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_HOVER_ENTER,
                 MotionEvent.ACTION_HOVER_EXIT, MotionEvent.ACTION_HOVER_MOVE -> {
@@ -805,6 +822,12 @@ class TouchInputHandler(private val game: Game) {
                     ) return
                 }
             }
+        }
+
+        if (isStylus && game.externalDisplayManager?.isUsingExternalDisplay() != true) {
+            val normalized = getStreamViewRelativeNormalizedXY(touchedView, event, 0)
+            eventX = normalized[0] * activeStreamView.width
+            eventY = normalized[1] * activeStreamView.height
         }
 
         if (game.externalDisplayManager != null && game.externalDisplayManager?.isUsingExternalDisplay() == true) {
@@ -857,25 +880,14 @@ class TouchInputHandler(private val game: Game) {
             )
         }
 
-        val absoluteX: Float
-        val absoluteY: Float
-        if (view == activeStreamView) {
-            absoluteX = rawX
-            absoluteY = rawY
-        } else {
-            val scaleX = activeStreamView.scaleX
-            val scaleY = activeStreamView.scaleY
-            if (scaleX == 0f || scaleY == 0f) return floatArrayOf(0f, 0f)
-            absoluteX = (rawX - activeStreamView.x) / scaleX
-            absoluteY = (rawY - activeStreamView.y) / scaleY
-        }
-        val streamWidth = activeStreamView.width
-        val streamHeight = activeStreamView.height
-        if (streamWidth == 0 || streamHeight == 0) return floatArrayOf(0f, 0f)
-
-        return floatArrayOf(
-            (absoluteX / streamWidth).coerceIn(0f, 1f),
-            (absoluteY / streamHeight).coerceIn(0f, 1f)
+        val inStream = view == activeStreamView
+        return normalizeStreamPosition(
+            rawX, rawY,
+            if (inStream) 0f else activeStreamView.x,
+            if (inStream) 0f else activeStreamView.y,
+            if (inStream) 1f else activeStreamView.scaleX,
+            if (inStream) 1f else activeStreamView.scaleY,
+            activeStreamView.width, activeStreamView.height
         )
     }
 

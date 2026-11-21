@@ -9,7 +9,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginEnd="5dp"
+        android:background="@drawable/crown_config_panel_bg"
         android:orientation="vertical">
 
         <ScrollView
@@ -17,11 +17,10 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="@drawable/crown_config_panel_bg"
             android:clipToPadding="false"
             android:fillViewport="true"
-            android:paddingHorizontal="10dp"
-            android:paddingTop="10dp"
+            android:paddingHorizontal="14dp"
+            android:paddingTop="14dp"
             android:paddingBottom="14dp">
 
             <LinearLayout
@@ -35,7 +34,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="2dp"
-                    android:layout_marginBottom="5dp"
+                    android:layout_marginBottom="8dp"
                     android:text="@string/crown_edit_section_canvas"
                     style="@style/CrownSectionLabel" />
 
@@ -45,23 +44,21 @@
                     android:layout_marginBottom="12dp"
                     android:background="@drawable/crown_config_section_bg"
                     android:orientation="vertical"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="6dp">
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp">
 
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        style="@style/CrownSwitchRow.Descriptive">
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                android:gravity="center_vertical">
+                            android:gravity="center_vertical"
+                            android:orientation="vertical">
 
                             <TextView
+                                android:labelFor="@id/page_edit_drag_edit_switch"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text="@string/layout_page_edit_text_e8341"
@@ -78,7 +75,7 @@
                         </LinearLayout>
 
                         <com.limelight.utils.AppSwitchView
-                            style="@style/AppSwitchWidget"
+                            style="@style/CrownSwitchRowControl"
                             android:id="@+id/page_edit_drag_edit_switch"
                             android:checked="true"
                             android:textOff=""
@@ -91,19 +88,17 @@
                         android:background="@color/ui_shell_outline" />
 
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        style="@style/CrownSwitchRow.Descriptive">
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                android:gravity="center_vertical">
+                            android:gravity="center_vertical"
+                            android:orientation="vertical">
 
                             <TextView
+                                android:labelFor="@id/page_edit_alignment_snap_switch"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text="@string/crown_alignment_snap_switch"
@@ -120,7 +115,7 @@
                         </LinearLayout>
 
                         <com.limelight.utils.AppSwitchView
-                            style="@style/AppSwitchWidget"
+                            style="@style/CrownSwitchRowControl"
                             android:id="@+id/page_edit_alignment_snap_switch"
                             android:checked="true"
                             android:textOff=""
@@ -142,7 +137,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="2dp"
-                    android:layout_marginBottom="5dp"
+                    android:layout_marginBottom="8dp"
                     android:text="@string/crown_edit_section_buttons"
                     style="@style/CrownSectionLabel" />
 
@@ -276,13 +271,17 @@
             </LinearLayout>
         </ScrollView>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/crown_section_border" />
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:background="@color/crown_panel_background"
+            android:layout_height="56dp"
             android:gravity="center_vertical|end"
             android:orientation="horizontal"
-            android:paddingHorizontal="10dp"
+            android:paddingHorizontal="14dp"
             android:paddingVertical="8dp">
 
             <ImageButton
