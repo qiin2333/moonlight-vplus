@@ -49,6 +49,32 @@ internal inline fun pointerZeroIsStylus(pointerCount: Int, toolTypeAt: (Int) -> 
 
 internal const val CURRENT_MOTION_SAMPLE = -1
 
+/** Track downs delivered to the host independently of Android's last button snapshot. */
+internal class MouseNavigationButtons(private val send: (Byte, Boolean) -> Unit) {
+    private var observed = 0
+    private var forwarded = 0
+
+    fun update(buttonState: Int, allowNewPresses: Boolean = false) {
+        val held = buttonState and (MotionEvent.BUTTON_BACK or MotionEvent.BUTTON_FORWARD)
+        val pressed = if (allowNewPresses) held and observed.inv() else 0
+        observed = held
+        sendChanges((held and forwarded) or pressed)
+    }
+
+    fun releaseAll() = sendChanges(0)
+
+    private fun sendChanges(next: Int) {
+        val changed = forwarded xor next
+        forwarded = next
+        if (changed and MotionEvent.BUTTON_BACK != 0) {
+            send(MouseButtonPacket.BUTTON_X1, next and MotionEvent.BUTTON_BACK != 0)
+        }
+        if (changed and MotionEvent.BUTTON_FORWARD != 0) {
+            send(MouseButtonPacket.BUTTON_X2, next and MotionEvent.BUTTON_FORWARD != 0)
+        }
+    }
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
 internal fun allowsAbsoluteMouseFallback(mode: ExternalMouseMode, source: Int, toolType: Int): Boolean {
     if (mode != ExternalMouseMode.RELATIVE_CAPTURE) return true
@@ -102,6 +128,9 @@ class TouchInputHandler(private val game: Game) {
     // ---- 触控私有状态 ----
     // Mouse-only baseline. Pen packets carry their full button state independently.
     private var lastButtonState = 0
+    private val navigationButtons = MouseNavigationButtons { button, down ->
+        if (down) game.conn?.sendMouseButtonDown(button) else game.conn?.sendMouseButtonUp(button)
+    }
     private var multiFingerDownTime = 0L
 
     // 双指右键检测
@@ -307,6 +336,7 @@ class TouchInputHandler(private val game: Game) {
                     game.conn?.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
                 }
 
+                navigationButtons.update(buttonState)
                 lastButtonState = buttonState
                 return true
             }
@@ -343,6 +373,7 @@ class TouchInputHandler(private val game: Game) {
                 }
 
                 if (!game.inputCaptureProvider.isCapturingActive()) {
+                    navigationButtons.update(buttonState)
                     return true
                 }
 
@@ -421,22 +452,7 @@ class TouchInputHandler(private val game: Game) {
                     }
                 }
 
-                if (game.prefConfig.mouseNavButtons) {
-                    if (changedButtons and MotionEvent.BUTTON_BACK != 0) {
-                        if (buttonState and MotionEvent.BUTTON_BACK != 0) {
-                            game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
-                        } else {
-                            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
-                        }
-                    }
-                    if (changedButtons and MotionEvent.BUTTON_FORWARD != 0) {
-                        if (buttonState and MotionEvent.BUTTON_FORWARD != 0) {
-                            game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2)
-                        } else {
-                            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
-                        }
-                    }
-                }
+                navigationButtons.update(buttonState, allowNewPresses = game.prefConfig.mouseNavButtons)
 
                 // 触控笔按下/抬起
                 if (event.pointerCount == 1 && event.actionIndex == 0) {
@@ -1624,6 +1640,10 @@ class TouchInputHandler(private val game: Game) {
 
     fun cancelNonRootTouchpad() {
         nonRootTouchpadHandler.cancelAll(game.conn)
+    }
+
+    fun releaseMouseNavigationButtons() {
+        navigationButtons.releaseAll()
     }
 
     /**

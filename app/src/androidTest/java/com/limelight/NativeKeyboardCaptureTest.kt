@@ -1,17 +1,22 @@
 package com.limelight
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.preference.PreferenceManager
 import com.limelight.binding.input.capture.InputCaptureProvider
+import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -19,6 +24,46 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class NativeKeyboardCaptureTest {
+    @Test
+    fun retainedConnectionAppliesChangedMouseModeOnResume() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assumeTrue(PreferenceConfiguration.supportsDesktopMouseMode(context))
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val key = PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING
+        val original = prefs.all[key] as? Boolean
+        try {
+            KeyboardTestScenario.launch().use { scenario ->
+                lateinit var connection: NvConnection
+                scenario.onActivity { game ->
+                    val session = Game::class.java.getDeclaredField("streamSession").apply {
+                        isAccessible = true
+                    }.get(game) as StreamSessionCoordinator
+                    assertTrue(session.markConnectionAttempted())
+                    assertTrue(session.markConnectionEstablished())
+                    connection = requireNotNull(game.conn)
+                    game.setTouchMode(false)
+                    game.setInputGrabState(true)
+                    game.setExternalMouseDesktopMode(true)
+                }
+                for (desktop in listOf(false, true)) {
+                    scenario.moveToState(Lifecycle.State.STARTED)
+                    prefs.edit().putBoolean(key, desktop).apply()
+                    scenario.moveToState(Lifecycle.State.RESUMED)
+                    scenario.onActivity { game ->
+                        assertTrue(game.connected)
+                        assertSame(connection, game.conn)
+                        assertEquals(desktop, game.cursorVisible)
+                        assertEquals(!desktop, game.inputCaptureProvider.isCapturingEnabled())
+                    }
+                }
+            }
+        } finally {
+            val editor = prefs.edit()
+            if (original == null) editor.remove(key) else editor.putBoolean(key, original)
+            editor.apply()
+        }
+    }
+
     @Test
     fun switchingDesktopMouseModeReconfiguresCaptureWithoutChangingPreset() {
         KeyboardTestScenario.launch().use { scenario ->

@@ -726,6 +726,8 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
         const val FRAME_PACING_PREF_STRING = "frame_pacing"
         const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
         internal const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
+        internal fun readAbsoluteMouseMode(prefs: SharedPreferences): Boolean =
+            prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE)
         internal fun supportsDesktopMouseMode(context: Context): Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                 !context.packageManager.hasSystemFeature("com.nvidia.feature.shield")
@@ -1750,7 +1752,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
 
             config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST)
-            config.absoluteMouseMode = prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE)
+            config.absoluteMouseMode = readAbsoluteMouseMode(prefs)
             config.mouseAxisCorrection = MouseAxisCorrection.fromPreferenceValue(
                 prefs.getString(
                     MOUSE_AXIS_CORRECTION_PREF_STRING,
