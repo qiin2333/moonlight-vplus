@@ -1412,6 +1412,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
     }
 
+    internal fun refreshInputPreferencesForReconnect() {
+        val latest = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+        val previousMode = prefConfig.externalMouseMode
+        prefConfig.absoluteMouseMode = latest.absoluteMouseMode
+        if (prefConfig.externalMouseMode != previousMode) {
+            cursorVisible = prefConfig.usesSystemMousePointer
+        }
+        prefConfig.refreshControllerMotionPreferencesFrom(latest)
+    }
+
     private fun prepareConnection() {
         audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
@@ -1432,9 +1442,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
 
         // A background resume may reuse this Activity after input settings changed.
-        val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        prefConfig.absoluteMouseMode = latestConfig.absoluteMouseMode
-        prefConfig.refreshControllerMotionPreferencesFrom(latestConfig)
+        refreshInputPreferencesForReconnect()
 
         createConnectionAndHandler()
         performanceOverlayManager?.recordStreamStart()

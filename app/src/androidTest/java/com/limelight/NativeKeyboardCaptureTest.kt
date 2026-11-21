@@ -39,6 +39,14 @@ class NativeKeyboardCaptureTest {
                         assertTrue(game.prefConfig.enableNativeMousePointer)
                         assertFalse(game.prefConfig.touchscreenTrackpad)
                     }
+                    // A settings change while backgrounded bypasses the in-stream toggle.
+                    for (desktop in listOf(false, true)) {
+                        prefs.edit().putBoolean(key, desktop).apply()
+                        game.refreshInputPreferencesForReconnect()
+                        game.setInputGrabState(game.grabbedInput)
+                        assertEquals(desktop, game.cursorVisible)
+                        assertEquals(!desktop, game.inputCaptureProvider.isCapturingEnabled())
+                    }
                 } finally {
                     val editor = prefs.edit()
                     if (original == null) editor.remove(key) else editor.putBoolean(key, original)

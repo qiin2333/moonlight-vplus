@@ -49,6 +49,18 @@ internal inline fun pointerZeroIsStylus(pointerCount: Int, toolTypeAt: (Int) -> 
 
 internal const val CURRENT_MOTION_SAMPLE = -1
 
+@RequiresApi(Build.VERSION_CODES.O)
+internal fun allowsAbsoluteMouseFallback(mode: ExternalMouseMode, source: Int, toolType: Int): Boolean {
+    if (mode != ExternalMouseMode.RELATIVE_CAPTURE) return true
+    return when (toolType) {
+        MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER -> true
+        MotionEvent.TOOL_TYPE_MOUSE -> false
+        // Some pads report a finger on SOURCE_MOUSE, including the mouse + stylus source 0x3002.
+        else -> (source and InputDevice.SOURCE_MOUSE) != InputDevice.SOURCE_MOUSE &&
+            source != InputDevice.SOURCE_MOUSE_RELATIVE && source != InputDevice.SOURCE_TOUCHPAD
+    }
+}
+
 internal fun normalizeStreamPosition(
     x: Float, y: Float, offsetX: Float, offsetY: Float,
     scaleX: Float, scaleY: Float, width: Int, height: Int
@@ -358,25 +370,26 @@ class TouchInputHandler(private val game: Game) {
                             game.conn?.sendMouseMove(deltaX, deltaY)
                         }
                     }
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 &&
-                    allowAbsoluteMouseFallback(event)) {
-                    val device = event.device
-                    if (device != null) {
-                        val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
-                        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
-                        if (xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f) {
-                            val xMax = xRange.max.toInt()
-                            val yMax = yRange.max.toInt()
-                            if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                game.conn?.sendMousePosition(
-                                    event.x.toInt().toShort(), event.y.toInt().toShort(),
-                                    xMax.toShort(), yMax.toShort()
-                                )
+                } else if (allowsAbsoluteMouseFallback(game.prefConfig.externalMouseMode, eventSource, event.getToolType(0))) {
+                    if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
+                        val device = event.device
+                        if (device != null) {
+                            val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
+                            val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
+                            if (xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f) {
+                                val xMax = xRange.max.toInt()
+                                val yMax = yRange.max.toInt()
+                                if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
+                                    game.conn?.sendMousePosition(
+                                        event.x.toInt().toShort(), event.y.toInt().toShort(),
+                                        xMax.toShort(), yMax.toShort()
+                                    )
+                                }
                             }
                         }
+                    } else if (view != null) {
+                        updateMousePosition(view, event)
                     }
-                } else if (view != null && allowAbsoluteMouseFallback(event)) {
-                    updateMousePosition(view, event)
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
@@ -787,11 +800,6 @@ class TouchInputHandler(private val game: Game) {
 
         return true
     }
-
-    // Ignore stale absolute motion during capture transitions, but still forward buttons and scrolling.
-    private fun allowAbsoluteMouseFallback(event: MotionEvent): Boolean =
-        game.prefConfig.externalMouseMode != ExternalMouseMode.RELATIVE_CAPTURE ||
-            event.getToolType(0) != MotionEvent.TOOL_TYPE_MOUSE
 
     // ---- updateMousePosition ----
 
