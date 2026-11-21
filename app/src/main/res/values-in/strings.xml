@@ -282,4 +282,7 @@
     <string name="game_menu_perf_gestures_long_only">Tekan lama</string>
     <string name="game_menu_perf_gestures_custom">Gestur saat ini disesuaikan</string>
     <string name="game_menu_perf_moon">Fase bulan</string>
+    <string name="crown_config_segment_layout">Tata letak</string>
+    <string name="crown_config_segment_touch">Sentuh</string>
+    <string name="crown_config_segment_feedback">Getaran</string>
 </resources>

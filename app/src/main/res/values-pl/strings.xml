@@ -351,4 +351,7 @@
     <string name="game_menu_perf_gestures_long_only">Tylko przytrzymanie</string>
     <string name="game_menu_perf_gestures_custom">Bieżące gesty są niestandardowe</string>
     <string name="game_menu_perf_moon">Faza księżyca</string>
+    <string name="crown_config_segment_layout">Układ</string>
+    <string name="crown_config_segment_touch">Dotyk</string>
+    <string name="crown_config_segment_feedback">Wibracje</string>
 </resources>

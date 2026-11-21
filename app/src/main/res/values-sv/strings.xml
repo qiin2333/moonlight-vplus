@@ -351,4 +351,7 @@
     <string name="game_menu_perf_gestures_long_only">Endast långt tryck</string>
     <string name="game_menu_perf_gestures_custom">Aktuella gester är anpassade</string>
     <string name="game_menu_perf_moon">Månfas</string>
+    <string name="crown_config_segment_layout">Layout</string>
+    <string name="crown_config_segment_touch">Pekskärm</string>
+    <string name="crown_config_segment_feedback">Vibration</string>
 </resources>

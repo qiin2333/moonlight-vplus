@@ -78,4 +78,7 @@
     <string name="game_menu_perf_gestures_long_only">فقط لمس طولانی</string>
     <string name="game_menu_perf_gestures_custom">حرکت‌های فعلی سفارشی هستند</string>
     <string name="game_menu_perf_moon">فاز ماه</string>
+    <string name="crown_config_segment_layout">چیدمان</string>
+    <string name="crown_config_segment_touch">لمس</string>
+    <string name="crown_config_segment_feedback">لرزش</string>
 </resources>

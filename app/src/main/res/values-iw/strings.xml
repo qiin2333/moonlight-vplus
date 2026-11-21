@@ -230,4 +230,7 @@
     <string name="game_menu_perf_gestures_long_only">לחיצה ארוכה</string>
     <string name="game_menu_perf_gestures_custom">המחוות הנוכחיות מותאמות אישית</string>
     <string name="game_menu_perf_moon">מופע הירח</string>
+    <string name="crown_config_segment_layout">פריסה</string>
+    <string name="crown_config_segment_touch">מגע</string>
+    <string name="crown_config_segment_feedback">רטט</string>
 </resources>

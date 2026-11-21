@@ -243,4 +243,7 @@
     <string name="game_menu_perf_gestures_long_only">長押しのみ</string>
     <string name="game_menu_perf_gestures_custom">現在のジェスチャーはカスタム設定です</string>
     <string name="game_menu_perf_moon">月相</string>
+    <string name="crown_config_segment_layout">レイアウト</string>
+    <string name="crown_config_segment_touch">タッチ</string>
+    <string name="crown_config_segment_feedback">振動</string>
 </resources>

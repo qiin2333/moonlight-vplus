@@ -249,4 +249,7 @@
     <string name="game_menu_perf_gestures_long_only">Doar apăsare lungă</string>
     <string name="game_menu_perf_gestures_custom">Gesturile actuale sunt personalizate</string>
     <string name="game_menu_perf_moon">Faza lunii</string>
+    <string name="crown_config_segment_layout">Aspect</string>
+    <string name="crown_config_segment_touch">Atingere</string>
+    <string name="crown_config_segment_feedback">Vibrații</string>
 </resources>

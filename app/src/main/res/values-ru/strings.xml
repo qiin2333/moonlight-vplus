@@ -2262,4 +2262,7 @@
     <string name="game_menu_perf_gestures_long_only">Только удержание</string>
     <string name="game_menu_perf_gestures_custom">Текущие жесты настроены вручную</string>
     <string name="game_menu_perf_moon">Фаза луны</string>
+    <string name="crown_config_segment_layout">Раскладка</string>
+    <string name="crown_config_segment_touch">Касание</string>
+    <string name="crown_config_segment_feedback">Вибрация</string>
 </resources>

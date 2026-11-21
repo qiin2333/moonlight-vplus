@@ -277,4 +277,7 @@
     <string name="game_menu_perf_gestures_long_only">Kun langt trykk</string>
     <string name="game_menu_perf_gestures_custom">Gjeldende bevegelser er tilpasset</string>
     <string name="game_menu_perf_moon">Månefase</string>
+    <string name="crown_config_segment_layout">Oppsett</string>
+    <string name="crown_config_segment_touch">Berøring</string>
+    <string name="crown_config_segment_feedback">Vibrering</string>
 </resources>

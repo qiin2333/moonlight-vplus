@@ -300,4 +300,7 @@
     <string name="game_menu_perf_gestures_long_only">Chỉ nhấn giữ</string>
     <string name="game_menu_perf_gestures_custom">Cử chỉ hiện tại được tùy chỉnh</string>
     <string name="game_menu_perf_moon">Pha mặt trăng</string>
+    <string name="crown_config_segment_layout">Bố cục</string>
+    <string name="crown_config_segment_touch">Cảm ứng</string>
+    <string name="crown_config_segment_feedback">Rung</string>
 </resources>

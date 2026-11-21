@@ -368,4 +368,7 @@
     <string name="game_menu_perf_gestures_long_only">길게 누르기만</string>
     <string name="game_menu_perf_gestures_custom">현재 제스처는 사용자 설정입니다</string>
     <string name="game_menu_perf_moon">달의 위상</string>
+    <string name="crown_config_segment_layout">레이아웃</string>
+    <string name="crown_config_segment_touch">터치</string>
+    <string name="crown_config_segment_feedback">진동</string>
 </resources>

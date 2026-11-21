@@ -323,4 +323,7 @@
     <string name="game_menu_perf_gestures_long_only">Csak hosszan</string>
     <string name="game_menu_perf_gestures_custom">A jelenlegi gesztusok egyéniek</string>
     <string name="game_menu_perf_moon">Holdfázis</string>
+    <string name="crown_config_segment_layout">Elrendezés</string>
+    <string name="crown_config_segment_touch">Érintés</string>
+    <string name="crown_config_segment_feedback">Rezgés</string>
 </resources>

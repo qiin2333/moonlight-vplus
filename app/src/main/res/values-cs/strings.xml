@@ -327,4 +327,7 @@
     <string name="game_menu_perf_gestures_long_only">Jen podržení</string>
     <string name="game_menu_perf_gestures_custom">Aktuální gesta jsou vlastní</string>
     <string name="game_menu_perf_moon">Fáze Měsíce</string>
+    <string name="crown_config_segment_layout">Rozložení</string>
+    <string name="crown_config_segment_touch">Dotyk</string>
+    <string name="crown_config_segment_feedback">Vibrace</string>
 </resources>
