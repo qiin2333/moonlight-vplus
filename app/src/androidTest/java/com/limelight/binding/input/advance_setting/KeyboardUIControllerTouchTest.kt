@@ -68,11 +68,7 @@ class KeyboardUIControllerTouchTest {
                 val tabs = listOf(R.id.btn_key_page_main, R.id.btn_key_page_nav,
                     R.id.btn_key_page_num, R.id.btn_key_page_mini)
                     .map { activity.findViewById<TextView>(it) }
-                fun assertTabVisible(tab: TextView) {
-                    val visible = Rect()
-                    assertTrue(tab.getGlobalVisibleRect(visible))
-                    assertEquals(tab.width, visible.width())
-                    assertEquals(tab.height, visible.height())
+                fun backgroundColor(tab: TextView): Int {
                     val bitmap = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(bitmap)
                     canvas.drawColor(panel)
@@ -83,11 +79,28 @@ class KeyboardUIControllerTouchTest {
                     drawable.bounds = oldBounds
                     val background = bitmap.getPixel(16, 16)
                     bitmap.recycle()
+                    return background
+                }
+                fun assertTabVisible(tab: TextView) {
+                    val visible = Rect()
+                    assertTrue(tab.getGlobalVisibleRect(visible))
+                    assertEquals(tab.width, visible.width())
+                    assertEquals(tab.height, visible.height())
                     assertTrue("Tab text must contrast with its background",
-                        ColorUtils.calculateContrast(tab.currentTextColor, background) >= 4.5)
+                        ColorUtils.calculateContrast(tab.currentTextColor, backgroundColor(tab)) >= 4.5)
                 }
                 tabs.forEach(::assertTabVisible)
                 assertTrue(tabs[0].isSelected)
+                val drawable = tabs[0].background
+                val originalState = drawable.state.clone()
+                drawable.state = intArrayOf(android.R.attr.state_enabled)
+                val neutral = backgroundColor(tabs[0])
+                drawable.state = intArrayOf(android.R.attr.state_enabled, android.R.attr.state_selected)
+                assertEquals("Selected tabs should keep the neutral background", neutral, backgroundColor(tabs[0]))
+                drawable.state = intArrayOf(android.R.attr.state_enabled, android.R.attr.state_pressed)
+                assertTrue("Pressed tabs should still provide feedback", neutral != backgroundColor(tabs[0]))
+                drawable.state = originalState
+                assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.layout_main).visibility)
                 tabs[1].performClick()
                 assertTrue(tabs[1].isSelected)
                 assertFalse(tabs[0].isSelected)
@@ -96,6 +109,11 @@ class KeyboardUIControllerTouchTest {
                 tabs[0].performClick()
                 assertTrue(tabs[0].isSelected)
                 assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.layout_main).visibility)
+                val resize = activity.findViewById<TextView>(R.id.btn_keyboard_resize)
+                resize.performClick()
+                assertTrue(resize.isSelected)
+                resize.performClick()
+                assertFalse(resize.isSelected)
             }
         }
     }

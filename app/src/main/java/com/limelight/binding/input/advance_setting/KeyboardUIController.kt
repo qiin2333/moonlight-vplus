@@ -330,7 +330,7 @@ class KeyboardUIController(
         val resizeToggleListener = View.OnClickListener { v: View? ->
             val isVisible = resizeHandle!!.getVisibility() == View.VISIBLE
             resizeHandle.setVisibility(if (isVisible) View.GONE else View.VISIBLE)
-            updateTabStyle(btnResize, !isVisible)
+            updateTabStyle(btnResize, !isVisible, showSelectedBackground = true)
             if (!isVisible) syncResizeHandlePosition()
         }
         if (btnResize != null) btnResize.setOnClickListener(resizeToggleListener)
@@ -383,11 +383,15 @@ class KeyboardUIController(
         }
     }
 
-    private fun updateTabStyle(btn: TextView?, active: Boolean) {
+    private fun updateTabStyle(btn: TextView?, active: Boolean, showSelectedBackground: Boolean = false) {
         if (btn == null) return
         btn.setTextColor(ContextCompat.getColor(btn.context,
             if (active) R.color.crown_text_primary else R.color.crown_text_secondary))
-        btn.setBackgroundResource(R.drawable.keyboard_modifier_refined_selector)
+        btn.setBackgroundResource(if (showSelectedBackground) {
+            R.drawable.keyboard_modifier_refined_selector
+        } else {
+            R.drawable.keyboard_tab_selector
+        })
         btn.isSelected = active
     }
 
