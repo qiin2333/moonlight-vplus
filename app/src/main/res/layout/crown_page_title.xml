@@ -15,7 +15,7 @@
         android:background="@drawable/crown_header_mark_bg"
         android:importantForAccessibility="no">
 
-        <ImageView
+        <androidx.appcompat.widget.AppCompatImageView
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:layout_gravity="center"

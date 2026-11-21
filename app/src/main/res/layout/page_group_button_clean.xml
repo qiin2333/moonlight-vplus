@@ -305,7 +305,7 @@
                         android:layout_weight="1"
                         android:text="@string/layout_page_group_button_text_fd8c4"
                         android:textSize="14sp"/>
-                    <ImageView
+                    <androidx.appcompat.widget.AppCompatImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:importantForAccessibility="no"

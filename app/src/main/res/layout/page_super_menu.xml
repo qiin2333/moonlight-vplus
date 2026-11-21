@@ -118,7 +118,7 @@
                 <LinearLayout
                     style="@style/CrownSwitchRow.Descriptive">
 
-                    <ImageView
+                    <androidx.appcompat.widget.AppCompatImageView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_marginEnd="10dp"
@@ -167,7 +167,7 @@
                 <LinearLayout
                     style="@style/CrownSwitchRow.Descriptive">
 
-                    <ImageView
+                    <androidx.appcompat.widget.AppCompatImageView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_marginEnd="10dp"
@@ -230,7 +230,7 @@
                 android:orientation="horizontal"
                 android:paddingHorizontal="12dp">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="28dp"
                     android:layout_height="28dp"
                     android:layout_marginEnd="10dp"
@@ -261,7 +261,7 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:src="@drawable/phc_caret_right"
@@ -277,7 +277,7 @@
                 android:orientation="horizontal"
                 android:paddingHorizontal="12dp">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:layout_marginEnd="10dp"
@@ -340,7 +340,7 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <ImageView
+            <androidx.appcompat.widget.AppCompatImageView
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:layout_marginEnd="8dp"
