@@ -107,6 +107,7 @@
                     android:layout_weight="1"
                     android:autofillHints=""
                     android:hint="@string/dialog_hint_key_name"
+                    android:imeOptions="actionDone"
                     android:inputType="text"
                     android:maxLines="1"
                     android:textColor="#FFFFFF"

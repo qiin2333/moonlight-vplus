@@ -985,7 +985,7 @@ class PreferenceConfiguration {
         // 悬浮球交互监听器默认值
         private const val DEFAULT_FLOAT_BALL_SINGLE_CLICK_ACTION = "open_keyboard" // 单击打开键盘
         private const val DEFAULT_FLOAT_BALL_DOUBLE_CLICK_ACTION = "open_menu" // 双击打开菜单
-        private const val DEFAULT_FLOAT_BALL_LONG_CLICK_ACTION = "toggle_visibility" // 长按切换可见性
+        private const val DEFAULT_FLOAT_BALL_LONG_CLICK_ACTION = "none" // 长按默认无操作
         private const val DEFAULT_FLOAT_BALL_SWIPE_UP_ACTION = "none" // 向上滑动无操作
         private const val DEFAULT_FLOAT_BALL_SWIPE_DOWN_ACTION = "none" // 向下滑动无操作
         private const val DEFAULT_FLOAT_BALL_SWIPE_LEFT_ACTION = "none" // 向左滑动无操作

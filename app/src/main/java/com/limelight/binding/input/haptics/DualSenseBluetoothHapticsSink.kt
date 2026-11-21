@@ -12,7 +12,8 @@ internal class DualSenseBluetoothHapticsSink(
     private val pause: () -> Boolean,
     private val onFailure: () -> Unit = {},
     private val control: (Ds5HapticsState) -> Unit = {},
-    private val release: () -> Boolean = pause
+    private val release: () -> Boolean = pause,
+    private val inputClockNanos: () -> Long = System::nanoTime
 ) : DualSenseNativeHapticsSink {
     private data class Packet(val samples: ByteArray, val receivedAt: Long)
     private val lock = Any()
@@ -59,7 +60,7 @@ internal class DualSenseBluetoothHapticsSink(
             val flags = frame.flags.toInt()
             val restart = flags and 5 != 0
             if (!restart && sequence?.let { frame.sequenceNumber - it <= 0 } == true) return
-            val now = System.nanoTime()
+            val now = inputClockNanos()
             // Missing unreliable PCM is a gap, not a new stream; retain queued audio and FIR history.
             if (restart || lastInput != 0L && now - lastInput > IDLE_NS) {
                 queue.clear()
@@ -105,15 +106,16 @@ internal class DualSenseBluetoothHapticsSink(
             while (!stopping) {
                 val now = System.nanoTime()
                 if (deadline > now) { LockSupport.parkNanos(minOf(deadline - now, FLUSH_NS)); continue }
+                val inputNow = inputClockNanos()
                 val packet = synchronized(lock) {
-                    if (encoder.hasPendingSamples && now - lastInput >= FLUSH_NS) {
+                    if (encoder.hasPendingSamples && inputNow - lastInput >= FLUSH_NS) {
                         encoder.finish { enqueue(it, lastInput) }
                     }
-                    while (queue.isNotEmpty() && now - queue.first().receivedAt > MAX_AGE_NS) {
+                    while (queue.isNotEmpty() && inputNow - queue.first().receivedAt > MAX_AGE_NS) {
                         queue.removeFirst(); dropped++
                     }
                     queue.removeFirstOrNull()?.samples ?: if (playing && !ended &&
-                        lastInput != 0L && now - lastInput < IDLE_NS) {
+                        lastInput != 0L && inputNow - lastInput < IDLE_NS) {
                         underruns++
                         ByteArray(64)
                     } else null

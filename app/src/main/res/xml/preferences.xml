@@ -1220,7 +1220,7 @@
                     android:summary="@string/summary_float_ball_long_click_action"
                     android:entries="@array/float_ball_action_names"
                     android:entryValues="@array/float_ball_action_values"
-                    android:defaultValue="toggle_visibility" />
+                    android:defaultValue="none" />
             </PreferenceCategory>
         </PreferenceScreen>
         <PreferenceScreen

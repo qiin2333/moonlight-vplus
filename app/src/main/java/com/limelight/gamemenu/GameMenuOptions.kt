@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -90,24 +91,42 @@ internal fun MenuOptionColumn(
     optionFocusModifier: Modifier = Modifier,
     inlineControlsFocusable: Boolean = true,
     initialFocusIconKey: String? = null,
-    initialFocusOptionKey: String? = null
+    initialFocusOptionKey: String? = null,
+    stableFocusKeys: Boolean = false
 ) {
     val initialFocusIndex = options.indexOfFirst { it.focusKey == initialFocusOptionKey }
         .takeIf { initialFocusOptionKey != null && it >= 0 }
         ?: options.indexOfFirst { it.iconKey == initialFocusIconKey }
             .takeIf { initialFocusIconKey != null && it >= 0 } ?: 0
     Column(modifier, verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)) {
-        options.forEachIndexed { index, option ->
-            MenuOptionRow(
-                option = option,
-                iconRes = iconForOption(option.iconKey),
-                onClick = { onOptionClick(option) },
-                onInlineToggle = onInlineToggle,
-                onSegmentClick = onSegmentClick,
-                modifier = optionFocusModifier,
-                initialFocusRequester = initialFocusRequester.takeIf { index == initialFocusIndex },
-                inlineControlsFocusable = inlineControlsFocusable
-            )
+        if (stableFocusKeys) {
+            options.forEachIndexed { index, option ->
+                key(option.focusKey ?: index) {
+                    MenuOptionRow(
+                        option = option,
+                        iconRes = iconForOption(option.iconKey),
+                        onClick = { onOptionClick(option) },
+                        onInlineToggle = onInlineToggle,
+                        onSegmentClick = onSegmentClick,
+                        modifier = optionFocusModifier,
+                        initialFocusRequester = initialFocusRequester.takeIf { index == initialFocusIndex },
+                        inlineControlsFocusable = inlineControlsFocusable
+                    )
+                }
+            }
+        } else {
+            options.forEachIndexed { index, option ->
+                MenuOptionRow(
+                    option = option,
+                    iconRes = iconForOption(option.iconKey),
+                    onClick = { onOptionClick(option) },
+                    onInlineToggle = onInlineToggle,
+                    onSegmentClick = onSegmentClick,
+                    modifier = optionFocusModifier,
+                    initialFocusRequester = initialFocusRequester.takeIf { index == initialFocusIndex },
+                    inlineControlsFocusable = inlineControlsFocusable
+                )
+            }
         }
     }
 }
