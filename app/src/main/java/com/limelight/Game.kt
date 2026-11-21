@@ -1995,7 +1995,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog() ||
             hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible
-        if (!intercepting && KeyboardAccessibilityService.interceptingEnabled) {
+        if (!intercepting && ::keyboardInputHandler.isInitialized) {
             keyboardInputHandler.releaseForwardedKeys()
         }
         KeyboardAccessibilityService.setIntercepting(intercepting)
