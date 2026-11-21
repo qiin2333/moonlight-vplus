@@ -64,7 +64,7 @@ metadata_blob=$(git hash-object -w "$tmp/metadata.json")
 # All Git operations use the checkout's repository and its authenticated remote.
 for retry in 1 2 3 4 5; do
   rm -f "$GIT_INDEX_FILE"
-  if git ls-remote --exit-code --heads origin refs/heads/mapping-archive > "$tmp/remote"; then
+  if git ls-remote --exit-code --heads origin refs/heads/mapping-archive > /dev/null; then
     git fetch --quiet --no-tags origin refs/heads/mapping-archive
     parent=$(git rev-parse FETCH_HEAD)
     git read-tree "$parent"

@@ -404,16 +404,8 @@ jobs:
         run: |
           set -e
           REL_DIR=app/build/outputs/apk/nonRoot/release
-          # 优先使用 tag 版本号，否则从 metadata 读取
-          if [ -n "$VERSION_NAME" ]; then
-            VERSION="$VERSION_NAME"
-            echo "Using tag version: $VERSION"
-          else
-            VERSION=$(python3 -c "import json; data=json.load(open('$REL_DIR/output-metadata.json')); print(data['elements'][0]['versionName'])")
-            echo "Using metadata version: $VERSION"
-          fi
           SRC_APK=$(ls "$REL_DIR"/*.apk | head -n 1)
-          DEST="$REL_DIR/Moonlight.V+.${VERSION}.apk"
+          DEST="$REL_DIR/Moonlight.V+.${VERSION_NAME}.apk"
           mv "$SRC_APK" "$DEST"
           echo "Renamed APK to: $DEST"
           echo "REL_APK=$DEST" >> $GITHUB_ENV

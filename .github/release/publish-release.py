@@ -17,17 +17,17 @@ import sys
 import tempfile
 
 
-def api(*args, data=None):
-    result = subprocess.run(['gh', 'api', *args], input=data, stdout=subprocess.PIPE,
+def api(*args):
+    result = subprocess.run(['gh', 'api', *args], stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, check=False)
     if result.returncode:
         raise ValueError(f'GitHub API request failed: {result.stderr.decode(errors="replace").strip()}')
     return result.stdout
 
 
-def request_json(*args, data=None):
+def request_json(*args):
     try:
-        return json.loads(api(*args, data=data))
+        return json.loads(api(*args))
     except (ValueError, UnicodeDecodeError) as error:
         raise ValueError(f'invalid GitHub API response: {error}') from error
 
@@ -115,7 +115,7 @@ def recover(repo, tag, dest):
             os.replace(temp, dest)
         finally:
             temp.unlink(missing_ok=True)
-    print(json.dumps({'published': True, 'apk_path': str(dest)}))
+    print(json.dumps({'published': True}))
 
 
 def check_draft(repo, tag, apk, notes, prerelease, require_asset):

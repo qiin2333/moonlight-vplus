@@ -100,8 +100,16 @@ for tag in v12.15.32-preview.1 v12.15.32-beta v12.15.32-rc.foo; do
   if python3 "$script" check "$tag" >/dev/null 2>&1; then
     echo "ERROR: unsupported tag $tag accepted" >&2; exit 1
   fi
+  if python3 "$script" notes "$tag" "$tmp/app.apk" >/dev/null 2>&1; then
+    echo "ERROR: unsupported tag $tag accepted for notes" >&2; exit 1
+  fi
 done
-[ ! -e "$GH_CALLS" ] # Classifying a tag does not call the API.
+for repo in '' 'example' 'example/project/extra'; do
+  if GITHUB_REPOSITORY="$repo" python3 "$script" notes v12.15.31 "$tmp/app.apk" >/dev/null 2>&1; then
+    echo "ERROR: invalid repository $repo accepted" >&2; exit 1
+  fi
+done
+[ ! -e "$GH_CALLS" ] # Classification and invalid inputs do not call the API.
 python3 "$script" notes v12.15.31 "$tmp/app.apk" > "$tmp/stable.md"
 [ "$(cat "$GH_CALLS")" = x ] # Exactly one paginated API invocation.
 [ "$(git rev-parse refs/tags/v12.15.17)" = "$baseline_commit" ]

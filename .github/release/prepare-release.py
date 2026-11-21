@@ -122,9 +122,9 @@ def classify(tag, releases):
 def select_previous(releases, tag, prerelease):
     candidates = []
     for release in releases:
-        name = release.get('tag_name')
+        name = release['tag_name']
         published = release.get('published_at')
-        if release.get('draft') or not published or not isinstance(name, str) or name == tag:
+        if release['draft'] or not published:
             continue
         previous_pre = release.get('prerelease') is True
         if not prerelease and previous_pre:
@@ -159,12 +159,6 @@ def select_previous(releases, tag, prerelease):
 
 
 def render(tag, prerelease, apk, repo, releases):
-    if not version(tag):
-        raise ValueError(f'unsupported release tag: {tag}')
-    if prerelease and not version(tag)[1]:
-        raise ValueError('prerelease tags must include a suffix, such as -beta.1')
-    if not prerelease and version(tag)[1]:
-        raise ValueError('stable tags must not contain a prerelease suffix')
     if not prerelease:
         ensure_stable_is_newer(tag, releases)
     if not os.path.isfile(apk):
@@ -179,8 +173,7 @@ def render(tag, prerelease, apk, repo, releases):
     for line in log.splitlines():
         match = COMMIT_RE.match(line)
         if not match:
-            if repo:
-                line = re.sub(r'\(#(\d+)\)$', lambda m: f'([#{m.group(1)}](https://github.com/{repo}/pull/{m.group(1)}))', line)
+            line = re.sub(r'\(#(\d+)\)$', lambda m: f'([#{m.group(1)}](https://github.com/{repo}/pull/{m.group(1)}))', line)
             unmatched.append(line)
             continue
         kind, description = match.groups()
@@ -188,8 +181,7 @@ def render(tag, prerelease, apk, repo, releases):
             continue
         kind = 'perf' if kind == 'refactor' else kind
         # Keep pull request references directly clickable in the release.
-        if repo:
-            description = re.sub(r'\(#(\d+)\)$', lambda m: f'([#{m.group(1)}](https://github.com/{repo}/pull/{m.group(1)}))', description)
+        description = re.sub(r'\(#(\d+)\)$', lambda m: f'([#{m.group(1)}](https://github.com/{repo}/pull/{m.group(1)}))', description)
         categories[kind].append(description)
     sha256 = hashlib.sha256()
     with open(apk, 'rb') as stream:
@@ -208,9 +200,9 @@ def render(tag, prerelease, apk, repo, releases):
             out.append('')
     if unmatched:
         out.extend(['### 更新内容', *(f'- {item}' for item in unmatched), ''])
-    if previous and repo:
+    if previous:
         out.extend([f'[查看完整变更](https://github.com/{repo}/compare/{previous}...{tag})', ''])
-    issues = f'https://github.com/{repo}/issues' if repo else '../../issues'
+    issues = f'https://github.com/{repo}/issues'
     out.extend(['### 📦 下载', f'- APK 文件：`{os.path.basename(apk)}`', '', '### SHA256', '',
                 '```text', f'{sha256.hexdigest()}  {os.path.basename(apk)}', '```', '',
                 '---', f'如遇到问题，请在 [Issues]({issues}) 反馈。🎮', ''])

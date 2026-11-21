@@ -90,13 +90,8 @@ expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/no
 write_release published yes
 add_extra_asset # Historical published releases may still include mapping.txt.
 expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
-python3 "$script" recover v12.15.32-beta.1 "$tmp/recovered.apk" > "$tmp/recovered.json"
+[ "$(python3 "$script" recover v12.15.32-beta.1 "$tmp/recovered.apk")" = '{"published": true}' ]
 cmp "$MOCK_APK" "$tmp/recovered.apk"
-python3 - "$tmp/recovered.json" <<'PY'
-import json,sys
-with open(sys.argv[1]) as f: data=json.load(f)
-assert data['published'] is True and set(data) == {'published', 'apk_path'}
-PY
 printf 'tampered APK\n' > "$MOCK_APK"
 expect_failure python3 "$script" recover v12.15.32-beta.1 "$tmp/bad.apk"
 [ ! -e "$tmp/bad.apk" ]
