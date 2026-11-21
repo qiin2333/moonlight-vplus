@@ -168,11 +168,12 @@ class DualSenseBluetoothHapticsPathTest {
         val resume = CountDownLatch(1)
         val played = CountDownLatch(expected.size)
         val actual = Collections.synchronizedList(mutableListOf<ByteArray>())
+        // Keep input time fixed so scheduler delays cannot trigger idle reset or stale-packet eviction.
         val sink = DualSenseBluetoothHapticsSink({ true }, {
             writing.countDown()
             check(resume.await(2, TimeUnit.SECONDS))
             actual.add(it.copyOf()); played.countDown(); true
-        }, { true })
+        }, { true }, inputClockNanos = { 1L })
         try {
             assertTrue(sink.start())
             frames.take(3).forEach(sink::submit)
