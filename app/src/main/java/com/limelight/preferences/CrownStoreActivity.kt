@@ -1132,7 +1132,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     ) {
         val previewKey = profilePreviewKey(profile)
         val previewState = profilePreviewStates.value[previewKey]
-        LaunchedEffect(previewKey) {
+        LaunchedEffect(previewKey, previewState) {
             ensureStoreProfilePreview(profile)
         }
         CrownProfileCard(modifier, contentPadding = PaddingValues(12.dp)) {
@@ -1191,7 +1191,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     ) {
         val previewKey = profilePreviewKey(profile)
         val previewState = profilePreviewStates.value[previewKey]
-        LaunchedEffect(previewKey) {
+        LaunchedEffect(previewKey, previewState) {
             ensureStoreProfilePreview(profile)
         }
         Column(
