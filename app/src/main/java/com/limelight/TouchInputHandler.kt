@@ -27,6 +27,7 @@ import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import com.limelight.preferences.ExternalMouseMode
 import com.limelight.ui.StreamView
 import kotlin.math.*
 
@@ -47,6 +48,44 @@ internal inline fun pointerZeroIsStylus(pointerCount: Int, toolTypeAt: (Int) -> 
     }
 
 internal const val CURRENT_MOTION_SAMPLE = -1
+
+/** Track downs delivered to the host independently of Android's last button snapshot. */
+internal class MouseNavigationButtons(private val send: (Byte, Boolean) -> Unit) {
+    private var observed = 0
+    private var forwarded = 0
+
+    fun update(buttonState: Int, allowNewPresses: Boolean = false) {
+        val held = buttonState and (MotionEvent.BUTTON_BACK or MotionEvent.BUTTON_FORWARD)
+        val pressed = if (allowNewPresses) held and observed.inv() else 0
+        observed = held
+        sendChanges((held and forwarded) or pressed)
+    }
+
+    fun releaseAll() = sendChanges(0)
+
+    private fun sendChanges(next: Int) {
+        val changed = forwarded xor next
+        forwarded = next
+        if (changed and MotionEvent.BUTTON_BACK != 0) {
+            send(MouseButtonPacket.BUTTON_X1, next and MotionEvent.BUTTON_BACK != 0)
+        }
+        if (changed and MotionEvent.BUTTON_FORWARD != 0) {
+            send(MouseButtonPacket.BUTTON_X2, next and MotionEvent.BUTTON_FORWARD != 0)
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+internal fun allowsAbsoluteMouseFallback(mode: ExternalMouseMode, source: Int, toolType: Int): Boolean {
+    if (mode != ExternalMouseMode.RELATIVE_CAPTURE) return true
+    return when (toolType) {
+        MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER -> true
+        MotionEvent.TOOL_TYPE_MOUSE -> false
+        // Some pads report a finger on SOURCE_MOUSE, including the mouse + stylus source 0x3002.
+        else -> (source and InputDevice.SOURCE_MOUSE) != InputDevice.SOURCE_MOUSE &&
+            source != InputDevice.SOURCE_MOUSE_RELATIVE && source != InputDevice.SOURCE_TOUCHPAD
+    }
+}
 
 internal fun normalizeStreamPosition(
     x: Float, y: Float, offsetX: Float, offsetY: Float,
@@ -89,6 +128,9 @@ class TouchInputHandler(private val game: Game) {
     // ---- 触控私有状态 ----
     // Mouse-only baseline. Pen packets carry their full button state independently.
     private var lastButtonState = 0
+    private val navigationButtons = MouseNavigationButtons { button, down ->
+        if (down) game.conn?.sendMouseButtonDown(button) else game.conn?.sendMouseButtonUp(button)
+    }
     private var multiFingerDownTime = 0L
 
     // 双指右键检测
@@ -250,7 +292,7 @@ class TouchInputHandler(private val game: Game) {
         val deviceSources = event.device?.sources ?: 0
 
         // 本地鼠标指针模式
-        if (game.prefConfig.enableNativeMousePointer && (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0) {
+        if (game.prefConfig.usesSystemMousePointer && (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0) {
             val isActualMouse = eventSource == InputDevice.SOURCE_MOUSE ||
                 eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
                 (event.pointerCount >= 1 && event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) ||
@@ -294,6 +336,7 @@ class TouchInputHandler(private val game: Game) {
                     game.conn?.sendMouseHighResHScroll((event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120).toInt().toShort())
                 }
 
+                navigationButtons.update(buttonState)
                 lastButtonState = buttonState
                 return true
             }
@@ -330,6 +373,7 @@ class TouchInputHandler(private val game: Game) {
                 }
 
                 if (!game.inputCaptureProvider.isCapturingActive()) {
+                    navigationButtons.update(buttonState)
                     return true
                 }
 
@@ -357,24 +401,26 @@ class TouchInputHandler(private val game: Game) {
                             game.conn?.sendMouseMove(deltaX, deltaY)
                         }
                     }
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
-                    val device = event.device
-                    if (device != null) {
-                        val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
-                        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
-                        if (xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f) {
-                            val xMax = xRange.max.toInt()
-                            val yMax = yRange.max.toInt()
-                            if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                game.conn?.sendMousePosition(
-                                    event.x.toInt().toShort(), event.y.toInt().toShort(),
-                                    xMax.toShort(), yMax.toShort()
-                                )
+                } else if (allowsAbsoluteMouseFallback(game.prefConfig.externalMouseMode, eventSource, event.getToolType(0))) {
+                    if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
+                        val device = event.device
+                        if (device != null) {
+                            val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
+                            val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
+                            if (xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f) {
+                                val xMax = xRange.max.toInt()
+                                val yMax = yRange.max.toInt()
+                                if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
+                                    game.conn?.sendMousePosition(
+                                        event.x.toInt().toShort(), event.y.toInt().toShort(),
+                                        xMax.toShort(), yMax.toShort()
+                                    )
+                                }
                             }
                         }
+                    } else if (view != null) {
+                        updateMousePosition(view, event)
                     }
-                } else if (view != null) {
-                    updateMousePosition(view, event)
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
@@ -406,22 +452,7 @@ class TouchInputHandler(private val game: Game) {
                     }
                 }
 
-                if (game.prefConfig.mouseNavButtons) {
-                    if (changedButtons and MotionEvent.BUTTON_BACK != 0) {
-                        if (buttonState and MotionEvent.BUTTON_BACK != 0) {
-                            game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
-                        } else {
-                            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
-                        }
-                    }
-                    if (changedButtons and MotionEvent.BUTTON_FORWARD != 0) {
-                        if (buttonState and MotionEvent.BUTTON_FORWARD != 0) {
-                            game.conn?.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2)
-                        } else {
-                            game.conn?.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
-                        }
-                    }
-                }
+                navigationButtons.update(buttonState, allowNewPresses = game.prefConfig.mouseNavButtons)
 
                 // 触控笔按下/抬起
                 if (event.pointerCount == 1 && event.actionIndex == 0) {
@@ -1609,6 +1640,10 @@ class TouchInputHandler(private val game: Game) {
 
     fun cancelNonRootTouchpad() {
         nonRootTouchpadHandler.cancelAll(game.conn)
+    }
+
+    fun releaseMouseNavigationButtons() {
+        navigationButtons.releaseAll()
     }
 
     /**

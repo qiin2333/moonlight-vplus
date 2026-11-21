@@ -1412,6 +1412,24 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         connectionTerminated(MoonBridge.ML_ERROR_FRAME_CONVERSION)
     }
 
+    internal fun refreshInputPreferencesForReconnect() {
+        val latest = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+        refreshDesktopMouseMode(latest.absoluteMouseMode, connectionRetained = false)
+        prefConfig.refreshControllerMotionPreferencesFrom(latest)
+    }
+
+    private fun refreshDesktopMouseMode(enabled: Boolean, connectionRetained: Boolean) {
+        val previousMode = prefConfig.externalMouseMode
+        prefConfig.absoluteMouseMode = enabled
+        if (prefConfig.externalMouseMode == previousMode) return
+
+        cursorVisible = prefConfig.usesSystemMousePointer
+        if (connectionRetained) {
+            setInputGrabState(grabbedInput)
+            cursorServiceManager.refreshCursorMode()
+        }
+    }
+
     private fun prepareConnection() {
         audioVibrationService?.stop()
         cursorServiceManager.destroyLocalCursorRenderers()
@@ -1431,9 +1449,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             decoderRenderer = null
         }
 
-        // Refresh controller motion settings before rebuilding the handler.
-        val latestConfig = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        prefConfig.refreshControllerMotionPreferencesFrom(latestConfig)
+        // A background resume may reuse this Activity after input settings changed.
+        refreshInputPreferencesForReconnect()
 
         createConnectionAndHandler()
         performanceOverlayManager?.recordStreamStart()
@@ -1479,6 +1496,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onResume() {
         super.onResume()
+        // Extreme Resume can keep the connection alive and skip prepareConnection().
+        if (connected) {
+            refreshDesktopMouseMode(PreferenceConfiguration.readAbsoluteMouseMode(defaultPreferences()), connectionRetained = true)
+        }
         usbForeground = true
         withUsbForwarding { it.startForeground() }
         if (::floatBallHandler.isInitialized &&
@@ -2306,10 +2327,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setInputGrabState(grab: Boolean) {
+        if (!grab && ::touchInputHandler.isInitialized) {
+            touchInputHandler.releaseMouseNavigationButtons()
+        }
         if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
             keyboardInputHandler.releaseForwardedKeys()
         }
-        if (grab && !prefConfig.enableNativeMousePointer) {
+        if (grab && !prefConfig.usesSystemMousePointer) {
             inputCaptureProvider.enableCapture()
             if (cursorVisible) {
                 inputCaptureProvider.showCursor()
@@ -2438,18 +2462,19 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         LimeLog.info("Setting native mouse pointer: $enable")
         prefConfig.enableNativeMousePointer = enable
 
-        if (enable) {
-            setInputGrabState(grabbedInput)
-            cursorVisible = true
-            inputCaptureProvider.showCursor()
+        cursorVisible = prefConfig.usesSystemMousePointer
+        setInputGrabState(if (enable) grabbedInput else true)
+        if (cursorVisible) {
             val cursorOverlay = findViewById<CursorView>(R.id.cursorOverlay)
             cursorOverlay?.hide()
-        } else {
-            cursorVisible = false
-            inputCaptureProvider.hideCursor()
-            setInputGrabState(true)
         }
         cursorServiceManager.refreshCursorMode()
+    }
+
+    fun setExternalMouseDesktopMode(enabled: Boolean) {
+        prefConfig.absoluteMouseMode = enabled
+        defaultPreferences().edit().putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled).apply()
+        enableNativeMousePointer(true)
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
@@ -2528,6 +2553,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * 后台恢复保留保活服务，Surface 销毁和 onStop 的先后顺序不影响该决定。
      */
     private fun stopConnection(reason: StreamStopReason) {
+        if (::touchInputHandler.isInitialized) {
+            touchInputHandler.releaseMouseNavigationButtons()
+        }
         if (::keyboardInputHandler.isInitialized) {
             keyboardInputHandler.releaseForwardedKeys()
         }

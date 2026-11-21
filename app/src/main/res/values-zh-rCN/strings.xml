@@ -706,6 +706,7 @@
     <string name="pacing_experimental_low_latency">实验性超低延迟</string>
 
     <string name="title_checkbox_absolute_mouse_mode">适合远程桌面的鼠标模式</string>
+    <string name="game_menu_external_mouse_desktop_summary">开启时按桌面位置定位，关闭时捕获外接鼠标，向游戏发送相对移动。</string>
     <string name="summary_checkbox_absolute_mouse_mode">这可以使得鼠标加速在远程桌面使用中表现得更自然，但它与许多游戏不兼容。</string>
     <string name="title_list_mouse_axis_correction">鼠标方向修正</string>
     <string name="summary_list_mouse_axis_correction">发送到主机前旋转被捕获的鼠标移动。仅在某些安卓设备错误旋转鼠标轴时修改。</string>
