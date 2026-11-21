@@ -135,6 +135,11 @@ def check_draft(repo, tag, apk, notes, prerelease, require_asset):
         raise ValueError('draft release channel differs')
     if rel.get('body') != Path(notes).read_text(encoding='utf-8'):
         raise ValueError('draft release notes differ; review and resolve before retrying')
+    assets = rel.get('assets')
+    if not isinstance(assets, list):
+        raise ValueError('release assets missing from API response')
+    if any(not isinstance(item, dict) or item.get('name') != expected_name for item in assets):
+        raise ValueError('draft contains unexpected attachments; remove them before publishing')
     item = asset(rel, expected_name)
     if item is None:
         if require_asset:

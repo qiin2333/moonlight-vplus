@@ -49,6 +49,15 @@ expect_failure() {
     exit 1
   fi
 }
+add_extra_asset() {
+  python3 - "$MOCK_RELEASES" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path) as f: releases = json.load(f)
+releases[0][0]['assets'].append({'id': 3, 'name': 'mapping.txt', 'state': 'uploaded'})
+with open(path, 'w') as f: json.dump(releases, f)
+PY
+}
 # New or empty draft permits upload, but cannot be finalized without the APK.
 printf '[[]]' > "$MOCK_RELEASES"
 [ "$(python3 "$script" recover v12.15.32-beta.1 "$tmp/recovered.apk")" = '{"published": false}' ]
@@ -61,6 +70,15 @@ expect_failure python3 "$script" verify-draft v12.15.32-beta.1 "$MOCK_APK" "$tmp
 write_release draft yes
 [ "$(python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease)" = '{"needs_upload": false}' ]
 python3 "$script" verify-draft v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease >/dev/null
+# Extra attachments must not be published, whether or not the APK is present.
+add_extra_asset
+expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
+expect_failure python3 "$script" verify-draft v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
+write_release draft no
+add_extra_asset
+expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
+expect_failure python3 "$script" verify-draft v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
+write_release draft yes
 printf 'different APK\n' >> "$MOCK_APK"
 expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
 expect_failure python3 "$script" verify-draft v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
@@ -70,6 +88,7 @@ expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/ot
 expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" stable
 # A published release is never modified; recovery downloads and verifies bytes.
 write_release published yes
+add_extra_asset # Historical published releases may still include mapping.txt.
 expect_failure python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
 python3 "$script" recover v12.15.32-beta.1 "$tmp/recovered.apk" > "$tmp/recovered.json"
 cmp "$MOCK_APK" "$tmp/recovered.apk"

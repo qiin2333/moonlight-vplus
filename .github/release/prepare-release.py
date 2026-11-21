@@ -2,7 +2,6 @@
 """Classify a release tag and generate notes from published releases."""
 
 import argparse
-import datetime
 import hashlib
 from itertools import zip_longest
 import json
@@ -214,8 +213,7 @@ def render(tag, prerelease, apk, repo, releases):
     issues = f'https://github.com/{repo}/issues' if repo else '../../issues'
     out.extend(['### 📦 下载', f'- APK 文件：`{os.path.basename(apk)}`', '', '### SHA256', '',
                 '```text', f'{sha256.hexdigest()}  {os.path.basename(apk)}', '```', '',
-                '---', f'如遇到问题，请在 [Issues]({issues}) 反馈。🎮', '',
-                f'*发布于 {datetime.datetime.now(datetime.timezone.utc).date().isoformat()}*', ''])
+                '---', f'如遇到问题，请在 [Issues]({issues}) 反馈。🎮', ''])
     return '\n'.join(out)
 
 

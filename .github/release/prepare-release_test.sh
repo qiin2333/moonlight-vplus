@@ -111,6 +111,38 @@ for text in '王冠预览' '修复音频兼容' '暂停输入' '商店导入' 'h
 done
 assert_absent '独立分支' "$tmp/stable.md"
 assert_absent '新功能' "$tmp/stable.md"
+# A draft created before midnight must remain retryable the next day. Generate
+# the same notes with two UTC clocks, while preserving the real release history
+# and APK so this catches any future dependency on the current date.
+python3 - "$script" "$GH_RESPONSE" "$tmp/app.apk" <<'PY'
+import datetime
+import json
+import runpy
+import sys
+from unittest.mock import patch
+
+module = runpy.run_path(sys.argv[1])
+with open(sys.argv[2], encoding='utf-8') as stream:
+    releases = module['releases_from_json'](json.load(stream))
+real_datetime = datetime.datetime
+
+class FirstDay(real_datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return real_datetime(2026, 11, 21, tzinfo=tz)
+
+class NextDay(real_datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return real_datetime(2026, 11, 22, tzinfo=tz)
+
+with patch.object(datetime, 'datetime', FirstDay):
+    first = module['render']('v12.15.31', False, sys.argv[3], 'example/project', releases)
+with patch.object(datetime, 'datetime', NextDay):
+    second = module['render']('v12.15.31', False, sys.argv[3], 'example/project', releases)
+assert first == second, 'release notes changed across UTC days'
+assert '发布于' not in first, 'GitHub supplies the actual publication date'
+PY
 # Add the just-published stable version before generating subsequent notes.
 python3 - "$GH_RESPONSE" <<'PY'
 import json, sys
