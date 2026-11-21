@@ -85,6 +85,8 @@ class VirtualController(
     }
 
     private var hidden = false
+    /** Desired visibility, including while the asynchronously built layout is pending. */
+    val isVisible: Boolean get() = !hidden
     private var pendingLayoutRefresh: OneShotPreDrawListener? = null
     private val delayedRetransmit = Runnable { sendControllerInputContextInternal() }
     private var optionsDialog: VirtualControllerOptionsDialog? = null

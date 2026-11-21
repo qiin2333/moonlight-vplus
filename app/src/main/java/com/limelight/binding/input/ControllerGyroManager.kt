@@ -731,7 +731,7 @@ class ControllerGyroManager(private val handler: ControllerHandler) {
         // 检查虚拟手柄是否启用
         // 虚拟手柄通常使用 defaultContext (controllerNumber=0)
         // 如果王冠功能启用，说明虚拟手柄可用
-        if (handler.prefConfig.onscreenController) {
+        if (handler.screenGamepadEnabled) {
             return true
         }
         return false

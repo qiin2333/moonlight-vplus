@@ -3,14 +3,19 @@ package com.limelight.binding.input.virtual_controller
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.HelpActivity
+import com.limelight.R
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -76,6 +81,56 @@ class VirtualControllerLayoutTest {
                 assertTrue(params.leftMargin + params.width <= measuredContainer.width)
                 assertTrue(params.topMargin + params.height <= measuredContainer.height)
             }
+        }
+    }
+
+    @Test
+    fun hidingBeforeLayoutAndDuringRefreshPreservesVisibilityAndReleasesInput() {
+        activityRule.scenario.onActivity { activity ->
+            container = FrameLayout(activity)
+            controller = VirtualController(null, container, activity).also {
+                it.refreshLayout()
+                assertTrue(it.isVisible)
+                it.hide()
+                assertFalse(it.isVisible)
+                it.show()
+                assertTrue(it.isVisible)
+                it.hide()
+                assertFalse(it.isVisible)
+            }
+            activity.setContentView(FrameLayout(activity).apply {
+                addView(requireNotNull(container), FrameLayout.LayoutParams(CONTAINER_WIDTH, CONTAINER_HEIGHT))
+            })
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        activityRule.scenario.onActivity { activity ->
+            val measuredController = requireNotNull(controller)
+            assertTrue(measuredController.elements.isNotEmpty())
+            assertTrue(measuredController.elements.all { it.visibility == View.INVISIBLE })
+            val settings = (0 until requireNotNull(container).childCount)
+                .map { requireNotNull(container).getChildAt(it) }
+                .filterIsInstance<ImageButton>()
+                .single { it.contentDescription == activity.getString(R.string.osc_quick_menu) }
+            assertEquals(View.INVISIBLE, settings.visibility)
+
+            measuredController.show()
+            assertTrue(measuredController.isVisible)
+            assertTrue(measuredController.elements.all { it.visibility == View.VISIBLE })
+            assertEquals(View.VISIBLE, settings.visibility)
+            measuredController.setButtonState(this, 1, true)
+            assertEquals(1, measuredController.controllerInputContext.inputMap.toInt())
+            measuredController.hide()
+            assertFalse(measuredController.isVisible)
+            assertEquals(0, measuredController.controllerInputContext.inputMap.toInt())
+            measuredController.refreshLayout()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            val measuredController = requireNotNull(controller)
+            assertTrue(measuredController.elements.isNotEmpty())
+            assertTrue(measuredController.elements.all { it.visibility == View.INVISIBLE })
         }
     }
 

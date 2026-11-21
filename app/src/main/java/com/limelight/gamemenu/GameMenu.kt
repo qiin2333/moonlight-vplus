@@ -2529,17 +2529,15 @@ class GameMenu(
             inlineControl = InlineControl.Segmented(buildPerformanceOverlaySegments())
         ))
 
-        if (game.prefConfig.onscreenController) {
-            normalOptions.add(MenuOption(
-                label = getString(R.string.game_menu_toggle_virtual_controller).trim(),
-                isWithGameFocus = false,
-                runnable = Runnable { game.toggleVirtualController() },
-                iconKey = "game_menu_toggle_virtual_controller",
-                isShowIcon = true,
-                isKeepDialog = true,
-                inlineControl = InlineControl.Toggle(game.isVirtualControllerVisible())
-            ))
-        }
+        normalOptions.add(MenuOption(
+            label = getString(R.string.game_menu_toggle_virtual_controller).trim(),
+            isWithGameFocus = false,
+            runnable = Runnable { game.toggleVirtualController() },
+            iconKey = "game_menu_toggle_virtual_controller",
+            isShowIcon = true,
+            isKeepDialog = true,
+            inlineControl = InlineControl.Toggle(game.isVirtualControllerVisible())
+        ))
 
         normalOptions.add(MenuOption(getString(R.string.game_menu_send_keys),
             false, { showSpecialKeysMenu() }, "game_menu_send_keys", isShowIcon = true, isKeepDialog = true,
