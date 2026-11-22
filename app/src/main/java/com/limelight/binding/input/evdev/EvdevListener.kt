@@ -5,7 +5,7 @@ interface EvdevListener {
     fun mouseButtonEvent(buttonId: Int, down: Boolean)
     fun mouseVScroll(amount: Byte)
     fun mouseHScroll(amount: Byte)
-    fun keyboardEvent(buttonDown: Boolean, keyCode: Short)
+    fun keyboardEvent(buttonDown: Boolean, keyCode: Short, isRepeat: Boolean = false)
     fun touchpadEvent(
         eventType: Byte,
         pointerId: Int,

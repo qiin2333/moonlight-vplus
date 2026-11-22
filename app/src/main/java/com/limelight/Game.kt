@@ -3314,8 +3314,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         conn?.sendMouseHScroll(amount)
     }
 
-    override fun keyboardEvent(buttonDown: Boolean, keyCode: Short) {
-        keyboardInputHandler.keyboardEvent(buttonDown, keyCode)
+    override fun keyboardEvent(buttonDown: Boolean, keyCode: Short, isRepeat: Boolean) {
+        keyboardInputHandler.keyboardEvent(buttonDown, keyCode, isRepeat)
     }
 
     override fun touchpadEvent(
