@@ -98,7 +98,7 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     // Returns true if the key stroke was consumed
-    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean): Boolean {
+    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, isRepeat: Boolean = false): Boolean {
         var modifierMask = 0
         var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
 
@@ -165,6 +165,9 @@ class KeyboardInputHandler(private val game: Game) {
         ) {
             when (androidKeyCode) {
                 KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_M -> {
+                    // A repeat may belong to a key that was already forwarded to the
+                    // host; activating the shortcut here would swallow its release.
+                    if (isRepeat) return false
                     specialKeyCode = androidKeyCode
                     waitingForAllModifiersUp = true
                     specialKeyUsesAccessibility = origin == KeyOrigin.ACCESSIBILITY || accessibilityModifierFlags != 0
@@ -435,7 +438,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, true)) {
+            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
                 return true
             }
 

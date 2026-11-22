@@ -2478,17 +2478,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun toggleExternalMouseDesktopMode() {
-        if (!prefConfig.supportsDesktopMouseMode) return
-        val enabled = !prefConfig.absoluteMouseMode
-        setExternalMouseDesktopMode(enabled)
-        Toast.makeText(
-            this,
-            getString(
-                if (enabled) R.string.toast_absolute_mouse_mode_enabled
-                else R.string.toast_relative_mouse_mode_enabled
-            ),
-            Toast.LENGTH_SHORT
-        ).show()
+        // The shortcut can arrive on the evdev reader thread, which has no Looper.
+        runOnUiThread {
+            if (!prefConfig.supportsDesktopMouseMode) return@runOnUiThread
+            val enabled = !prefConfig.absoluteMouseMode
+            setExternalMouseDesktopMode(enabled)
+            Toast.makeText(
+                this,
+                getString(
+                    if (enabled) R.string.toast_absolute_mouse_mode_enabled
+                    else R.string.toast_relative_mouse_mode_enabled
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
