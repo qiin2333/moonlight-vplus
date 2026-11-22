@@ -174,6 +174,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     var controllerManager: ControllerManager? = null
     private val crownSessionController = CrownSessionController(this) { controllerManager }
     private var standaloneKeyboardUI: KeyboardUIController? = null
+    private var pendingImeShow: Runnable? = null
     private val performanceInfoDisplays = ArrayList<PerformanceInfoDisplay>()
 
     var microphoneManager: MicrophoneManager? = null
@@ -693,6 +694,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private fun hideLocalSoftKeyboard() {
+        pendingImeShow?.let { streamView.removeCallbacks(it) }
+        pendingImeShow = null
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         inputManager.hideSoftInputFromWindow(streamView.windowToken, 0)
     }
@@ -2455,12 +2458,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         streamView.setTextInputEnabled(true)
         streamView.isFocusableInTouchMode = true
         streamView.requestFocus()
-        streamView.post {
+        pendingImeShow?.let { streamView.removeCallbacks(it) }
+        val showIme = Runnable {
+            pendingImeShow = null
             if (!isFinishing && !isDestroyed) {
                 val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                 inputManager.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
             }
         }
+        pendingImeShow = showIme
+        streamView.post(showIme)
     }
 
     override fun onRemoteTextContext(context: RemoteTextContext) {
