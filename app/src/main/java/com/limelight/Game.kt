@@ -63,6 +63,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.GlPreferences
+import com.limelight.preferences.LegacySettingsModeStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.services.StreamNotificationService
 import com.limelight.ui.CursorView
@@ -2504,8 +2505,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setExternalMouseDesktopMode(enabled: Boolean) {
+        val preferences = defaultPreferences()
+        LegacySettingsModeStore(preferences).ensureTouchDefaults(
+            packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        )
         prefConfig.absoluteMouseMode = enabled
-        defaultPreferences().edit()
+        preferences.edit()
             .putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled)
             .putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true)
             .apply()
