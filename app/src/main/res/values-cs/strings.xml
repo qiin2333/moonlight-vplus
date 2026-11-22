@@ -330,4 +330,6 @@
     <string name="crown_config_segment_layout">Rozložení</string>
     <string name="crown_config_segment_touch">Dotyk</string>
     <string name="crown_config_segment_feedback">Vibrace</string>
+    <string name="toast_absolute_mouse_mode_enabled">Režim absolutní myši zapnut</string>
+    <string name="toast_relative_mouse_mode_enabled">Režim relativní myši zapnut</string>
 </resources>

@@ -81,4 +81,6 @@
     <string name="crown_config_segment_layout">چیدمان</string>
     <string name="crown_config_segment_touch">لمس</string>
     <string name="crown_config_segment_feedback">لرزش</string>
+    <string name="toast_absolute_mouse_mode_enabled">حالت ماوس مطلق فعال شد</string>
+    <string name="toast_relative_mouse_mode_enabled">حالت ماوس نسبی فعال شد</string>
 </resources>

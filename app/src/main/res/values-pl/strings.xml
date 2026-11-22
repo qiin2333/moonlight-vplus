@@ -354,4 +354,6 @@
     <string name="crown_config_segment_layout">Układ</string>
     <string name="crown_config_segment_touch">Dotyk</string>
     <string name="crown_config_segment_feedback">Wibracje</string>
+    <string name="toast_absolute_mouse_mode_enabled">Włączono tryb myszy absolutnej</string>
+    <string name="toast_relative_mouse_mode_enabled">Włączono tryb myszy względnej</string>
 </resources>

@@ -98,7 +98,7 @@ class KeyboardInputHandler(private val game: Game) {
     }
 
     // Returns true if the key stroke was consumed
-    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean): Boolean {
+    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, isRepeat: Boolean = false): Boolean {
         var modifierMask = 0
         var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
 
@@ -151,6 +151,8 @@ class KeyboardInputHandler(private val game: Game) {
                             game.inputCaptureProvider.hideCursor()
                         }
                     }
+                    // Toggle absolute and relative movement for the external mouse.
+                    KeyEvent.KEYCODE_M -> game.toggleExternalMouseDesktopMode()
                 }
 
                 specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
@@ -162,7 +164,12 @@ class KeyboardInputHandler(private val game: Game) {
             (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)
         ) {
             when (androidKeyCode) {
-                KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C -> {
+                KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_M -> {
+                    // A repeat may belong to a key that was already forwarded to the
+                    // host; activating the shortcut here would swallow its release.
+                    if (isRepeat) return false
+                    // Let the host keep Ctrl+Alt+Shift+M when the local shortcut is unavailable.
+                    if (androidKeyCode == KeyEvent.KEYCODE_M && !game.prefConfig.supportsDesktopMouseMode) return false
                     specialKeyCode = androidKeyCode
                     waitingForAllModifiersUp = true
                     specialKeyUsesAccessibility = origin == KeyOrigin.ACCESSIBILITY || accessibilityModifierFlags != 0
@@ -433,7 +440,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, true)) {
+            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
                 return true
             }
 
@@ -639,10 +646,10 @@ class KeyboardInputHandler(private val game: Game) {
     /**
      * EvdevListener 键盘事件处理，从 Game.keyboardEvent() 委托。
      */
-    fun keyboardEvent(buttonDown: Boolean, keyCode: Short) {
+    fun keyboardEvent(buttonDown: Boolean, keyCode: Short, isRepeat: Boolean) {
         val keyMap = keyboardTranslator.translate(keyCode.toInt(), -1)
         if (keyMap.toInt() != 0) {
-            if (handleSpecialKeys(keyCode.toInt(), buttonDown)) {
+            if (handleSpecialKeys(keyCode.toInt(), buttonDown, isRepeat)) {
                 return
             }
             if (buttonDown) {

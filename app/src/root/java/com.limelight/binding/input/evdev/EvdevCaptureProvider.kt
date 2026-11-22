@@ -159,7 +159,8 @@ class EvdevCaptureProvider(
                             else -> {
                                 val keyCode = EvdevTranslator.translateEvdevKeyCode(event.code)
                                 if (keyCode.toInt() != 0) {
-                                    listener.keyboardEvent(event.value != 0, keyCode)
+                                    // Linux keyboard devices report autorepeat as EV_KEY value 2.
+                                    listener.keyboardEvent(event.value != 0, keyCode, event.value == 2)
                                 }
                             }
                         }

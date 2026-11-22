@@ -367,4 +367,6 @@
     <string name="crown_config_segment_layout">Disposition</string>
     <string name="crown_config_segment_touch">Tactile</string>
     <string name="crown_config_segment_feedback">Vibration</string>
+    <string name="toast_absolute_mouse_mode_enabled">Mode souris absolue activé</string>
+    <string name="toast_relative_mouse_mode_enabled">Mode souris relative activé</string>
 </resources>

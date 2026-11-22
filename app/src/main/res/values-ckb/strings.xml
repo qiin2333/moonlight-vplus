@@ -81,4 +81,6 @@
     <string name="crown_config_segment_layout">ڕێکخستن</string>
     <string name="crown_config_segment_touch">دەستدان</string>
     <string name="crown_config_segment_feedback">لەرزین</string>
+    <string name="toast_absolute_mouse_mode_enabled">دۆخی ماوسی ڕەها چالاک کرا</string>
+    <string name="toast_relative_mouse_mode_enabled">دۆخی ماوسی ڕێژەیی چالاک کرا</string>
 </resources>

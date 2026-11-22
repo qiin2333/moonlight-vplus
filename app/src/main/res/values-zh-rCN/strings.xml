@@ -1245,6 +1245,8 @@
 
     <string name="game_menu_toggle_remote_mouse">显示/隐藏远程鼠标</string>
     <string name="toast_remote_mouse_toast">远程鼠标已显示/隐藏。</string>
+    <string name="toast_absolute_mouse_mode_enabled">绝对鼠标模式已开启</string>
+    <string name="toast_relative_mouse_mode_enabled">相对鼠标模式已开启</string>
     <string name="notification_channel_name">串流后台服务</string>
     <string name="notification_channel_desc">当 Moonlight 在后台运行时保持连接活跃</string>
 

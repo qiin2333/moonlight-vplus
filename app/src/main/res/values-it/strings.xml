@@ -361,4 +361,6 @@
     <string name="crown_config_segment_layout">Layout</string>
     <string name="crown_config_segment_touch">Tocco</string>
     <string name="crown_config_segment_feedback">Vibrazione</string>
+    <string name="toast_absolute_mouse_mode_enabled">Modalità mouse assoluto attivata</string>
+    <string name="toast_relative_mouse_mode_enabled">Modalità mouse relativo attivata</string>
 </resources>

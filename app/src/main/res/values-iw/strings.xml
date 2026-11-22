@@ -233,4 +233,6 @@
     <string name="crown_config_segment_layout">פריסה</string>
     <string name="crown_config_segment_touch">מגע</string>
     <string name="crown_config_segment_feedback">רטט</string>
+    <string name="toast_absolute_mouse_mode_enabled">מצב עכבר מוחלט הופעל</string>
+    <string name="toast_relative_mouse_mode_enabled">מצב עכבר יחסי הופעל</string>
 </resources>

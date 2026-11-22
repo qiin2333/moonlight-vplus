@@ -303,4 +303,6 @@
     <string name="crown_config_segment_layout">Bố cục</string>
     <string name="crown_config_segment_touch">Cảm ứng</string>
     <string name="crown_config_segment_feedback">Rung</string>
+    <string name="toast_absolute_mouse_mode_enabled">Đã bật chế độ chuột tuyệt đối</string>
+    <string name="toast_relative_mouse_mode_enabled">Đã bật chế độ chuột tương đối</string>
 </resources>

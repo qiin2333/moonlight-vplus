@@ -296,4 +296,6 @@
     <string name="crown_config_segment_layout">Indeling</string>
     <string name="crown_config_segment_touch">Aanraking</string>
     <string name="crown_config_segment_feedback">Trilling</string>
+    <string name="toast_absolute_mouse_mode_enabled">Absolute muismodus ingeschakeld</string>
+    <string name="toast_relative_mouse_mode_enabled">Relatieve muismodus ingeschakeld</string>
 </resources>

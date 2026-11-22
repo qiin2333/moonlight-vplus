@@ -267,4 +267,6 @@
     <string name="crown_config_segment_layout">Düzen</string>
     <string name="crown_config_segment_touch">Dokunma</string>
     <string name="crown_config_segment_feedback">Titreşim</string>
+    <string name="toast_absolute_mouse_mode_enabled">Mutlak fare modu etkinleştirildi</string>
+    <string name="toast_relative_mouse_mode_enabled">Göreli fare modu etkinleştirildi</string>
 </resources>
