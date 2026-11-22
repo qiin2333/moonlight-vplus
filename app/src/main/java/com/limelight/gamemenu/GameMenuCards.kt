@@ -98,6 +98,9 @@ internal fun GameMenuCards(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(GameMenuDimens.tight)
     ) {
+        if (state.visibleCards.bitrate) {
+            BitrateCard(state.bitrate, callbacks, onSliderGesture, callbacks.onEditCards)
+        }
         if (state.visibleCards.display) {
             DisplayStatusCard(
                 state = state.bitrate,
@@ -105,9 +108,6 @@ internal fun GameMenuCards(
                 onConfigure = callbacks.onEditCards,
                 onSliderGesture = onSliderGesture
             )
-        }
-        if (state.visibleCards.bitrate) {
-            BitrateCard(state.bitrate, callbacks, onSliderGesture, callbacks.onEditCards)
         }
         if (state.visibleCards.audioHaptics) {
             AudioHapticsCard(
