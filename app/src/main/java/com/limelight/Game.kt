@@ -1426,12 +1426,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     internal fun refreshInputPreferencesForReconnect() {
         val latest = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        refreshDesktopMouseMode(latest.absoluteMouseMode, connectionRetained = false)
+        refreshDesktopMouseMode(
+            latest.absoluteMouseMode,
+            connectionRetained = false,
+            externalMouseSelected = latest.enableNativeMousePointer
+        )
         prefConfig.refreshControllerMotionPreferencesFrom(latest)
     }
 
-    private fun refreshDesktopMouseMode(enabled: Boolean, connectionRetained: Boolean) {
+    private fun refreshDesktopMouseMode(
+        enabled: Boolean,
+        connectionRetained: Boolean,
+        externalMouseSelected: Boolean = prefConfig.enableNativeMousePointer
+    ) {
         val previousMode = prefConfig.externalMouseMode
+        prefConfig.enableNativeMousePointer = externalMouseSelected
         prefConfig.absoluteMouseMode = enabled
         if (prefConfig.externalMouseMode == previousMode) return
 
@@ -1510,7 +1519,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         super.onResume()
         // Extreme Resume can keep the connection alive and skip prepareConnection().
         if (connected) {
-            refreshDesktopMouseMode(PreferenceConfiguration.readAbsoluteMouseMode(defaultPreferences()), connectionRetained = true)
+            val latest = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+            refreshDesktopMouseMode(
+                latest.absoluteMouseMode,
+                connectionRetained = true,
+                externalMouseSelected = latest.enableNativeMousePointer
+            )
         }
         usbForeground = true
         withUsbForwarding { it.startForeground() }
@@ -2491,7 +2505,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun setExternalMouseDesktopMode(enabled: Boolean) {
         prefConfig.absoluteMouseMode = enabled
-        defaultPreferences().edit().putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled).apply()
+        defaultPreferences().edit()
+            .putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled)
+            .putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true)
+            .apply()
         enableNativeMousePointer(true)
     }
 

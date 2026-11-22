@@ -80,7 +80,10 @@ class NativeKeyboardCaptureTest {
                         game.setExternalMouseDesktopMode(desktop)
                         assertEquals(!desktop, game.inputCaptureProvider.isCapturingEnabled())
                         assertEquals(desktop, game.cursorVisible)
-                        assertEquals(desktop, PreferenceConfiguration.readPreferences(game).absoluteMouseMode)
+                        PreferenceConfiguration.readPreferences(game).let { persisted ->
+                            assertEquals(desktop, persisted.absoluteMouseMode)
+                            assertTrue(persisted.enableNativeMousePointer)
+                        }
                         assertTrue(game.prefConfig.enableNativeMousePointer)
                         assertFalse(game.prefConfig.touchscreenTrackpad)
                     }

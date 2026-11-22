@@ -3235,6 +3235,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
             }
             setupInputModePresetPreference()
+            setupRemoteDesktopMouseModePreference()
             setupPerfOverlayPreferences()
             setupMicrophoneButtonPositionPreference()
             setupFloatBallSettings()
@@ -4423,6 +4424,24 @@ class StreamSettings : ThemedAppCompatActivity() {
                     newValue as? String ?: MicVolumeProcessingPolicy.OFF
                 )
                 refreshModeSelectors()
+                true
+            }
+        }
+
+        private fun setupRemoteDesktopMouseModePreference() {
+            val preference = findPreference<CheckBoxPreference>(
+                PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING
+            ) ?: return
+
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                if (newValue == true &&
+                    PreferenceConfiguration.supportsDesktopMouseMode(requireContext())
+                ) {
+                    // Absolute mode is a modifier of the external-mouse pointer path.
+                    PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
+                        .putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true)
+                        .apply()
+                }
                 true
             }
         }
