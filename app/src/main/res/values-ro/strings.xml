@@ -252,4 +252,6 @@
     <string name="crown_config_segment_layout">Aspect</string>
     <string name="crown_config_segment_touch">Atingere</string>
     <string name="crown_config_segment_feedback">Vibrații</string>
+    <string name="toast_absolute_mouse_mode_enabled">Modul mouse absolut activat</string>
+    <string name="toast_relative_mouse_mode_enabled">Modul mouse relativ activat</string>
 </resources>

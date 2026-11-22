@@ -151,6 +151,8 @@ class KeyboardInputHandler(private val game: Game) {
                             game.inputCaptureProvider.hideCursor()
                         }
                     }
+                    // Toggle absolute and relative movement for the external mouse.
+                    KeyEvent.KEYCODE_M -> game.toggleExternalMouseDesktopMode()
                 }
 
                 specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
@@ -162,7 +164,7 @@ class KeyboardInputHandler(private val game: Game) {
             (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)
         ) {
             when (androidKeyCode) {
-                KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C -> {
+                KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_M -> {
                     specialKeyCode = androidKeyCode
                     waitingForAllModifiersUp = true
                     specialKeyUsesAccessibility = origin == KeyOrigin.ACCESSIBILITY || accessibilityModifierFlags != 0

@@ -1534,6 +1534,8 @@
 
     <string name="game_menu_toggle_remote_mouse">Show/Hide Remote Mouse</string>
     <string name="toast_remote_mouse_toast">Remote mouse displayed/hidden</string>
+    <string name="toast_absolute_mouse_mode_enabled">Absolute mouse mode enabled</string>
+    <string name="toast_relative_mouse_mode_enabled">Relative mouse mode enabled</string>
     <string name="notification_channel_name">Streaming backend service</string>
     <string name="notification_channel_desc">Keep the connection active when Moonlight is running in the background</string>
 

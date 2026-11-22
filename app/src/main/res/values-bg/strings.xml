@@ -237,4 +237,6 @@
     <string name="crown_config_segment_layout">Подредба</string>
     <string name="crown_config_segment_touch">Докосване</string>
     <string name="crown_config_segment_feedback">Вибрация</string>
+    <string name="toast_absolute_mouse_mode_enabled">Абсолютният режим на мишката е включен</string>
+    <string name="toast_relative_mouse_mode_enabled">Относителният режим на мишката е включен</string>
 </resources>

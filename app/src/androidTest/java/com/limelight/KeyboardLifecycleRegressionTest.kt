@@ -11,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.services.KeyboardAccessibilityService
 import org.junit.Assert.*
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -107,6 +108,29 @@ class KeyboardLifecycleRegressionTest {
         }
         SystemClock.sleep(350)
         scenario.onActivity { assertFalse(it.grabbedInput) }
+    }
+
+    @Test
+    fun mouseModeShortcutTogglesAbsoluteAndRelativeModes() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(game)
+            val key = com.limelight.preferences.PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING
+            val original = prefs.all[key] as? Boolean
+            assumeTrue(game.prefConfig.supportsDesktopMouseMode)
+            game.prefConfig.enableNativeMousePointer = true
+            game.prefConfig.absoluteMouseMode = true
+            try {
+                shortcut(game, KeyEvent.KEYCODE_M)
+                assertFalse(game.prefConfig.absoluteMouseMode)
+                assertTrue("Mouse mode shortcut leaked to the host keyboard path", forwarded(game).isEmpty())
+                shortcut(game, KeyEvent.KEYCODE_M)
+                assertTrue(game.prefConfig.absoluteMouseMode)
+            } finally {
+                if (original == null) prefs.edit().remove(key).apply()
+                else prefs.edit().putBoolean(key, original).apply()
+            }
+        }
     }
 
     private fun withGame(block: (ActivityScenario<Game>) -> Unit) {

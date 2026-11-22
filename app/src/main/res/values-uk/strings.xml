@@ -365,4 +365,6 @@
     <string name="crown_config_segment_layout">Розкладка</string>
     <string name="crown_config_segment_touch">Дотик</string>
     <string name="crown_config_segment_feedback">Вібрація</string>
+    <string name="toast_absolute_mouse_mode_enabled">Абсолютний режим миші ввімкнено</string>
+    <string name="toast_relative_mouse_mode_enabled">Відносний режим миші ввімкнено</string>
 </resources>

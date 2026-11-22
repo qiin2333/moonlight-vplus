@@ -371,4 +371,6 @@
     <string name="crown_config_segment_layout">레이아웃</string>
     <string name="crown_config_segment_touch">터치</string>
     <string name="crown_config_segment_feedback">진동</string>
+    <string name="toast_absolute_mouse_mode_enabled">절대 마우스 모드가 활성화되었습니다</string>
+    <string name="toast_relative_mouse_mode_enabled">상대 마우스 모드가 활성화되었습니다</string>
 </resources>

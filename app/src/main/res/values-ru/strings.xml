@@ -2265,4 +2265,6 @@
     <string name="crown_config_segment_layout">Раскладка</string>
     <string name="crown_config_segment_touch">Касание</string>
     <string name="crown_config_segment_feedback">Вибрация</string>
+    <string name="toast_absolute_mouse_mode_enabled">Включен абсолютный режим мыши</string>
+    <string name="toast_relative_mouse_mode_enabled">Включен относительный режим мыши</string>
 </resources>

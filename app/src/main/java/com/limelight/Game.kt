@@ -2477,6 +2477,20 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         enableNativeMousePointer(true)
     }
 
+    fun toggleExternalMouseDesktopMode() {
+        if (!prefConfig.supportsDesktopMouseMode) return
+        val enabled = !prefConfig.absoluteMouseMode
+        setExternalMouseDesktopMode(enabled)
+        Toast.makeText(
+            this,
+            getString(
+                if (enabled) R.string.toast_absolute_mouse_mode_enabled
+                else R.string.toast_relative_mouse_mode_enabled
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         if (usbForwarding?.consumes(event.device) == true) return true
         return touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event) || super.onGenericMotionEvent(event)

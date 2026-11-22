@@ -285,4 +285,6 @@
     <string name="crown_config_segment_layout">Tata letak</string>
     <string name="crown_config_segment_touch">Sentuh</string>
     <string name="crown_config_segment_feedback">Getaran</string>
+    <string name="toast_absolute_mouse_mode_enabled">Mode mouse absolut diaktifkan</string>
+    <string name="toast_relative_mouse_mode_enabled">Mode mouse relatif diaktifkan</string>
 </resources>

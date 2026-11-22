@@ -246,4 +246,6 @@
     <string name="crown_config_segment_layout">レイアウト</string>
     <string name="crown_config_segment_touch">タッチ</string>
     <string name="crown_config_segment_feedback">振動</string>
+    <string name="toast_absolute_mouse_mode_enabled">絶対マウスモードを有効にしました</string>
+    <string name="toast_relative_mouse_mode_enabled">相対マウスモードを有効にしました</string>
 </resources>

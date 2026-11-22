@@ -326,4 +326,6 @@
     <string name="crown_config_segment_layout">Elrendezés</string>
     <string name="crown_config_segment_touch">Érintés</string>
     <string name="crown_config_segment_feedback">Rezgés</string>
+    <string name="toast_absolute_mouse_mode_enabled">Abszolút egér mód bekapcsolva</string>
+    <string name="toast_relative_mouse_mode_enabled">Relatív egér mód bekapcsolva</string>
 </resources>
