@@ -685,7 +685,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun toggleVirtualKeyboard() {
-        getOrCreateKeyboardUIController()?.toggle()
+        val controller = getOrCreateKeyboardUIController() ?: return
+        controller.toggle()
+        if (controller.isVisible) {
+            hideLocalSoftKeyboard()
+        }
+    }
+
+    private fun hideLocalSoftKeyboard() {
+        val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        inputManager.hideSoftInputFromWindow(streamView.windowToken, 0)
     }
 
     // region ---- Extracted helpers to reduce duplication ----
@@ -2434,19 +2443,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay")
-        val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         val imeVisible = ViewCompat.getRootWindowInsets(streamView)
             ?.isVisible(WindowInsetsCompat.Type.ime()) == true
         if (imeVisible) {
-            inputManager.hideSoftInputFromWindow(streamView.windowToken, 0)
+            hideLocalSoftKeyboard()
             return
         }
 
+        // The virtual on-screen keyboard and the local soft keyboard are mutually exclusive.
+        standaloneKeyboardUI?.takeIf { it.isVisible }?.hide()
         streamView.setTextInputEnabled(true)
         streamView.isFocusableInTouchMode = true
         streamView.requestFocus()
         streamView.post {
             if (!isFinishing && !isDestroyed) {
+                val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                 inputManager.showSoftInput(streamView, InputMethodManager.SHOW_IMPLICIT)
             }
         }
