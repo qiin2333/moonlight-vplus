@@ -1,6 +1,7 @@
 package com.limelight
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
@@ -30,7 +31,7 @@ class NativeKeyboardCaptureTest {
         assumeTrue(PreferenceConfiguration.supportsDesktopMouseMode(context))
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val key = PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING
-        val original = prefs.all[key] as? Boolean
+        val original = snapshotMousePreferences(prefs)
         try {
             KeyboardTestScenario.launch().use { scenario ->
                 lateinit var connection: NvConnection
@@ -58,9 +59,7 @@ class NativeKeyboardCaptureTest {
                 }
             }
         } finally {
-            val editor = prefs.edit()
-            if (original == null) editor.remove(key) else editor.putBoolean(key, original)
-            editor.apply()
+            restoreMousePreferences(prefs, original)
         }
     }
 
@@ -71,7 +70,7 @@ class NativeKeyboardCaptureTest {
                 assumeTrue(game.prefConfig.supportsDesktopMouseMode)
                 val prefs = PreferenceManager.getDefaultSharedPreferences(game)
                 val key = PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING
-                val original = prefs.all[key] as? Boolean
+                val original = snapshotMousePreferences(prefs)
                 try {
                     game.setTouchMode(false)
                     game.setInputGrabState(true)
@@ -80,7 +79,10 @@ class NativeKeyboardCaptureTest {
                         game.setExternalMouseDesktopMode(desktop)
                         assertEquals(!desktop, game.inputCaptureProvider.isCapturingEnabled())
                         assertEquals(desktop, game.cursorVisible)
-                        assertEquals(desktop, PreferenceConfiguration.readPreferences(game).absoluteMouseMode)
+                        PreferenceConfiguration.readPreferences(game).let { persisted ->
+                            assertEquals(desktop, persisted.absoluteMouseMode)
+                            assertTrue(persisted.enableNativeMousePointer)
+                        }
                         assertTrue(game.prefConfig.enableNativeMousePointer)
                         assertFalse(game.prefConfig.touchscreenTrackpad)
                     }
@@ -93,9 +95,7 @@ class NativeKeyboardCaptureTest {
                         assertEquals(!desktop, game.inputCaptureProvider.isCapturingEnabled())
                     }
                 } finally {
-                    val editor = prefs.edit()
-                    if (original == null) editor.remove(key) else editor.putBoolean(key, original)
-                    editor.apply()
+                    restoreMousePreferences(prefs, original)
                 }
             }
         }
@@ -223,5 +223,34 @@ class NativeKeyboardCaptureTest {
                 game.keyboardInputHandler.handleKeyUp(event)
             }
         }
+    }
+
+    private fun snapshotMousePreferences(prefs: SharedPreferences): Map<String, Any?> =
+        mousePreferenceKeys.associateWith { prefs.all[it] }
+
+    private fun restoreMousePreferences(
+        prefs: SharedPreferences,
+        original: Map<String, Any?>
+    ) {
+        val editor = prefs.edit()
+        for (key in mousePreferenceKeys) {
+            when (val value = original[key]) {
+                null -> editor.remove(key)
+                is Boolean -> editor.putBoolean(key, value)
+                is String -> editor.putString(key, value)
+            }
+        }
+        editor.apply()
+    }
+
+    private companion object {
+        val mousePreferenceKeys = listOf(
+            PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING,
+            PreferenceConfiguration.ENABLE_ENHANCED_TOUCH_PREF_STRING,
+            PreferenceConfiguration.TOUCHSCREEN_TRACKPAD_PREF_STRING,
+            PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING,
+            PreferenceConfiguration.SCREEN_DS5_TOUCHPAD_PREF_STRING,
+            PreferenceConfiguration.NATIVE_MOUSE_MODE_PRESET_PREF_STRING,
+        )
     }
 }

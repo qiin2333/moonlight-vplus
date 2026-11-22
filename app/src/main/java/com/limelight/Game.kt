@@ -63,6 +63,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.perfhud.PerfHudDensity
 import com.limelight.preferences.DisplayChoiceLists
 import com.limelight.preferences.GlPreferences
+import com.limelight.preferences.LegacySettingsModeStore
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.services.StreamNotificationService
 import com.limelight.ui.CursorView
@@ -1426,12 +1427,21 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     internal fun refreshInputPreferencesForReconnect() {
         val latest = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
-        refreshDesktopMouseMode(latest.absoluteMouseMode, connectionRetained = false)
+        refreshDesktopMouseMode(
+            latest.absoluteMouseMode,
+            connectionRetained = false,
+            externalMouseSelected = latest.enableNativeMousePointer
+        )
         prefConfig.refreshControllerMotionPreferencesFrom(latest)
     }
 
-    private fun refreshDesktopMouseMode(enabled: Boolean, connectionRetained: Boolean) {
+    private fun refreshDesktopMouseMode(
+        enabled: Boolean,
+        connectionRetained: Boolean,
+        externalMouseSelected: Boolean = prefConfig.enableNativeMousePointer
+    ) {
         val previousMode = prefConfig.externalMouseMode
+        prefConfig.enableNativeMousePointer = externalMouseSelected
         prefConfig.absoluteMouseMode = enabled
         if (prefConfig.externalMouseMode == previousMode) return
 
@@ -1510,7 +1520,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         super.onResume()
         // Extreme Resume can keep the connection alive and skip prepareConnection().
         if (connected) {
-            refreshDesktopMouseMode(PreferenceConfiguration.readAbsoluteMouseMode(defaultPreferences()), connectionRetained = true)
+            val latest = PreferenceConfiguration.readPreferences(this, currentTargetDisplay)
+            refreshDesktopMouseMode(
+                latest.absoluteMouseMode,
+                connectionRetained = true,
+                externalMouseSelected = latest.enableNativeMousePointer
+            )
         }
         usbForeground = true
         withUsbForwarding { it.startForeground() }
@@ -2490,8 +2505,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     fun setExternalMouseDesktopMode(enabled: Boolean) {
+        val preferences = defaultPreferences()
+        LegacySettingsModeStore(preferences).ensureTouchDefaults(
+            packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        )
         prefConfig.absoluteMouseMode = enabled
-        defaultPreferences().edit().putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled).apply()
+        preferences.edit()
+            .putBoolean(PreferenceConfiguration.ABSOLUTE_MOUSE_MODE_PREF_STRING, enabled)
+            .putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true)
+            .apply()
         enableNativeMousePointer(true)
     }
 
