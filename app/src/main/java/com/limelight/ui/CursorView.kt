@@ -26,6 +26,10 @@ class CursorView : View {
     private var cursorY = -100f
     private var inputWantsCursor = false
     private var hostCursorVisible = false
+
+    // When true this view owns the pointer: the host is not compositing one,
+    // so visibility only depends on whether input wants a cursor at all.
+    private var localCursorOwned = false
     private val paint = Paint()
 
     constructor(context: Context) : super(context) {
@@ -95,13 +99,26 @@ class CursorView : View {
         invalidate()
     }
 
+    /**
+     * Marks this view as the only pointer shown for the stream.
+     *
+     * Without it the overlay needs a host cursor shape before it becomes
+     * visible, which never happens on hosts that cannot send one.
+     */
+    fun setLocalCursorOwned(owned: Boolean) {
+        if (localCursorOwned == owned) return
+        localCursorOwned = owned
+        updateVisibility()
+        invalidate()
+    }
+
     private fun updateVisibility() {
-        visibility = if (inputWantsCursor && hostCursorVisible) VISIBLE else GONE
+        visibility = if (inputWantsCursor && (hostCursorVisible || localCursorOwned)) VISIBLE else GONE
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (!inputWantsCursor || !hostCursorVisible) return
+        if (!inputWantsCursor || (!hostCursorVisible && !localCursorOwned)) return
 
         val bmpToDraw: Bitmap?
         val pX: Float

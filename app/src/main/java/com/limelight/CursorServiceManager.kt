@@ -8,6 +8,7 @@ import android.util.LruCache
 import android.view.Gravity
 import android.view.PointerIcon
 import android.widget.FrameLayout
+import com.limelight.binding.input.touch.LocalCursorRenderer
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
 import com.limelight.nvstream.jni.MoonBridge
@@ -80,6 +81,12 @@ class CursorServiceManager(
     private var cursorUpdateTimeout: Runnable? = null
     private var externalDisplayActive = false
 
+    // Local pointer for an external mouse. The mouse deltas are integrated on
+    // this device and the resulting absolute position is reported, so the
+    // on-device cursor never waits for a host round trip. Touches never touch
+    // this path.
+    private var externalMouseRenderer: LocalCursorRenderer? = null
+
     fun setExternalDisplayActive(active: Boolean) {
         if (externalDisplayActive == active) return
         externalDisplayActive = active
@@ -95,6 +102,13 @@ class CursorServiceManager(
                 context.setEnableLocalCursorRendering(shouldRenderOverlay())
             }
         }
+
+        // The external-mouse pointer is not tied to a touch context, so it keeps
+        // its own renderer and only needs the new dimensions on a layout change.
+        externalMouseRenderer?.setViewDimensions(
+            width.coerceAtLeast(1),
+            height.coerceAtLeast(1)
+        )
     }
 
     fun destroyLocalCursorRenderers() {
@@ -103,12 +117,83 @@ class CursorServiceManager(
                 context.destroyLocalCursorRenderer()
             }
         }
+
+        externalMouseRenderer?.let {
+            it.hide()
+            it.destroy()
+        }
+        externalMouseRenderer = null
+    }
+
+    /**
+     * Moves the locally drawn external-mouse pointer by a relative delta.
+     *
+     * Returns the absolute pointer position in stream pixels, so the caller can
+     * report exactly the position that was just drawn. Reporting the same value
+     * that is displayed is what keeps the local and the remote pointer in sync.
+     */
+    fun moveExternalMousePointerBy(deltaX: Float, deltaY: Float): FloatArray? {
+        val renderer = ensureExternalMouseRenderer() ?: return null
+        renderer.updateCursorPosition(deltaX, deltaY)
+        renderer.show()
+        return renderer.getCursorAbsolutePosition()
+    }
+
+    /** Hides the locally drawn external-mouse pointer. */
+    fun hideExternalMousePointer() {
+        externalMouseRenderer?.hide()
+    }
+
+    /**
+     * Records a touch contact as the position the external-mouse pointer resumes from.
+     *
+     * Touches are never drawn on this device, so the pointer is hidden here. Only
+     * its position is updated, which is what makes a mouse moved right after a
+     * touch continue from where the finger left off instead of jumping back to
+     * the old spot. Touch reporting itself is untouched.
+     */
+    fun recordTouchPointerPosition(normalizedX: Float, normalizedY: Float) {
+        if (!externalMousePointerActive()) return
+        val renderer = ensureExternalMouseRenderer() ?: return
+        renderer.hide()
+        val width = (streamView.width - 1).coerceAtLeast(1).toFloat()
+        val height = (streamView.height - 1).coerceAtLeast(1).toFloat()
+        renderer.setCursorPosition(normalizedX * width, normalizedY * height)
+    }
+
+    /**
+     * True when an external mouse should draw its own pointer on this device.
+     *
+     * Only the mouse path consults this. Touches keep the host-composited cursor,
+     * so their reporting and their visuals stay exactly as they were.
+     */
+    private fun externalMousePointerActive(): Boolean {
+        return prefConfig.usesLocalExternalMousePointer &&
+            !externalDisplayActive &&
+            cursorOverlay != null
+    }
+
+    private fun ensureExternalMouseRenderer(): LocalCursorRenderer? {
+        if (!externalMousePointerActive()) return null
+        val overlay = cursorOverlay ?: return null
+        val width = streamView.width
+        val height = streamView.height
+        if (width <= 0 || height <= 0) return null
+
+        val existing = externalMouseRenderer
+        if (existing != null) {
+            existing.setViewDimensions(width, height)
+            return existing
+        }
+
+        overlay.setLocalCursorOwned(true)
+        return LocalCursorRenderer(overlay, width, height).also { externalMouseRenderer = it }
     }
 
     fun refreshCursorMode() {
         reconcileCursorMode()
         updateRelativeCursorRenderers()
-        if (localModeActive) {
+        if (localModeActive || externalMousePointerActive()) {
             postApplyCurrentCursor()
         }
     }
@@ -242,7 +327,8 @@ class CursorServiceManager(
             touchpadEnabled = prefConfig.touchscreenTrackpad,
             localCursorEnabled = prefConfig.enableLocalCursorRendering,
             hasCursorOverlay = cursorOverlay != null,
-            externalDisplayActive = externalDisplayActive
+            externalDisplayActive = externalDisplayActive,
+            externalMouseClientCursor = prefConfig.usesLocalExternalMousePointer
         )
     }
 
@@ -368,11 +454,21 @@ class CursorServiceManager(
 
     private fun applyCurrentCursorOnUiThread() {
         if (!localModeActive) {
-            restoreDefaultCursor()
+            // Without host cursor shapes the split-direct-touch pointer still has
+            // to stay on screen, otherwise it blinks out between touches.
+            if (externalMousePointerActive()) {
+                cursorOverlay?.setLocalCursorOwned(true)
+            } else {
+                restoreDefaultCursor()
+            }
             return
         }
         if (!hostCursorVisible) {
-            hideLocalPresentation()
+            if (externalMousePointerActive()) {
+                cursorOverlay?.setLocalCursorOwned(true)
+            } else {
+                hideLocalPresentation()
+            }
             return
         }
 
@@ -396,9 +492,13 @@ class CursorServiceManager(
             } catch (e: Exception) {
                 LimeLog.warning("Cursor: failed to apply native pointer: ${e.message}")
             }
-        } else if (shouldRenderOverlay()) {
+        } else if (shouldRenderOverlay() || externalMousePointerActive()) {
             cursorOverlay?.setCursorBitmap(shape.bitmap, shape.hotspotX, shape.hotspotY)
-            cursorOverlay?.setHostCursorVisible(true)
+            if (externalMousePointerActive()) {
+                cursorOverlay?.setLocalCursorOwned(true)
+            } else {
+                cursorOverlay?.setHostCursorVisible(true)
+            }
         }
     }
 
@@ -441,7 +541,9 @@ class CursorServiceManager(
             } catch (_: Exception) {
             }
         }
-        cursorOverlay?.setHostCursorVisible(false)
+        if (!externalMousePointerActive()) {
+            cursorOverlay?.setHostCursorVisible(false)
+        }
     }
 
     private fun restoreDefaultCursor() {
@@ -456,8 +558,10 @@ class CursorServiceManager(
                 } catch (_: Exception) {
                 }
             }
-            cursorOverlay?.setHostCursorVisible(false)
-            cursorOverlay?.resetToDefault()
+            if (!externalMousePointerActive()) {
+                cursorOverlay?.setHostCursorVisible(false)
+                cursorOverlay?.resetToDefault()
+            }
         }
     }
 
@@ -483,7 +587,8 @@ internal object CursorModePolicy {
         touchpadEnabled: Boolean,
         localCursorEnabled: Boolean,
         hasCursorOverlay: Boolean,
-        externalDisplayActive: Boolean = false
+        externalDisplayActive: Boolean = false,
+        externalMouseClientCursor: Boolean = false
     ): Boolean {
         // Android may keep the system pointer on the tablet's input display. A
         // PointerIcon on the Presentation cannot move it to the video display.
@@ -493,7 +598,10 @@ internal object CursorModePolicy {
 
         val nativePointer = nativePointerSupported && nativePointerEnabled
         val touchpadOverlay = touchpadEnabled && localCursorEnabled && hasCursorOverlay
-        return nativePointer || touchpadOverlay
+        // A locally drawn external-mouse pointer still needs the host to send
+        // cursor shapes, otherwise the overlay can only show the fallback arrow.
+        val externalMousePointer = externalMouseClientCursor && hasCursorOverlay
+        return nativePointer || touchpadOverlay || externalMousePointer
     }
 
     fun shouldRenderTouchpadOverlay(

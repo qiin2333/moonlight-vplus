@@ -669,7 +669,7 @@ class ControllerHandler(
                             }
                             sendControllerInputPacketLocked(survivor)
                         } else if (number.toInt() == 0 &&
-                            (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad)) {
+                            (prefConfig.onscreenController || prefConfig.screenDs5Touchpad)) {
                             val screenMetadata = ControllerArrivalMetadata(
                                 MoonBridge.LI_CTYPE_XBOX, STANDARD_GAMEPAD_BUTTON_FLAGS, 0)
                             controllerArrivalMetadata[0] = screenMetadata
@@ -1925,7 +1925,7 @@ class ControllerHandler(
     internal fun getActiveControllerMask(): Short {
         val local = localControllerContexts().filter { isContextUsable(it) && it.assignedControllerNumber }
             .fold(0) { mask, context -> mask or (1 shl context.controllerNumber.toInt()) }
-        val screen = if (prefConfig.onscreenController || prefConfig.enableCrownFeatures || prefConfig.screenDs5Touchpad) 1 else 0
+        val screen = if (prefConfig.onscreenController || prefConfig.screenDs5Touchpad) 1 else 0
         return usbHandoff.activeMask(prefConfig.multiController, currentControllers.get(), initialControllers.toInt(), local, screen)
     }
 

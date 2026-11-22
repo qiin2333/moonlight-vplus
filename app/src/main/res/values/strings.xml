@@ -556,6 +556,8 @@
     <string name="summary_checkbox_enable_enhanced_touch">Legacy storage switch controlled by the Control method preset.</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">Pointer zone on left</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">Move the pointer-control zone from the right side of the screen to the left.</string>
+    <string name="title_checkbox_external_mouse_client_cursor">Low-latency external mouse pointer</string>
+    <string name="summary_checkbox_external_mouse_client_cursor">Moves the external mouse pointer on this device so it follows immediately instead of waiting for the host round trip, and reports the same position to the host. Touches keep their original behaviour and never draw a pointer: a touch only hides the pointer and decides where it reappears when the mouse moves again.</string>
     <string name="title_enhanced_touch_zone_divider">Touch-zone boundary</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">Set where direct touch and pointer control are divided. Below 50% places the boundary from the left; above 50% places it from the right.</string>
     <string name="dialog_title_enhanced_touch_zone_divider" formatted="false">Below 50% measures from the left edge; above 50% measures from the right edge.</string>

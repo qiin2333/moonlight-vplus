@@ -486,6 +486,8 @@
     <string name="summary_checkbox_enable_enhanced_touch">Служебная настройка, задаваемая выбранным способом управления.</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">Зона указателя слева</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">Переносит зону управления указателем с правой стороны на левую.</string>
+    <string name="title_checkbox_external_mouse_client_cursor">Указатель внешней мыши с низкой задержкой</string>
+    <string name="summary_checkbox_external_mouse_client_cursor">Указатель внешней мыши рисуется на этом устройстве и сразу следует за ней, не ожидая ответа хоста; хосту передаётся та же позиция. Касания работают как раньше и не рисуют указатель: касание только скрывает его и задаёт точку, из которой указатель продолжит движение.</string>
     <string name="title_enhanced_touch_zone_divider">Граница сенсорных зон</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">Граница прямых касаний и указателя. Ниже 50% отсчитывается слева, выше 50% — справа.</string>
     <string name="dialog_title_enhanced_touch_zone_divider" formatted="false">Ниже 50% — от левого края; выше 50% — от правого.</string>

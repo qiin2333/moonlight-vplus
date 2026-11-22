@@ -14,6 +14,7 @@ class LocalCursorRenderer(
     private var cursorX = this.viewWidth / 2f
     private var cursorY = this.viewHeight / 2f
     private val uiHandler = Handler(Looper.getMainLooper())
+    private var shown = false
 
     init {
         postPosition()
@@ -22,6 +23,18 @@ class LocalCursorRenderer(
     fun updateCursorPosition(deltaX: Float, deltaY: Float) {
         cursorX = (cursorX + deltaX).coerceIn(0f, (viewWidth - 1).toFloat())
         cursorY = (cursorY + deltaY).coerceIn(0f, (viewHeight - 1).toFloat())
+        postPosition()
+    }
+
+    /**
+     * Jumps the pointer to an absolute position in view pixels without showing it.
+     *
+     * Touches never draw this pointer, but they still decide where the next mouse
+     * movement has to continue from.
+     */
+    fun setCursorPosition(x: Float, y: Float) {
+        cursorX = x.coerceIn(0f, (viewWidth - 1).toFloat())
+        cursorY = y.coerceIn(0f, (viewHeight - 1).toFloat())
         postPosition()
     }
 
@@ -48,6 +61,12 @@ class LocalCursorRenderer(
     }
 
     fun show() {
+        // Every motion event asks for the cursor, so keep show() cheap and idempotent.
+        if (shown) {
+            postPosition()
+            return
+        }
+        shown = true
         uiHandler.post {
             cursorView?.let {
                 it.show()
@@ -57,6 +76,8 @@ class LocalCursorRenderer(
     }
 
     fun hide() {
+        if (!shown) return
+        shown = false
         uiHandler.post { cursorView?.hide() }
     }
 

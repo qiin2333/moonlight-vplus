@@ -412,6 +412,8 @@
     <string name="summary_checkbox_enable_enhanced_touch">由“控制方式预设”管理的旧版存储开关。</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">指针区放在左侧</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">把指针控制区从屏幕右侧移到左侧。</string>
+    <string name="title_checkbox_external_mouse_client_cursor">外接鼠标低延迟指针</string>
+    <string name="summary_checkbox_external_mouse_client_cursor">外接鼠标的指针由本机绘制并立即跟手，不必等主机往返，同时把同一位置上报给主机。触控保持原有逻辑且不绘制指针：触摸只隐藏指针并记录位置，下次移动鼠标时指针就从触摸结束的位置继续。</string>
     <string name="title_enhanced_touch_zone_divider">触控分区边界</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">设置直接触控区和指针控制区的分界位置。低于 50% 从左侧计算，高于 50% 从右侧计算。</string>
     <string name="dialog_title_enhanced_touch_zone_divider" formatted="false">低于 50% 从左边缘计算，高于 50% 从右边缘计算。</string>

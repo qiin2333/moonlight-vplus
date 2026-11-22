@@ -358,6 +358,31 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     var isTouchOverrideEnabled = false
 
+    /**
+     * Moves the locally drawn external-mouse pointer and returns its absolute
+     * position in stream pixels.
+     *
+     * The caller reports exactly that position, so the drawn pointer and the
+     * remote one can never drift apart. Touches never call this.
+     */
+    fun moveExternalMousePointerBy(deltaX: Float, deltaY: Float): FloatArray? {
+        if (!::cursorServiceManager.isInitialized) return null
+        return cursorServiceManager.moveExternalMousePointerBy(deltaX, deltaY)
+    }
+
+    fun hideExternalMousePointer() {
+        if (!::cursorServiceManager.isInitialized) return
+        cursorServiceManager.hideExternalMousePointer()
+    }
+
+    /**
+     * Remembers where a touch left the pointer, without drawing anything for it.
+     */
+    fun recordTouchPointerPosition(normalizedX: Float, normalizedY: Float) {
+        if (!::cursorServiceManager.isInitialized) return
+        cursorServiceManager.recordTouchPointerPosition(normalizedX, normalizedY)
+    }
+
     fun getisTouchOverrideEnabled(): Boolean = isTouchOverrideEnabled
 
     fun setisTouchOverrideEnabled(isTouchOverrideEnabled: Boolean) {

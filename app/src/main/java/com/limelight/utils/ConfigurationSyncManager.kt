@@ -3313,6 +3313,7 @@ class ConfigurationSyncManager(private val context: Context) {
             "checkbox_enable_audiofx",
             "checkbox_enable_analytics",
             "checkbox_enable_enhanced_touch",
+            "checkbox_external_mouse_client_cursor",
             "checkbox_enable_esc_menu",
             "checkbox_enable_float_ball",
             "checkbox_enable_hdr",

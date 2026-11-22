@@ -131,6 +131,16 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
     var enhancedTouchOnWhichSide = false //Assigned to NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT
     var enhanceTouchZoneDivider = 0 //Assigned to NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER
     var pointerVelocityFactor = 0f //Assigned to NativeTouchContext.POINTER_VELOCITY_FACTOR
+    /**
+     * Draw the pointer of an external mouse on this device instead of the host.
+     *
+     * The mouse is moved by relative deltas, so the only way to make the pointer follow
+     * without a host round trip is to integrate those deltas locally and report the
+     * resulting absolute position. Touches are not affected at all: they keep using
+     * whatever the host composites into the video. The shape still comes from the host
+     * cursor channel.
+     */
+    var externalMouseClientCursor = false
     var nativeTouchFingersToToggleKeyboard = 0 // Number of fingers to tap to toggle local on-screen keyboard in native touch mode.
 
     var videoFormat: FormatOption = FormatOption.AUTO
@@ -227,9 +237,21 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
     var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
     internal val externalMouseMode: ExternalMouseMode
-        get() = ExternalMouseMode.resolve(enableNativeMousePointer, supportsDesktopMouseMode, absoluteMouseMode)
+        get() = ExternalMouseMode.resolve(
+            enableNativeMousePointer, supportsDesktopMouseMode, absoluteMouseMode
+        )
     internal val usesSystemMousePointer: Boolean
         get() = externalMouseMode == ExternalMouseMode.SYSTEM_POINTER
+
+    /**
+     * True when an external mouse should be drawn locally instead of by the host.
+     *
+     * Only the mouse path consults this: touches never draw a pointer of their own.
+     * A touchpad already has its own local cursor, and the system-pointer mode is
+     * natively local, so both keep their existing behaviour.
+     */
+    internal val usesLocalExternalMousePointer: Boolean
+        get() = externalMouseClientCursor && !touchscreenTrackpad
     var mouseAxisCorrection = MouseAxisCorrection.OFF
     var enableNativeMousePointer = false
     var enableAudioFx = false
@@ -415,6 +437,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
                     POINTER_VELOCITY_FACTOR_PREF_STRING,
                     pointerVelocityFactor.roundToInt()
                 )
+                .putBoolean(EXTERNAL_MOUSE_CLIENT_CURSOR_PREF_STRING, externalMouseClientCursor)
                 .putBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, touchscreenTrackpad)
                 .putBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, touchKeyboardAutoInvoke)
                 .putBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, remoteImeAutoShow)
@@ -622,6 +645,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
         copy.escMenuKey = this.escMenuKey
         copy.enableStartKeyMenu = this.enableStartKeyMenu
         copy.enableNativeMousePointer = this.enableNativeMousePointer
+        copy.externalMouseClientCursor = this.externalMouseClientCursor
         copy.absoluteMouseMode = absoluteMouseMode
         copy.mouseAxisCorrection = this.mouseAxisCorrection
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
@@ -837,6 +861,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
         const val ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING = "checkbox_enable_native_mouse_pointer"
         const val NATIVE_MOUSE_MODE_PRESET_PREF_STRING = "list_native_mouse_mode_preset"
         const val ENABLE_ENHANCED_TOUCH_PREF_STRING = "checkbox_enable_enhanced_touch"
+        const val EXTERNAL_MOUSE_CLIENT_CURSOR_PREF_STRING = "checkbox_external_mouse_client_cursor"
 
         // ---- Package-private pref key constants (promoted to public for Kotlin interop) ----
         const val FPS_PREF_STRING = "list_fps"
@@ -1550,6 +1575,8 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
             config.enhancedTouchOnWhichSide = prefs.getBoolean(ENHANCED_TOUCH_ON_RIGHT_PREF_STRING, true) // by default, enhanced touch zone is on the right side.
             config.enhanceTouchZoneDivider = prefs.getInt(ENHANCED_TOUCH_ZONE_DIVIDER_PREF_STRING, 50) // decides where to divide native touch zone & enhance touch zone
             config.pointerVelocityFactor = prefs.getInt(POINTER_VELOCITY_FACTOR_PREF_STRING, 100).toFloat() // set pointer velocity faster or slower
+            config.externalMouseClientCursor =
+                prefs.getBoolean(EXTERNAL_MOUSE_CLIENT_CURSOR_PREF_STRING, false)
 
             val enableAudioPassthrough = prefs.getBoolean(ENABLE_AUDIO_PASSTHROUGH_PREF_STRING, DEFAULT_ENABLE_AUDIO_PASSTHROUGH)
             config.enableAudioPassthrough = enableAudioPassthrough

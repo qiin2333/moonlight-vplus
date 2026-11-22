@@ -766,6 +766,11 @@
                     android:summary="@string/summary_checkbox_enable_enhanced_touch"
                     android:title="@string/title_checkbox_enable_enhanced_touch" />
                 <CheckBoxPreference
+                    android:key="checkbox_external_mouse_client_cursor"
+                    android:defaultValue="false"
+                    android:summary="@string/summary_checkbox_external_mouse_client_cursor"
+                    android:title="@string/title_checkbox_external_mouse_client_cursor" />
+                <CheckBoxPreference
                     android:key="checkbox_enhanced_touch_on_which_side"
                     android:dependency="checkbox_enable_enhanced_touch"
                     android:title="@string/title_checkbox_enhanced_touch_on_which_side"

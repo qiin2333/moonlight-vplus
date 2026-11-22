@@ -722,6 +722,8 @@
     <string name="summary_checkbox_enable_enhanced_touch">由「控制方式預設」管理的舊版儲存開關。</string>
     <string name="title_checkbox_enhanced_touch_on_which_side">指標區放在左側</string>
     <string name="summary_checkbox_enhanced_touch_on_which_side">把指標控制區從螢幕右側移到左側。</string>
+    <string name="title_checkbox_external_mouse_client_cursor">外接滑鼠低延遲指標</string>
+    <string name="summary_checkbox_external_mouse_client_cursor">外接滑鼠的指標由本機繪製並立即跟手，不必等主機往返，同時把同一位置回報給主機。觸控保持原有邏輯且不繪製指標：觸碰只隱藏指標並記錄位置，下次移動滑鼠時指標就從觸碰結束的位置繼續。</string>
     <string name="title_enhanced_touch_zone_divider">觸控分區邊界</string>
     <string name="summary_enhanced_touch_zone_divider" formatted="false">設定直接觸控區和指標控制區的分界位置。低於 50% 從左側計算，高於 50% 從右側計算。</string>
     <string name="dialog_title_enhanced_touch_zone_divider" formatted="false">低於 50% 從左邊緣計算，高於 50% 從右邊緣計算。</string>

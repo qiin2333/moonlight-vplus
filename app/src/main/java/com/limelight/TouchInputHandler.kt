@@ -373,6 +373,8 @@ class TouchInputHandler(private val game: Game) {
                 }
 
                 if (!game.inputCaptureProvider.isCapturingActive()) {
+                    // No capture means the host owns the pointer, so drop ours.
+                    game.hideExternalMousePointer()
                     navigationButtons.update(buttonState)
                     return true
                 }
@@ -391,8 +393,24 @@ class TouchInputHandler(private val game: Game) {
                         correctedDeltaY
                     )
                     if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
-                        if (game.prefConfig.absoluteMouseMode) {
-                            val activeStreamView = game.activeStreamView!!
+                        val activeStreamView = game.activeStreamView
+                        // Only an external mouse gets a pointer drawn on this device. Touches
+                        // keep using whatever the host composites into the video, so their
+                        // reporting and their visuals are unchanged.
+                        val localPointer =
+                            if (activeStreamView != null && game.prefConfig.usesLocalExternalMousePointer) {
+                                game.moveExternalMousePointerBy(deltaX.toFloat(), deltaY.toFloat())
+                            } else {
+                                null
+                            }
+                        if (localPointer != null && activeStreamView != null) {
+                            // Report exactly the position that was just drawn, so the local
+                            // pointer and the remote one can never drift apart.
+                            game.conn?.sendMousePosition(
+                                localPointer[0].toInt().toShort(), localPointer[1].toInt().toShort(),
+                                activeStreamView.width.toShort(), activeStreamView.height.toShort()
+                            )
+                        } else if (game.prefConfig.absoluteMouseMode && activeStreamView != null) {
                             game.conn?.sendMouseMoveAsMousePosition(
                                 deltaX, deltaY,
                                 activeStreamView.width.toShort(), activeStreamView.height.toShort()
@@ -520,6 +538,9 @@ class TouchInputHandler(private val game: Game) {
             } else {
                 // This case is for fingers
                 updateScreenDs5TouchpadGestureRoute(view, event)
+                // Touches are not drawn, but they do decide where the external
+                // mouse pointer resumes from.
+                recordTouchPointerPosition(view, event)
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                     enhancedTouchRouteOwner.finish()
                     nativeTouchPointerMap.clear()
@@ -891,6 +912,14 @@ class TouchInputHandler(private val game: Game) {
         MotionEvent.ACTION_HOVER_EXIT -> MoonBridge.LI_TOUCH_EVENT_HOVER_LEAVE
         MotionEvent.ACTION_BUTTON_PRESS, MotionEvent.ACTION_BUTTON_RELEASE -> MoonBridge.LI_TOUCH_EVENT_BUTTON_ONLY
         else -> -1
+    }
+
+    private fun recordTouchPointerPosition(view: View?, event: MotionEvent) {
+        if (!game.prefConfig.usesLocalExternalMousePointer) return
+        if (event.pointerCount <= 0) return
+        val pointerIndex = event.actionIndex.coerceIn(0, event.pointerCount - 1)
+        val coords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
+        game.recordTouchPointerPosition(coords[0], coords[1])
     }
 
     private fun getStreamViewRelativeNormalizedXY(view: View?, event: MotionEvent, pointerIndex: Int): FloatArray {
