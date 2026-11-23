@@ -1886,6 +1886,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         if (!targetDisplayResolver.isExternalDisplaySelected()) {
             DisplayModeWindowApplier.apply(window, selection)
+            if (::floatBallHandler.isInitialized) {
+                floatBallHandler.manager?.syncHostDisplayMode()
+            }
         } else {
             externalDisplayManager?.updateDisplayMode(selection)
         }

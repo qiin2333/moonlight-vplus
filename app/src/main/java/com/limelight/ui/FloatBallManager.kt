@@ -490,6 +490,7 @@ class FloatBallManager constructor(
         val context = getContext()
         val view = floatBall
         if (view == null || context == null) return
+        copyHostDisplayMode(context)
         try {
             if (view.parent == null) {
                 windowManager.addView(view, layoutParams)
@@ -499,6 +500,23 @@ class FloatBallManager constructor(
         } catch (e: RuntimeException) {
             Log.e(TAG, "Update view failed: ${e.message}")
         }
+    }
+
+    /**
+     * Mirror the stream window's display mode request onto the ball window. ColorOS takes the
+     * refresh rate from the topmost interesting app window, which is this ball, so without the
+     * mirror an unlisted app falls back to the 90 Hz default while streaming.
+     */
+    private fun copyHostDisplayMode(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val host = (context as? Activity)?.window?.attributes ?: return
+        layoutParams.preferredDisplayModeId = host.preferredDisplayModeId
+        layoutParams.preferredRefreshRate = host.preferredRefreshRate
+    }
+
+    /** Re-applies the host window's display mode after the stream changed it. */
+    fun syncHostDisplayMode() {
+        if (floatBall?.parent != null) updateViewPosition()
     }
 
     private fun startAutoHideTimer() {

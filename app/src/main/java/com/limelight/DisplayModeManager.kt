@@ -125,6 +125,9 @@ object DisplayModeManager {
                 }
             } else {
                 LimeLog.info("Current display mode is already the best display mode")
+                // Still pin it: otherwise the system may lower the rate later in the stream
+                // (ColorOS drops unlisted apps back to its 90 Hz default).
+                preferredModeId = bestMode.modeId
             }
 
             displayRefreshRate = bestMode.refreshRate
