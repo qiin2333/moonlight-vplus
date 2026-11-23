@@ -40,12 +40,14 @@ object LauncherIcon {
      * activity component. A launcher that already deleted a pinned icon cannot be repaired
      * silently, but this recovers dynamic and pinned records still owned by ShortcutManager.
      */
-    fun migrateShortcutsToCurrentLauncher(context: Context) {
+    fun migrateShortcutsToCurrentLauncher(
+        context: Context,
+        launcherComponent: ComponentName = currentLauncherComponent(context)
+    ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
 
         val appContext = context.applicationContext
         val shortcutManager = appContext.getSystemService(ShortcutManager::class.java) ?: return
-        val launcherComponent = currentLauncherComponent(appContext)
         try {
             val updates = ArrayList<ShortcutInfo>()
 
@@ -96,7 +98,7 @@ object LauncherIcon {
         )
         // Rebind shortcuts while both aliases are still valid. This avoids launchers
         // rejecting an update because the old target is already disabled.
-        migrateShortcutsToCurrentLauncher(appContext)
+        migrateShortcutsToCurrentLauncher(appContext, aliasComponent(appContext, variant))
         pm.setComponentEnabledSetting(
             aliasComponent(appContext, if (variant == VARIANT_SABA_DARK) VARIANT_SABA else VARIANT_SABA_DARK),
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
