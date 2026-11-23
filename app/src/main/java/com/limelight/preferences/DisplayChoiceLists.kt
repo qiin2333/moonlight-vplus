@@ -2,6 +2,7 @@ package com.limelight.preferences
 
 import android.content.Context
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.util.DisplayMetrics
 import android.view.Display
 import kotlin.math.max
@@ -25,6 +26,29 @@ internal object DisplayChoiceLists {
         resolved.getRealMetrics(metrics)
         val width = metrics.widthPixels.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
         val height = metrics.heightPixels.takeIf { it > 0 } ?: context.resources.displayMetrics.heightPixels
+        // Android TV renders its UI at 1080p and scales it to a 4K panel, so getRealMetrics()
+        // reports the UI size; the active display mode carries the real output size.
+        var physicalWidth = 0
+        var physicalHeight = 0
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val mode = resolved.mode
+            physicalWidth = mode.physicalWidth
+            physicalHeight = mode.physicalHeight
+        }
+        return preferredNativeSize(physicalWidth, physicalHeight, width, height)
+    }
+
+    internal fun preferredNativeSize(
+        physicalWidth: Int,
+        physicalHeight: Int,
+        metricsWidth: Int,
+        metricsHeight: Int
+    ): Pair<Int, Int>? {
+        val (width, height) = if (physicalWidth > 0 && physicalHeight > 0) {
+            physicalWidth to physicalHeight
+        } else {
+            metricsWidth to metricsHeight
+        }
         if (width <= 0 || height <= 0) return null
         return max(width, height) to min(width, height)
     }
