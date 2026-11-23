@@ -1,6 +1,7 @@
 package com.limelight.preferences
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.util.DisplayMetrics
@@ -28,15 +29,29 @@ internal object DisplayChoiceLists {
         val height = metrics.heightPixels.takeIf { it > 0 } ?: context.resources.displayMetrics.heightPixels
         // Android TV renders its UI at 1080p and scales it to a 4K panel, so getRealMetrics()
         // reports the UI size; the active display mode carries the real output size.
+        // Phones keep following the UI size (wm size overrides, MIUI FHD+, Xperia 1).
         var physicalWidth = 0
         var physicalHeight = 0
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val mode = resolved.mode
-            physicalWidth = mode.physicalWidth
-            physicalHeight = mode.physicalHeight
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
+        ) {
+            // getMode() throws when the active mode id is missing from supportedModes.
+            val mode = try {
+                resolved.mode
+            } catch (e: IllegalStateException) {
+                null
+            }
+            if (mode != null) {
+                physicalWidth = mode.physicalWidth
+                physicalHeight = mode.physicalHeight
+            }
         }
         return preferredNativeSize(physicalWidth, physicalHeight, width, height)
     }
+
+    /** Native never asks the host for more than UHD, even on 4096x2160 panel modes. */
+    private const val MAX_NATIVE_LONG = 3840
+    private const val MAX_NATIVE_SHORT = 2160
 
     internal fun preferredNativeSize(
         physicalWidth: Int,
@@ -44,13 +59,18 @@ internal object DisplayChoiceLists {
         metricsWidth: Int,
         metricsHeight: Int
     ): Pair<Int, Int>? {
-        val (width, height) = if (physicalWidth > 0 && physicalHeight > 0) {
-            physicalWidth to physicalHeight
-        } else {
-            metricsWidth to metricsHeight
+        val metricsLong = max(metricsWidth, metricsHeight)
+        val metricsShort = min(metricsWidth, metricsHeight)
+        if (physicalWidth > 0 && physicalHeight > 0) {
+            val modeLong = min(max(physicalWidth, physicalHeight), MAX_NATIVE_LONG)
+            val modeShort = min(min(physicalWidth, physicalHeight), MAX_NATIVE_SHORT)
+            // A transient mode smaller than the UI must not shrink Native.
+            if (modeLong >= metricsLong && modeShort >= metricsShort) {
+                return modeLong to modeShort
+            }
         }
-        if (width <= 0 || height <= 0) return null
-        return max(width, height) to min(width, height)
+        if (metricsLong <= 0 || metricsShort <= 0) return null
+        return metricsLong to metricsShort
     }
 
     /**
