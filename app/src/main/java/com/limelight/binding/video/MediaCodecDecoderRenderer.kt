@@ -261,6 +261,7 @@ class MediaCodecDecoderRenderer(
 
     private var lastTimestampUs: Long = 0
     private var lastFrameNumber = 0
+    private var pyrowavePendingDiscardedFrames = 0
     private var refreshRate = 0
 
     // Fixed primitive ring: local codec PTS -> enqueue time and host cadence PTS.
@@ -2373,6 +2374,7 @@ class MediaCodecDecoderRenderer(
             }
             firstFrameDelivered = false
             lastFrameNumber = 0
+            pyrowavePendingDiscardedFrames = 0
             activeWindowVideoStats.clear()
             activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
             LimeLog.info("PyroWave decoder recreated for ${width}x$height")
@@ -2420,9 +2422,9 @@ class MediaCodecDecoderRenderer(
         lastTwo.add(lastWindowVideoStats)
         lastTwo.add(activeWindowVideoStats)
         val fps = lastTwo.getFps()
-        val receivedFrames = lastTwo.totalFramesReceived.coerceAtLeast(1)
+        val renderedFrames = lastTwo.totalFramesRendered.coerceAtLeast(1)
         val totalFrames = lastTwo.totalFrames.coerceAtLeast(1)
-        val decoderTimeMs = lastTwo.decoderTimeMs.toFloat() / receivedFrames
+        val decoderTimeMs = lastTwo.decoderTimeMs.toFloat() / renderedFrames
         val lostFrameRate = lastTwo.framesLost.toFloat() / totalFrames * 100
         val minHostProcessingLatency = lastTwo.minHostProcessingLatency.code.toFloat() / 10
         val maxHostProcessingLatency = lastTwo.maxHostProcessingLatency.code.toFloat() / 10
@@ -2605,16 +2607,17 @@ class MediaCodecDecoderRenderer(
         hostPresentationTimeUs: Long
     ): Int = submitDecodeUnitWithMetadata(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber,
                                          frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
-                                         hostPresentationTimeUs, null)
+                                         hostPresentationTimeUs, null, 0)
 
     override fun submitPyrowaveDecodeUnit(
         decodeUnitData: ByteArray, decodeUnitLength: Int, decodeUnitType: Int,
         frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
         receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
         frameMetadata: ByteArray?,
+        locallyDiscardedFrames: Int,
     ): Int = submitDecodeUnitWithMetadata(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber,
                                          frameType, frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs,
-                                         hostPresentationTimeUs, frameMetadata)
+                                         hostPresentationTimeUs, frameMetadata, locallyDiscardedFrames)
 
     private fun codecConfigSize(): Long =
         vpsBuffers.sumOf { it.size.toLong() } +
@@ -2657,6 +2660,7 @@ class MediaCodecDecoderRenderer(
         frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
         receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
         frameMetadata: ByteArray?,
+        locallyDiscardedFrames: Int,
     ): Int {
         if (stopping || isProcessingPaused) {
             // Don't bother if we're stopping or paused
@@ -2664,6 +2668,7 @@ class MediaCodecDecoderRenderer(
         }
 
         if (pyrowaveDecoderActive) {
+            pyrowavePendingDiscardedFrames += locallyDiscardedFrames.coerceAtLeast(0)
             val decodeStartNs = SystemClock.elapsedRealtimeNanos()
             when (pyrowaveDecoder.submit(decodeUnitData, decodeUnitLength, frameMetadata)) {
                 PyrowaveDecoderSession.SubmitResult.SUCCESS -> Unit
@@ -2697,16 +2702,18 @@ class MediaCodecDecoderRenderer(
             if (activeWindowVideoStats.measurementStartTimestamp == 0L) {
                 activeWindowVideoStats.measurementStartTimestamp = nowMs
             }
-            if (lastFrameNumber != 0 && frameNumber > lastFrameNumber + 1) {
-                val framesLost = frameNumber - lastFrameNumber - 1
+            val discardedFrames = pyrowavePendingDiscardedFrames
+            pyrowavePendingDiscardedFrames = 0
+            val framesLost = PyrowaveFrameAccounting.missingFrames(lastFrameNumber, frameNumber, discardedFrames)
+            if (framesLost > 0) {
                 activeWindowVideoStats.framesLost += framesLost
                 activeWindowVideoStats.totalFrames += framesLost
                 activeWindowVideoStats.frameLossEvents++
                 perfListener.onVideoFrameLoss(framesLost, frameNumber)
             }
             lastFrameNumber = frameNumber
-            activeWindowVideoStats.totalFramesReceived++
-            activeWindowVideoStats.totalFrames++
+            activeWindowVideoStats.totalFramesReceived += 1 + discardedFrames
+            activeWindowVideoStats.totalFrames += 1 + discardedFrames
             activeWindowVideoStats.totalFramesRendered++
             val pyrowaveTimings = pyrowaveDecoder.latestFrameTimings
             if (pyrowaveTimings.isValid) {

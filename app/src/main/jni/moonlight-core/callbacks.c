@@ -119,7 +119,7 @@ Java_com_limelight_nvstream_jni_MoonBridge_init(JNIEnv *env, jclass clazz) {
     BridgeDrStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrStop", "()V");
     BridgeDrCleanupMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrCleanup", "()V");
     BridgeDrSubmitDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitDecodeUnit", "([BIIIICJJJ)I");
-    BridgeDrSubmitPyrowaveDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitPyrowaveDecodeUnit", "([BIIIICJJJ[B)I");
+    BridgeDrSubmitPyrowaveDecodeUnitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeDrSubmitPyrowaveDecodeUnit", "([BIIIICJJJ[BI)I");
     BridgeArInitMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArInit", "(IIIII)I");
     BridgeArStartMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStart", "()V");
     BridgeArStopMethod = (*env)->GetStaticMethodID(env, clazz, "bridgeArStop", "()V");
@@ -258,7 +258,8 @@ int BridgeDrSubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
                                          DecodedFrameBuffer, offset, BUFFER_TYPE_PICDATA,
                                          decodeUnit->frameNumber, decodeUnit->frameType, (jchar)decodeUnit->frameHostProcessingLatency,
                                          (jlong)decodeUnit->receiveTimeUs, (jlong)decodeUnit->enqueueTimeUs,
-                                         (jlong)decodeUnit->presentationTimeUs, metadata);
+                                         (jlong)decodeUnit->presentationTimeUs, metadata,
+                                         (jint)decodeUnit->pyrowaveFramesDiscarded);
         if (metadata != NULL) (*env)->DeleteLocalRef(env, metadata);
     } else {
         ret = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSubmitDecodeUnitMethod,

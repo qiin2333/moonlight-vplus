@@ -22,6 +22,7 @@ abstract class VideoDecoderRenderer {
         frameNumber: Int, frameType: Int, frameHostProcessingLatency: Char,
         receiveTimeUs: Long, enqueueTimeUs: Long, hostPresentationTimeUs: Long,
         frameMetadata: ByteArray?,
+        locallyDiscardedFrames: Int,
     ): Int = if (frameMetadata == null || frameMetadata.isEmpty()) {
         submitDecodeUnit(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber, frameType,
                          frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs, hostPresentationTimeUs)
