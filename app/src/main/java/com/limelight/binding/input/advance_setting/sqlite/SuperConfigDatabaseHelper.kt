@@ -345,8 +345,16 @@ class SuperConfigDatabaseHelper(context: Context?) :
 
     fun importConfigForBackup(configString: String): Int = importConfig(configString, true)
 
+    /** Import and report the config ID committed for this profile. */
+    fun importConfigWithId(configString: String, onImported: (Long) -> Unit): Int =
+        importConfig(configString, false, onImported)
+
     /** Assign new IDs to the profile and elements, then repair group and wheel references. */
-    private fun importConfig(configString: String, fromBackup: Boolean): Int {
+    private fun importConfig(
+        configString: String,
+        fromBackup: Boolean,
+        onImported: ((Long) -> Unit)? = null
+    ): Int {
         val gson = configGson()
         val exportFile = try {
             gson.fromJson(configString, ExportFile::class.java) ?: return -1
@@ -372,6 +380,7 @@ class SuperConfigDatabaseHelper(context: Context?) :
             applyNewConfigDefaults(settings)
             writableDataBase.insertOrThrow("config", null, settings)
             insertImportedElements(newConfigId, elements)
+            onImported?.invoke(newConfigId)
         }
     }
 

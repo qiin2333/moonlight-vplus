@@ -64,8 +64,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 800px;
-            height: 300px;
+            width: min(800px, calc(100vw - 24px));
+            height: min(300px, calc(100vh - 24px));
+            max-width: calc(100vw - 24px);
+            max-height: calc(100vh - 24px);
+            box-sizing: border-box;
             background: white;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
             padding: 10px;
@@ -125,6 +128,11 @@
             background-color: #FF6B9D;
             color: white;
         }
+
+        #control-panel button.active {
+            background-color: #FF6B9D;
+            color: white;
+        }
     </style>
 </head>
 
@@ -167,10 +175,10 @@
             </label>
 
         </div>
-        <button onclick="exportConfig()">保存到我的王冠</button>
+        <button id="save-config-btn" onclick="exportConfig()">保存到我的王冠</button>
         <button id="change-bg" onclick="document.getElementById('bgInput').click();">更改背景</button>
-        <button onclick="toggleDeleteMode()">删除按键</button>
-        <button onclick="addButton()">添加按键</button>
+        <button id="delete-mode-btn" onclick="toggleDeleteMode()">删除按键</button>
+        <button id="add-button-btn" onclick="addButton()">添加按键</button>
         <div id="cf666" style="display: none;position: fixed;top: 10px;left: 70px;padding: 5px 5px;font-size: 10px;">不要尝试重复添加按键,不支持(ー_ー)</div>
         <div id="qtxwz" style="display: none;position: fixed;top: 10px;left: 80px;padding: 5px 5px;font-size: 10px;">请填写完整的按键名称</div>
         <div id="ts666" style="display: none;position: fixed;margin: 0% auto;padding: 5px 5px;font-size: 6px;">点击小横线可将布局移至下方</div>
@@ -443,12 +451,6 @@
             crosshair.style.left = `${lastClickPos.x}px`;
             crosshair.style.top = `${lastClickPos.y}px`;
             crosshair.style.display = "flex";
-            crosshair.addEventListener("mousedown", (e) => startDrag(e, crosshair));
-            crosshair.addEventListener("touchstart", (e) => startDrag(e, crosshair), {
-                passive: false
-            });
-            crosshair.addEventListener("mouseup", stopDrag);
-            crosshair.addEventListener("touchend", stopDrag);
             updateCrosshairSize();
         }
         // 添加按键
@@ -463,39 +465,45 @@
             if (deleteMode) {
                 return;
             };
-
-            if (index > -1) {
-                const buttonConfig8 = {
-                    type: buttons[index].type,
-                    x: parseInt(clickedButton.style.left),
-                    y: parseInt(clickedButton.style.top),
-                    width: parseInt(clickedButton.style.width),
-                    height: parseInt(clickedButton.style.height)
-                };
-                buttons[index] = buttonConfig8;
+            const targetId = clickedButton.dataset.buttonId;
+            const targetButton = targetId == null ? null :
+                buttons.find(btn => String(btn.id) === String(targetId));
+            if (targetButton) {
+                targetButton.x = parseInt(clickedButton.style.left);
+                targetButton.y = parseInt(clickedButton.style.top);
+                targetButton.width = parseInt(clickedButton.style.width);
+                targetButton.height = parseInt(clickedButton.style.height);
             };
         }
         // 删除按键
         function deleteButton(event, button) {
-            const clickedButton = event.target; // 获取被点击的按钮
-            const buttonConfig = [...buttons].reverse().find(config =>
-                config.x === parseInt(clickedButton.style.left) &&
-                config.y === parseInt(clickedButton.style.top) &&
-                config.width === parseInt(clickedButton.style.width) &&
-                config.height === parseInt(clickedButton.style.height)
-            );
-            index = buttons.indexOf(buttonConfig);
             if (deleteMode !== true) {
                 return;
             };
-            if (index > -1) {
-                buttons.splice(index, 1);
+            const targetId = button.dataset.buttonId;
+            const targetIndex = targetId == null ? -1 :
+                buttons.findIndex(btn => String(btn.id) === String(targetId));
+            if (targetIndex > -1) {
+                buttons.splice(targetIndex, 1);
                 button.remove();
             };
         }
+        // 切换删除模式
+        function toggleDeleteMode() {
+            deleteMode = !deleteMode;
+            const deleteButtonEl = document.getElementById("delete-mode-btn");
+            if (deleteButtonEl) {
+                deleteButtonEl.classList.toggle("active", deleteMode);
+            }
+        }
         // 实现按键拖动
         function startDrag(e, button) {
-            
+            if (deleteMode) {
+                e.preventDefault();
+                deleteButton(e, button);
+                return;
+            }
+
             keyWidth = parseInt(e.target.style.width)
             keyHeight = parseInt(e.target.style.height)
                             // 更新显示标签
@@ -504,22 +512,27 @@
                         // 根据 roundedValue 调整拖动条的值
             document.getElementById("key-width").value = keyWidth;
             document.getElementById("key-height").value = keyHeight;
-            document.getElementById("merged-slider").value = keyWidth;
+            if (keyWidth === keyHeight) {
+                document.getElementById("merged-slider").value = keyWidth;
+                document.getElementById("merged-label").innerText = `\u00A0\u00A0\u00A0${keyWidth}`;
+            } else {
+                // 非正方形按键：合并滑条无法表达两种尺寸，仅显示实际宽高
+                document.getElementById("merged-label").innerText = `${keyWidth} x ${keyHeight}`;
+            }
 
             // 更新光标大小或其他相关操作
             updateCrosshairSize();
             
             e.preventDefault(); // 防止触摸事件导致滚动
-            deleteButton(e, button);
             const rect = button.getBoundingClientRect();
-            const offsetX = (e.clientX || e.touches[0].clientX) - rect.left;
-            const offsetY = (e.clientY || e.touches[0].clientY) - rect.top;
+            const startPoint = (e.touches && e.touches[0]) ? e.touches[0] : e;
+            const offsetX = startPoint.clientX - rect.left;
+            const offsetY = startPoint.clientY - rect.top;
 
             function drag(e) {
-                const clientX = e.clientX || e.touches[0].clientX;
-                const clientY = e.clientY || e.touches[0].clientY;
-                button.style.left = `${roundToNearest5(clientX - offsetX)}px`;
-                button.style.top = `${roundToNearest5(clientY - offsetY)}px`;
+                const point = (e.touches && e.touches[0]) ? e.touches[0] : e;
+                button.style.left = `${roundToNearest5(point.clientX - offsetX)}px`;
+                button.style.top = `${roundToNearest5(point.clientY - offsetY)}px`;
             }
 
             function stopDrag() {
@@ -528,6 +541,7 @@
                 document.removeEventListener("mouseup", stopDrag);
                 document.removeEventListener("touchmove", drag);
                 document.removeEventListener("touchend", stopDrag);
+                document.removeEventListener("touchcancel", stopDrag);
             }
 
             document.addEventListener("mousemove", drag);
@@ -536,6 +550,7 @@
                 passive: false
             });
             document.addEventListener("touchend", stopDrag);
+            document.addEventListener("touchcancel", stopDrag);
         }
 
         function stopDrag(event) {
@@ -637,10 +652,6 @@
         let mdatElements = {};
         const scaleFactor = Math.max(1, window.devicePixelRatio || 1);
 
-        function computeMD5(data) {
-            return CryptoJS.MD5(data).toString();
-        }
-
         function getElementMeta(type) {
             if (type === "WASD隐藏摇杆") {
                 return {
@@ -706,8 +717,11 @@
             return value;
         }
 
+        let nextElementIdCounter = Date.now();
         function nextElementId() {
-            return Date.now() + Math.floor(Math.random() * 100000);
+            // 会话内单调递增，避免同一毫秒内随机碰撞
+            nextElementIdCounter += 1;
+            return nextElementIdCounter;
         }
 
         function assignButtonIds() {
@@ -794,16 +808,6 @@
             const updated = buttons
                 .map(btn => mdatElements[btn.id])
                 .filter(Boolean);
-            const settingsObj = {
-                mouse_wheel_speed: 20,
-                touch_enable: "true",
-                touch_mode: "true",
-                enhanced_touch: "false",
-                config_id: exportConfigId,
-                config_name: "Moonlight 王冠配置"
-            };
-
-            const version = 8;
             const configName = "Moonlight 王冠配置";
             const elementsStr = JSON.stringify(updated);
 
@@ -812,23 +816,8 @@
                 return;
             }
 
-            const settingsStr = JSON.stringify({
-                mouse_wheel_speed: 20,
-                touch_enable: "true",
-                touch_mode: "true",
-                enhanced_touch: "false",
-                config_id: exportConfigId,
-                config_name: configName
-            });
-            const md5 = computeMD5(String(version) + settingsStr + elementsStr);
-            const payloadText = JSON.stringify({
-                version, settings: settingsStr, elements: elementsStr, md5
-            });
-            const blob = new Blob([JSON.stringify(JSON.parse(payloadText), null, 2)], { type: "application/json" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "moonlight-config-" + Date.now() + ".mdat";
-            link.click();
+            // 页面未内置校验算法，独立浏览器中无法生成可导入的配置
+            alert("请通过 Moonlight V+ 应用内打开本页面保存配置。");
         }
 
         function createButtonDom(btn) {
@@ -863,13 +852,29 @@
 
         // 监听标题点击，切换控件面板的位置
         document.getElementById("panel-title").addEventListener("click", togglePanelPosition);
+
+        // 十字框拖拽监听只注册一次，避免每次点击画布时重复叠加
+        (function initCrosshairDrag() {
+            const crosshair = document.getElementById("crosshair");
+            if (!crosshair) return;
+            crosshair.addEventListener("mousedown", (e) => startDrag(e, crosshair));
+            crosshair.addEventListener("touchstart", (e) => startDrag(e, crosshair), {
+                passive: false
+            });
+            crosshair.addEventListener("mouseup", stopDrag);
+            crosshair.addEventListener("touchend", stopDrag);
+        })();
     </script>
     <script>
+        let backgroundSelectionToken = 0;
         function changeBackground(event) {
     const file = event.target.files[0];
     if (file && file.type.startsWith("image/")) {
         const reader = new FileReader();
+        const selectionToken = ++backgroundSelectionToken;
         reader.onload = function(e) {
+            // 连续选择多张图片时，只应用最后一次选择
+            if (selectionToken !== backgroundSelectionToken) return;
             document.getElementById("canvas").style.backgroundImage = `url(${e.target.result})`;
             document.getElementById("canvas").style.backgroundSize = "cover";
             document.getElementById("canvas").style.backgroundPosition = "center";
@@ -877,6 +882,37 @@
         reader.readAsDataURL(file);
     }
 }
+    </script>
+    <script>
+        // 根据系统语言本地化主要操作按钮；行为仍由元素 id 决定，不依赖显示文字
+        (function applyEditorLocale() {
+            const labels = {
+                zh: {
+                    save: "保存到我的王冠",
+                    changeBg: "更改背景",
+                    deleteMode: "删除按键",
+                    add: "添加按键"
+                },
+                en: {
+                    save: "Save to My Crowns",
+                    changeBg: "Change Background",
+                    deleteMode: "Delete Control",
+                    add: "Add Control"
+                }
+            };
+            const language = (navigator.language || "").toLowerCase();
+            const selected = language.startsWith("zh") ? labels.zh : labels.en;
+            const targets = {
+                "save-config-btn": selected.save,
+                "change-bg": selected.changeBg,
+                "delete-mode-btn": selected.deleteMode,
+                "add-button-btn": selected.add
+            };
+            Object.keys(targets).forEach(function(id) {
+                const element = document.getElementById(id);
+                if (element) element.textContent = targets[id];
+            });
+        })();
     </script>
 </body>
 </html>

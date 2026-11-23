@@ -208,6 +208,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     private var crownCreatorDialog: Dialog? = null
     private var crownCreatorPreviousOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     private var crownCreatorFilePathCallback: ValueCallback<Array<Uri>>? = null
+    private val crownCreatorSaveInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
     private val composeUiState = mutableStateOf(CrownStoreUiState())
     private val profilePreviewStates = mutableStateOf<Map<String, ProfilePreviewUiState>>(emptyMap())
     private val storePreviewExecutor = Executors.newFixedThreadPool(3) { task ->
@@ -3187,7 +3188,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         creatorWebView.addJavascriptInterface(object {
             @JavascriptInterface
             fun saveRawConfig(elementsJson: String, configName: String) {
-                val previousIds = runCatching { helper.queryAllConfigIds().toSet() }.getOrNull()
+                if (!crownCreatorSaveInFlight.compareAndSet(false, true)) return
+                val sessionDialog = crownCreatorDialog
+                var importedConfigId = 0L
                 val errorCode = try {
                     val version = 8
                     val settingsJson = JSONObject().apply {
@@ -3208,17 +3211,13 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         put("md5", md5)
                     }.toString()
                     CrownProfileShareManager.validatePayload(payload)
-                    helper.importConfig(payload)
+                    helper.importConfigWithId(payload) { importedConfigId = it }
                 } catch (e: Exception) {
                     Log.w("CrownCreator", "Failed to build/import Crown profile", e)
                     -1
                 }
-                val importedId = if (errorCode == 0) {
-                    previousIds?.let { ids ->
-                        runCatching {
-                            helper.queryAllConfigIds().firstOrNull { it !in ids }?.toString()
-                        }.getOrNull()
-                    }
+                val importedId = if (errorCode == 0 && importedConfigId != 0L) {
+                    importedConfigId.toString()
                 } else {
                     null
                 }
@@ -3233,8 +3232,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             R.string.toast_crown_quick_creator_save_success,
                             Toast.LENGTH_SHORT
                         ).show()
-                        crownCreatorDialog?.dismiss()
+                        if (sessionDialog?.isShowing == true) sessionDialog.dismiss()
                     } else {
+                        crownCreatorSaveInFlight.set(false)
                         Toast.makeText(
                             this@CrownStoreActivity,
                             R.string.toast_crown_quick_creator_save_failed,
@@ -3246,20 +3246,18 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
 
             @JavascriptInterface
             fun saveConfig(payloadText: String) {
-                val previousIds = runCatching { helper.queryAllConfigIds().toSet() }.getOrNull()
+                if (!crownCreatorSaveInFlight.compareAndSet(false, true)) return
+                val sessionDialog = crownCreatorDialog
+                var importedConfigId = 0L
                 val errorCode = try {
                     CrownProfileShareManager.validatePayload(payloadText)
-                    helper.importConfig(payloadText)
+                    helper.importConfigWithId(payloadText) { importedConfigId = it }
                 } catch (e: Exception) {
                     Log.w("CrownCreator", "Failed to validate created Crown profile", e)
                     -1
                 }
-                val importedId = if (errorCode == 0) {
-                    previousIds?.let { ids ->
-                        runCatching {
-                            helper.queryAllConfigIds().firstOrNull { it !in ids }?.toString()
-                        }.getOrNull()
-                    }
+                val importedId = if (errorCode == 0 && importedConfigId != 0L) {
+                    importedConfigId.toString()
                 } else {
                     null
                 }
@@ -3274,8 +3272,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                             R.string.toast_crown_quick_creator_save_success,
                             Toast.LENGTH_SHORT
                         ).show()
-                        crownCreatorDialog?.dismiss()
+                        if (sessionDialog?.isShowing == true) sessionDialog.dismiss()
                     } else {
+                        crownCreatorSaveInFlight.set(false)
                         Toast.makeText(
                             this@CrownStoreActivity,
                             R.string.toast_crown_quick_creator_save_failed,
@@ -3298,7 +3297,9 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         val dialog = Dialog(this, R.style.AppDialogStyle)
         dialog.setContentView(rootLayout)
         crownCreatorDialog = dialog
+        crownCreatorSaveInFlight.set(false)
         dialog.setOnDismissListener {
+            crownCreatorSaveInFlight.set(false)
             crownCreatorFilePathCallback?.onReceiveValue(null)
             crownCreatorFilePathCallback = null
             creatorWebView.stopLoading()
