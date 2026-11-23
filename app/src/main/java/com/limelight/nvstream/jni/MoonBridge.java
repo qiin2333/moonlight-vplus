@@ -341,10 +341,10 @@ public class MoonBridge {
     public static int bridgeDrSubmitPyrowaveDecodeUnit(byte[] data, int length, int type,
                                                        int frameNumber, int frameType, char hostLatency,
                                                        long receiveTimeUs, long enqueueTimeUs, long presentationTimeUs,
-                                                       byte[] metadata) {
+                                                       byte[] metadata, int locallyDiscardedFrames) {
         if (videoRenderer == null) return DR_OK;
         return videoRenderer.submitPyrowaveDecodeUnit(data, length, type, frameNumber, frameType,
-                hostLatency, receiveTimeUs, enqueueTimeUs, presentationTimeUs, metadata);
+                hostLatency, receiveTimeUs, enqueueTimeUs, presentationTimeUs, metadata, locallyDiscardedFrames);
     }
 
     public static int bridgeArInit(int audioConfiguration, int sampleRate, int samplesPerFrame, int codec, int bitrate) {
