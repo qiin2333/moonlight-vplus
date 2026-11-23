@@ -18,7 +18,7 @@
     <string name="mic_error_resume">마이크를 재개할 수 없습니다: 초기화 실패</string>
     <string name="mic_error_init_detail">마이크 초기화 실패: %1$s</string>
     <string name="connection_not_paired">기기가 컴퓨터와 페어링되지 않았습니다</string>
-    <string name="connection_hdr_unsupported">GPU/디스플레이가 HDR-SDR 변환을 지원하지 않습니다. 스트림은 SDR로 전송됩니다.</string>
+    <string name="connection_hdr_unsupported">호스트 PC가 HDR 스트리밍을 지원하지 않습니다. 스트림은 SDR로 전송됩니다.</string>
     <string name="connection_above_4k_host">호스트 PC가 4K 이상 해상도의 스트리밍을 지원하지 않습니다.</string>
     <string name="connection_above_4k_client">4K 이상으로 스트리밍하려면 기기가 HEVC 또는 AV1을 지원해야 합니다.</string>
     <string name="connection_4k_update">4K 스트리밍을 위해 GeForce Experience를 업데이트하세요. 1080p로 스트리밍됩니다.</string>

@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Mikrofon konnte nicht fortgesetzt werden: Initialisierung fehlgeschlagen</string>
     <string name="mic_error_init_detail">Mikrofoninitialisierung fehlgeschlagen: %1$s</string>
     <string name="connection_not_paired">Gerät nicht mit dem PC gekoppelt</string>
-    <string name="connection_hdr_unsupported">Die GPU/das Display unterstützt keine HDR-zu-SDR-Konvertierung. Der Stream wird in SDR ausgegeben.</string>
+    <string name="connection_hdr_unsupported">Der Host unterstützt kein HDR-Streaming. Der Stream wird in SDR ausgegeben.</string>
     <string name="connection_above_4k_host">Der Host-PC unterstützt keine Auflösungen über 4K.</string>
     <string name="connection_above_4k_client">Das Gerät muss HEVC oder AV1 unterstützen, um über 4K zu streamen.</string>
     <string name="connection_4k_update">Aktualisiere GeForce Experience für 4K. Der Stream wird 1080p.</string>

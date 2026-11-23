@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Tidak dapat melanjutkan mikrofon: inisialisasi gagal</string>
     <string name="mic_error_init_detail">Inisialisasi mikrofon gagal: %1$s</string>
     <string name="connection_not_paired">Perangkat belum dipasangkan dengan komputer</string>
-    <string name="connection_hdr_unsupported">GPU/tampilan PC Anda tidak mendukung konversi HDR ke SDR. Stream akan menggunakan SDR.</string>
+    <string name="connection_hdr_unsupported">Host Anda tidak mendukung streaming HDR. Stream akan menggunakan SDR.</string>
     <string name="connection_above_4k_host">PC host Anda tidak mendukung streaming pada resolusi di atas 4K.</string>
     <string name="connection_above_4k_client">Perangkat streaming harus mendukung HEVC atau AV1 untuk streaming di atas 4K.</string>
     <string name="connection_4k_update">Perbarui GeForce Experience untuk streaming 4K. Stream akan menjadi 1080p.</string>

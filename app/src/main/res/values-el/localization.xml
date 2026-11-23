@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Αδυναμία συνέχισης μικροφώνου: αποτυχία αρχικοποίησης</string>
     <string name="mic_error_init_detail">Αποτυχία αρχικοποίησης μικροφώνου: %1$s</string>
     <string name="connection_not_paired">Η συσκευή δεν είναι συζευγμένη με τον υπολογιστή</string>
-    <string name="connection_hdr_unsupported">Η GPU/η οθόνη δεν υποστηρίζει μετατροπή HDR σε SDR. Η ροή θα είναι SDR.</string>
+    <string name="connection_hdr_unsupported">Ο υπολογιστής-οικοδεσπότης δεν υποστηρίζει ροή HDR. Η ροή θα είναι SDR.</string>
     <string name="connection_above_4k_host">Ο host PC δεν υποστηρίζει ροή σε αναλύσεις άνω των 4K.</string>
     <string name="connection_above_4k_client">Η συσκευή πρέπει να υποστηρίζει HEVC ή AV1 για ροή άνω των 4K.</string>
     <string name="connection_4k_update">Ενημερώστε το GeForce Experience για ροή σε 4K. Η ροή θα είναι 1080p.</string>

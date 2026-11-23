@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Det gick inte att återuppta mikrofonen: initieringen misslyckades</string>
     <string name="mic_error_init_detail">Mikrofoninitieringen misslyckades: %1$s</string>
     <string name="connection_not_paired">Enheten är inte parkopplad med datorn</string>
-    <string name="connection_hdr_unsupported">GPU:n/skärmen stöder inte konvertering från HDR till SDR. Strömmen blir SDR.</string>
+    <string name="connection_hdr_unsupported">Värddatorn stöder inte HDR-strömning. Strömmen blir SDR.</string>
     <string name="connection_above_4k_host">Värd-PC:n har inte stöd för strömning i upplösningar över 4K.</string>
     <string name="connection_above_4k_client">Strömningsenheten måste ha stöd för HEVC eller AV1 för att strömma över 4K.</string>
     <string name="connection_4k_update">Uppdatera GeForce Experience för att strömma i 4K. Strömmen blir 1080p.</string>

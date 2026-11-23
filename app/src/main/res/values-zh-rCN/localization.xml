@@ -18,7 +18,7 @@
     <string name="mic_error_resume">麦克风恢复失败：重新初始化失败</string>
     <string name="mic_error_init_detail">初始化麦克风流失败：%1$s</string>
     <string name="connection_not_paired">设备未与电脑配对</string>
-    <string name="connection_hdr_unsupported">显卡/显示器不支持 HDR 转 SDR，将使用 SDR。</string>
+    <string name="connection_hdr_unsupported">主机不支持 HDR 串流，将使用 SDR。</string>
     <string name="connection_above_4k_host">主机不支持高于 4K 的串流分辨率。</string>
     <string name="connection_above_4k_client">串流设备必须支持 HEVC 或 AV1 才能使用高于 4K 的分辨率。</string>
     <string name="connection_4k_update">请更新 GeForce Experience 以使用 4K 串流。当前将使用 1080p。</string>
