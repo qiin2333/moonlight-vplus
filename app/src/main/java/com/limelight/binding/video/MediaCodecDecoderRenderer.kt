@@ -3142,17 +3142,27 @@ class MediaCodecDecoderRenderer(
     }
 
     fun getAverageEndToEndLatency(): Int {
-        if (globalVideoStats.totalFramesReceived == 0) {
+        val frameCount = if (videoFormat == MoonBridge.VIDEO_FORMAT_PYROWAVE) {
+            globalVideoStats.totalFramesRendered
+        } else {
+            globalVideoStats.totalFramesReceived
+        }
+        if (frameCount == 0) {
             return 0
         }
-        return (globalVideoStats.totalTimeMs / globalVideoStats.totalFramesReceived).toInt()
+        return (globalVideoStats.totalTimeMs / frameCount).toInt()
     }
 
     fun getAverageDecoderLatency(): Int {
-        if (globalVideoStats.totalFramesReceived == 0) {
+        val frameCount = if (videoFormat == MoonBridge.VIDEO_FORMAT_PYROWAVE) {
+            globalVideoStats.totalFramesRendered
+        } else {
+            globalVideoStats.totalFramesReceived
+        }
+        if (frameCount == 0) {
             return 0
         }
-        return (globalVideoStats.decoderTimeMs / globalVideoStats.totalFramesReceived).toInt()
+        return (globalVideoStats.decoderTimeMs / frameCount).toInt()
     }
 
     @SuppressLint("DefaultLocale")
