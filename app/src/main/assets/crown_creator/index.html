@@ -1,0 +1,882 @@
+﻿
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moonlight V+ 王冠配置生成器</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #canvas {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        #control-panel {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 20px;
+            background: white;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            border-radius: 8px;
+        }
+
+        .button {
+            position: absolute;
+            background-color: #FF6B9D;
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        #crosshair {
+            position: absolute;
+            background-color: #808080;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            opacity: 0.6;
+            /* 半透明效果 */
+            display: none;
+            /* 初始隐藏 */
+        }
+
+        #key-selector {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 300px;
+            background: white;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            display: none;
+            z-index: 15;
+            overflow-y: auto;
+            border-radius: 8px;
+        }
+
+        #key-selector button {
+            width: 40px;
+            height: 40px;
+            margin: 3px;
+            font-size: 16px;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        /* 模态框背景 */
+        .modal {
+            display: none;
+            /* 默认隐藏 */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        /* 模态框内容 */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 2% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 60%;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* 按钮样式 */
+        .modal-buttons button {
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #confirmRenameButton {
+            background-color: #FF6B9D;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="control-panel">
+        <hr id="panel-title">
+        <button id="bubu" onclick="bubu()" style="display: none; position: fixed;top: 10px;left: 20px;padding: 5px 5px;font-size: 10px;">(*￣▽￣*) </button>
+        <div id="bububu" style="display: block;">
+            <button id="40button" onclick="bu(40)" style="position: fixed;top: 10px;left: 20px;padding: 5px 5px;font-size: 10px;">40</button><button id="50button" onclick="bu(50)" style="position: fixed;top: 10px;left: 45px;padding: 5px 5px;font-size: 10px;">50</button><button id="70button" onclick="bu(80)" style="position: fixed;top: 10px;left: 70px;padding: 5px 5px;font-size: 10px;">80</button><button id="1450button" onclick="bu('8x4')" style="position: fixed;top: 10px;left: 95px;padding: 5px 5px;font-size: 10px;">8x4</button><button id="60button" onclick="bu(60)" style="position: fixed;top: 10px;left: 125px;padding: 5px 5px;font-size: 10px;">60</button><button id="1460button" onclick="bu('14x6')" style="position: fixed;top: 10px;left: 150px;padding: 5px 5px;font-size: 10px;">14x6</button>
+        </div>
+        <label>
+            <button id="key-type" onclick="togglePanelPosition()" style="position: fixed;top: 40px;right: 20px;width: 40px;height: 40px;padding: 5px;font-size: 10px;line-height: 1;">↑↓</button>
+        </label>
+        <div id="independent-sliders-container">
+            <label>
+                宽度:
+                <span id="width-label">&nbsp;&nbsp;&nbsp;50</span> px
+                <input type="range" id="key-width" min="20" max="300" value="50" oninput="updateWidthLabel()">
+            </label>
+            <br>
+            <label>
+                高度:
+                <span id="height-label">&nbsp;&nbsp;&nbsp;50</span> px
+                <input type="range" id="key-height" min="20" max="300" value="50" oninput="updateHeightLabel()">
+            </label>
+        </div>
+
+        <button id="toggle-button" onclick="toggleSliders()" style="position: fixed;top: 10px;right: 20px;padding: 5px 5px;font-size: 10px;">合并滑动条</button>
+
+        <div id="merged-slider-container" style="display: none;">
+            <label>
+                宽 & 高:
+                <span id="merged-label">&nbsp;&nbsp;&nbsp;50</span> px
+                <input type="range" id="merged-slider" min="20" max="200" value="50" oninput="updateMergedLabel()">
+                <br>
+                -
+                <input type="file" id="bgInput" accept="image/*" style="display:none" onchange="changeBackground(event)">
+
+            </label>
+
+        </div>
+        <button onclick="exportConfig()">保存到我的王冠</button>
+        <button id="change-bg" onclick="document.getElementById('bgInput').click();">更改背景</button>
+        <button onclick="toggleDeleteMode()">删除按键</button>
+        <button onclick="addButton()">添加按键</button>
+        <div id="cf666" style="display: none;position: fixed;top: 10px;left: 70px;padding: 5px 5px;font-size: 10px;">不要尝试重复添加按键,不支持(ー_ー)</div>
+        <div id="qtxwz" style="display: none;position: fixed;top: 10px;left: 80px;padding: 5px 5px;font-size: 10px;">请填写完整的按键名称</div>
+        <div id="ts666" style="display: none;position: fixed;margin: 0% auto;padding: 5px 5px;font-size: 6px;">点击小横线可将布局移至下方</div>
+    </div>
+
+    <div id="canvas" onclick="recordPosition(event)">
+        <div id="crosshair"></div>
+    </div>
+
+    <!-- 按键选择框 -->
+    <div id="key-selector">
+        <div id="keys"></div>
+    </div>
+    <!-- 改名模态框 -->
+    <div id="renameModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage">目标：<span id="originalKey"></span>，改为什么？</p>
+            <input type="text" id="newKeyInput" placeholder="输入新名称" style="width: 80%; height: 40px; font-size: 16px; padding: 10px;" />
+            <div class="modal-buttons">
+                <button id="cancelRenameButton">取消</button>
+                <button id="confirmRenameButton">确定</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let buttons = []; // 存储所有按键的配置信息
+        let lastClickPos = {
+            x: 0,
+            y: 0
+        }; // 记录最后一次点击的位置
+        const keyLayoutRows = [
+            ["Esc", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"],
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Del", "←", "→"],
+            ["Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Back", "↑"],
+            ["Shift", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Enter", "↓"],
+            ["Ctrl", "Win", "Alt", "Z", "X", "C", "V", "B", "N", "M", "Space"],
+            ["Insert", "Home", "End", "PgUp", "PgDn", "拖动+左", "拖动+右", "拖动+中", "触控板", "MM", "WASD隐藏摇杆", "ML", "MR"]
+        ];
+        let keyWidth = 50; // 初始化宽度 
+        let keyHeight = 50; // 初始化高度
+        let deleteMode = false; // 删除模式标志
+        let index = -1; // 按键索引
+        let isMerged = false; //合并标志
+        let pendingAdd = false; // 添加后选择按键
+
+        // 用于限制坐标到5的倍数
+        function roundToNearest5(value) {
+            return Math.round(value / 5) * 5;
+        }
+
+        // 初始化按键选择框
+        function initKeySelector() {
+            const keySelector = document.getElementById("keys");
+            keySelector.innerHTML = '';
+
+            keySelector.style.display = "flex";
+            keySelector.style.flexDirection = "column";
+            keySelector.style.gap = "6px";
+
+            keyLayoutRows.forEach(row => {
+                const rowDiv = document.createElement("div");
+                rowDiv.style.display = "flex";
+                rowDiv.style.gap = "4px";
+                rowDiv.style.flexWrap = "wrap";
+                rowDiv.style.alignItems = "center";
+
+                row.forEach(key => {
+                    const button = document.createElement("button");
+                    button.innerText = key;
+                    button.style.height = "42px";
+                    button.style.minWidth = "46px";
+                    button.style.padding = "0 8px";
+                    button.style.fontSize = "12px";
+
+                    if (key === "Tab" || key === "Ctrl" || key === "Enter") {
+                        button.style.minWidth = "72px";
+                    } else if (key === "Space") {
+                        button.style.minWidth = "140px";
+                    } else if (key === "Shift") {
+                        button.style.minWidth = "100px";
+                    }
+
+                    button.onclick = () => selectKey(key);
+                    rowDiv.appendChild(button);
+                });
+
+                keySelector.appendChild(rowDiv);
+            });
+        }
+
+        // 选择按键并关闭选择框
+        function selectKey(key) {
+            document.getElementById("key-selector").style.display = "none";
+            if (pendingAdd) {
+                pendingAdd = false;
+                addButtonByType(key);
+            }
+        }
+
+        function addButtonByType(type) {
+            if (buttons.some(button => button.type === type)) {
+                document.getElementById("cf666").style.display = "block";
+                setTimeout(function() {
+                    document.getElementById("cf666").style.display = "none";
+                }, 2000);
+                return;
+            }
+
+            const button = document.createElement("div");
+            button.className = "button";
+            button.style.width = `${keyWidth}px`;
+            button.style.height = `${keyHeight}px`;
+            button.style.left = `${lastClickPos.x}px`;
+            button.style.top = `${lastClickPos.y}px`;
+            button.innerText = type;
+            const buttonId = nextElementId();
+            button.dataset.buttonId = String(buttonId);
+
+            const buttonConfig = {
+                id: buttonId,
+                type,
+                width: keyWidth,
+                height: keyHeight,
+                x: lastClickPos.x,
+                y: lastClickPos.y
+            };
+            buttons.push(buttonConfig);
+
+            button.addEventListener("mousedown", (e) => startDrag(e, button));
+            button.addEventListener("touchstart", (e) => startDrag(e, button), {
+                passive: false
+            });
+            button.addEventListener("mouseup", stopDragf);
+            button.addEventListener("touchend", stopDragf);
+
+            document.getElementById("canvas").appendChild(button);
+        }
+        // 更新宽度标签
+        function updateWidthLabel() {
+            const sliderValue = parseInt(document.getElementById("key-width").value) || 50;
+            keyWidth = Math.round(sliderValue / 10) * 10;
+            document.getElementById("width-label").innerText = keyWidth < 100 ? `\u00A0\u00A0\u00A0${keyWidth}` : keyWidth;
+            updateCrosshairSize();
+        }
+
+        // 更新高度标签
+        function updateHeightLabel() {
+            const sliderValue = parseInt(document.getElementById("key-height").value) || 50;
+            keyHeight = Math.round(sliderValue / 10) * 10;
+            document.getElementById("height-label").innerText = keyHeight < 100 ? `\u00A0\u00A0\u00A0${keyHeight}` : keyHeight;
+            updateCrosshairSize();
+        }
+
+        // 更新合并滑动条的值
+        function updateMergedLabel() {
+            const mergedValue = parseInt(document.getElementById("merged-slider").value) || 50;
+            const roundedValue = Math.round(mergedValue / 10) * 10;
+            document.getElementById("merged-label").innerText = roundedValue < 100 ? `\u00A0\u00A0\u00A0${roundedValue}` : roundedValue;
+
+            // 同步更新宽度和高度
+            keyWidth = roundedValue;
+            keyHeight = roundedValue;
+            document.getElementById("width-label").innerText = roundedValue < 100 ? `\u00A0\u00A0\u00A0${roundedValue}` : roundedValue;
+            document.getElementById("height-label").innerText = roundedValue < 100 ? `\u00A0\u00A0\u00A0${roundedValue}` : roundedValue;
+            updateCrosshairSize();
+        }
+        //开启预设
+        function bubu() {
+            document.getElementById("bubu").style.display = "none";
+            document.getElementById("bububu").style.display = "block";
+        }
+        //预设实现
+        function bu(roundedValue) {
+            // 更新标签文本
+            document.getElementById("merged-label").innerText = `\u00A0\u00A0\u00A0${roundedValue}`;
+            document.getElementById("width-label").innerText = `\u00A0\u00A0\u00A0${roundedValue}`;
+            document.getElementById("height-label").innerText = `\u00A0\u00A0\u00A0${roundedValue}`;
+
+            // 设置 keyWidth 和 keyHeight 为 roundedValue
+            keyWidth = roundedValue;
+            keyHeight = roundedValue;
+
+            // 根据 roundedValue 调整拖动条的值
+            document.getElementById("key-width").value = keyWidth;
+            document.getElementById("key-height").value = keyHeight;
+            document.getElementById("merged-slider").value = keyWidth;
+
+            // 更新光标大小或其他相关操作
+            updateCrosshairSize();
+
+            // 如果 roundedValue 为 "" 时，设置为特定值
+            if (roundedValue === "8x4") {
+                keyWidth = 80;
+                keyHeight = 40;
+                // 更新显示标签
+                document.getElementById("height-label").innerText = `\u00A0\u00A0\u00A0${keyHeight}`;
+                document.getElementById("width-label").innerText = `\u00A0\u00A0\u00A0${keyWidth}`;
+
+                // 更新拖动条的值
+                document.getElementById("key-width").value = keyWidth;
+                document.getElementById("key-height").value = keyHeight;
+                document.getElementById("merged-slider").value = keyWidth;
+
+                // 调用更新光标的函数
+                updateCrosshairSize();
+            }
+            if (roundedValue === "14x6") {
+                keyWidth = 140;
+                keyHeight = 60;
+                // 更新显示标签
+                document.getElementById("height-label").innerText = `\u00A0\u00A0\u00A0${keyHeight}`;
+                document.getElementById("width-label").innerText = `\u00A0\u00A0\u00A0${keyWidth}`;
+
+                // 更新拖动条的值
+                document.getElementById("key-width").value = keyWidth;
+                document.getElementById("key-height").value = keyHeight;
+                document.getElementById("merged-slider").value = keyWidth;
+
+                // 调用更新光标的函数
+                updateCrosshairSize();
+            }
+        }
+        // 切换滑动条模式
+        function toggleSliders() {
+            isMerged = !isMerged;
+
+            if (isMerged) {
+                mergeSliders();
+            } else {
+                restoreSliders();
+            }
+        }
+
+        // 合并滑动条
+        function mergeSliders() {
+            document.getElementById("independent-sliders-container").style.display = "none";
+            document.getElementById("merged-slider-container").style.display = "block";
+
+            const mergedSlider = document.getElementById("merged-slider");
+            mergedSlider.value = Math.min(keyWidth, keyHeight);
+            updateMergedLabel();
+
+            document.getElementById("toggle-button").innerText = "恢复滑动条";
+        }
+
+        // 恢复独立滑动条
+        function restoreSliders() {
+            document.getElementById("independent-sliders-container").style.display = "block";
+            document.getElementById("merged-slider-container").style.display = "none";
+
+            // 同步宽度和高度到独立滑动条
+            document.getElementById("key-width").value = keyWidth;
+            document.getElementById("key-height").value = keyHeight;
+
+            document.getElementById("toggle-button").innerText = "合并滑动条";
+        }
+        // 更新十字框（灰色按键）的尺寸
+        function updateCrosshairSize() {
+            const crosshair = document.getElementById("crosshair");
+            crosshair.style.width = `${keyWidth}px`;
+            crosshair.style.height = `${keyHeight}px`;
+        }
+        // 记录点击位置并显示灰色按键样式
+        function recordPosition(event) {
+            lastClickPos = {
+                x: roundToNearest5(event.clientX - keyWidth / 2),
+                y: roundToNearest5(event.clientY - keyHeight / 2)
+            };
+            const crosshair = document.getElementById("crosshair");
+            crosshair.style.left = `${lastClickPos.x}px`;
+            crosshair.style.top = `${lastClickPos.y}px`;
+            crosshair.style.display = "flex";
+            crosshair.addEventListener("mousedown", (e) => startDrag(e, crosshair));
+            crosshair.addEventListener("touchstart", (e) => startDrag(e, crosshair), {
+                passive: false
+            });
+            crosshair.addEventListener("mouseup", stopDrag);
+            crosshair.addEventListener("touchend", stopDrag);
+            updateCrosshairSize();
+        }
+        // 添加按键
+        function addButton() {
+            pendingAdd = true;
+            initKeySelector();
+            document.getElementById("key-selector").style.display = "block";
+        }
+
+        function stopDragf(event) {
+            const clickedButton = event.target; // 获取被点击的按钮
+            if (deleteMode) {
+                return;
+            };
+
+            if (index > -1) {
+                const buttonConfig8 = {
+                    type: buttons[index].type,
+                    x: parseInt(clickedButton.style.left),
+                    y: parseInt(clickedButton.style.top),
+                    width: parseInt(clickedButton.style.width),
+                    height: parseInt(clickedButton.style.height)
+                };
+                buttons[index] = buttonConfig8;
+            };
+        }
+        // 删除按键
+        function deleteButton(event, button) {
+            const clickedButton = event.target; // 获取被点击的按钮
+            const buttonConfig = [...buttons].reverse().find(config =>
+                config.x === parseInt(clickedButton.style.left) &&
+                config.y === parseInt(clickedButton.style.top) &&
+                config.width === parseInt(clickedButton.style.width) &&
+                config.height === parseInt(clickedButton.style.height)
+            );
+            index = buttons.indexOf(buttonConfig);
+            if (deleteMode !== true) {
+                return;
+            };
+            if (index > -1) {
+                buttons.splice(index, 1);
+                button.remove();
+            };
+        }
+        // 实现按键拖动
+        function startDrag(e, button) {
+            
+            keyWidth = parseInt(e.target.style.width)
+            keyHeight = parseInt(e.target.style.height)
+                            // 更新显示标签
+            document.getElementById("height-label").innerText = `\u00A0\u00A0\u00A0${keyHeight}`;
+            document.getElementById("width-label").innerText = `\u00A0\u00A0\u00A0${keyWidth}`;
+                        // 根据 roundedValue 调整拖动条的值
+            document.getElementById("key-width").value = keyWidth;
+            document.getElementById("key-height").value = keyHeight;
+            document.getElementById("merged-slider").value = keyWidth;
+
+            // 更新光标大小或其他相关操作
+            updateCrosshairSize();
+            
+            e.preventDefault(); // 防止触摸事件导致滚动
+            deleteButton(e, button);
+            const rect = button.getBoundingClientRect();
+            const offsetX = (e.clientX || e.touches[0].clientX) - rect.left;
+            const offsetY = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            function drag(e) {
+                const clientX = e.clientX || e.touches[0].clientX;
+                const clientY = e.clientY || e.touches[0].clientY;
+                button.style.left = `${roundToNearest5(clientX - offsetX)}px`;
+                button.style.top = `${roundToNearest5(clientY - offsetY)}px`;
+            }
+
+            function stopDrag() {
+
+                document.removeEventListener("mousemove", drag);
+                document.removeEventListener("mouseup", stopDrag);
+                document.removeEventListener("touchmove", drag);
+                document.removeEventListener("touchend", stopDrag);
+            }
+
+            document.addEventListener("mousemove", drag);
+            document.addEventListener("mouseup", stopDrag);
+            document.addEventListener("touchmove", drag, {
+                passive: false
+            });
+            document.addEventListener("touchend", stopDrag);
+        }
+
+        function stopDrag(event) {
+            const crosshair = document.getElementById("crosshair");
+            if (!crosshair) {
+                console.error("未找到 ID 为 'crosshair' 的元素。");
+                return;
+            }
+
+            const rect = crosshair.getBoundingClientRect();
+            lastClickPos = {
+                x: roundToNearest5(rect.left),
+                y: roundToNearest5(rect.top)
+            };
+        }
+
+        let typeMap = {
+            "Esc": "k111",
+            "F1": "k131",
+            "F2": "k132",
+            "F3": "k133",
+            "F4": "k134",
+            "F5": "k135",
+            "F6": "k136",
+            "F7": "k137",
+            "F8": "k138",
+            "F9": "k139",
+            "F10": "k140",
+            "F11": "k141",
+            "F12": "k142",
+            "Del": "k112",
+            "Ctrl": "k113",
+            "Win": "k117",
+            "Alt": "k57",
+            "Space": "k62",
+            "Shift": "k59",
+            "Tab": "k61",
+            "Enter": "k66",
+            "Back": "k67",
+            "1": "k8",
+            "2": "k9",
+            "3": "k10",
+            "4": "k11",
+            "5": "k12",
+            "6": "k13",
+            "7": "k14",
+            "8": "k15",
+            "9": "k16",
+            "0": "k7",
+            "A": "k29",
+            "B": "k30",
+            "C": "k31",
+            "D": "k32",
+            "E": "k33",
+            "F": "k34",
+            "G": "k35",
+            "H": "k36",
+            "I": "k37",
+            "J": "k38",
+            "K": "k39",
+            "L": "k40",
+            "M": "k41",
+            "N": "k42",
+            "O": "k43",
+            "P": "k44",
+            "Q": "k45",
+            "R": "k46",
+            "S": "k47",
+            "T": "k48",
+            "U": "k49",
+            "V": "k50",
+            "W": "k51",
+            "X": "k52",
+            "Y": "k53",
+            "Z": "k54",
+            "Home": "k122",
+            "End": "k123",
+            "PgUp": "k92",
+            "PgDn": "k93",
+            "Insert": "k124",
+            "↑": "k19",
+            "↓": "k20",
+            "←": "k21",
+            "→": "k22",
+            "ML": "m1",
+            "MR": "m3",
+            "MM": "m2",
+            "触控板": "m1",
+            "拖动+左": "m1",
+            "拖动+右": "m3",
+            "拖动+中": "m2",
+        };
+
+        const reverseTypeMap = Object.entries(typeMap).reduce((acc, item) => {
+            acc[item[1]] = item[0];
+            return acc;
+        }, {});
+
+        let mdatElements = {};
+        const scaleFactor = Math.max(1, window.devicePixelRatio || 1);
+
+        function computeMD5(data) {
+            return CryptoJS.MD5(data).toString();
+        }
+
+        function getElementMeta(type) {
+            if (type === "WASD隐藏摇杆") {
+                return {
+                    element_type: 33,
+                    element_mode: 0,
+                    element_sense: 35,
+                    element_layer: 40,
+                    element_middle_value: "k59",
+                    element_down_value: "k47",
+                    element_up_value: "k51",
+                    element_left_value: "k29",
+                    element_right_value: "k32",
+                    element_radius: 140
+                };
+            }
+            if (type === "摇杆") {
+                return {
+                    element_type: 30,
+                    element_mode: 0,
+                    element_sense: 45,
+                    element_middle_value: "m_12"
+                };
+            }
+            if (type === "十字键") {
+                return {
+                    element_type: 20,
+                    element_mode: 0,
+                    element_sense: 35,
+                    element_up_value: "k19",
+                    element_down_value: "k20",
+                    element_left_value: "k21",
+                    element_right_value: "k22"
+                };
+            }
+            if (type === "触控板") {
+                return {
+                    element_type: 2,
+                    element_mode: 0,
+                    element_sense: 100,
+                    element_layer: 40,
+                    extra_attributes: "{\"isTrackpadMode\":true}"
+                };
+            }
+            if (type === "拖动+左" || type === "拖动+右" || type === "拖动+中") {
+                return {
+                    element_type: 2,
+                    element_mode: 0,
+                    element_sense: 100,
+                    element_layer: 40,
+                    extra_attributes: "{\"isTrackpadMode\":false}"
+                };
+            }
+            return {
+                element_type: 0
+            };
+        }
+
+        function normalizeValueCode(value) {
+            if (typeof value !== "string") return value;
+            if (value.startsWith("key_")) {
+                return "k" + value.substring(4);
+            }
+            return value;
+        }
+
+        function nextElementId() {
+            return Date.now() + Math.floor(Math.random() * 100000);
+        }
+
+        function assignButtonIds() {
+            buttons.forEach(btn => {
+                if (!btn.id) {
+                    btn.id = nextElementId();
+                }
+            });
+        }
+
+        function syncButtonsFromDom() {
+            const domButtons = Array.from(document.querySelectorAll("#canvas .button"));
+            const domMap = {};
+            domButtons.forEach(el => {
+                const id = el.dataset.buttonId;
+                if (!id) return;
+                domMap[id] = {
+                    x: Math.round(parseInt(el.style.left, 10) || 0),
+                    y: Math.round(parseInt(el.style.top, 10) || 0),
+                    width: Math.round(parseInt(el.style.width, 10) || 50),
+                    height: Math.round(parseInt(el.style.height, 10) || 50),
+                    type: (el.innerText || "").trim() || "按键"
+                };
+            });
+
+            buttons = buttons.map(btn => {
+                const key = String(btn.id);
+                const domValue = domMap[key];
+                return domValue ? { ...btn, ...domValue } : btn;
+            });
+        }
+
+        function getButtonTypeFromElement(el) {
+            if (el.element_text && el.element_text.trim() !== "") return el.element_text;
+            const normalizedValue = normalizeValueCode(el.element_value);
+            return reverseTypeMap[normalizedValue] || normalizedValue || "按键";
+        }
+
+        function createElementFromButton(btn, configId) {
+            const width = Math.round(btn.width * scaleFactor);
+            const height = Math.round(btn.height * scaleFactor);
+            const x = Math.round((btn.x + btn.width / 2) * scaleFactor);
+            const y = Math.round((btn.y + btn.height / 2) * scaleFactor);
+            const elementId = btn.id || nextElementId();
+            const type = btn.type || "按键";
+            const mapped = typeMap[type];
+            const value = normalizeValueCode(mapped || type);
+            const meta = getElementMeta(type);
+            const elementText = ["拖动+左", "拖动+右", "拖动+中", "触控板"].includes(type) ? "" : type;
+
+            return {
+                element_id: elementId,
+                element_width: width,
+                element_height: height,
+                element_central_x: x,
+                element_central_y: y,
+                element_text: elementText,
+                element_value: value,
+                config_id: configId,
+                element_radius: 10,
+                element_thick: 4,
+                element_layer: 50,
+                element_color: -259487608,
+                element_background_color: 0,
+                element_pressed_color: 701287628,
+                element_flag1: 1,
+                normalTextColor: -259487608,
+                pressedTextColor: 701287628,
+                textSizePercent: 63,
+                ...meta
+            };
+        }
+        function exportConfig() {
+            assignButtonIds();
+            syncButtonsFromDom();
+            const exportConfigId = Date.now();
+
+            buttons.forEach(btn => {
+                const oldEl = mdatElements[btn.id];
+                const newEl = createElementFromButton(btn, exportConfigId);
+                mdatElements[btn.id] = oldEl ? { ...oldEl, ...newEl } : newEl;
+            });
+
+            const updated = buttons
+                .map(btn => mdatElements[btn.id])
+                .filter(Boolean);
+            const settingsObj = {
+                mouse_wheel_speed: 20,
+                touch_enable: "true",
+                touch_mode: "true",
+                enhanced_touch: "false",
+                config_id: exportConfigId,
+                config_name: "Moonlight 王冠配置"
+            };
+
+            const version = 8;
+            const configName = "Moonlight 王冠配置";
+            const elementsStr = JSON.stringify(updated);
+
+            if (window.MoonlightCrown && typeof window.MoonlightCrown.saveRawConfig === "function") {
+                window.MoonlightCrown.saveRawConfig(elementsStr, configName);
+                return;
+            }
+
+            const settingsStr = JSON.stringify({
+                mouse_wheel_speed: 20,
+                touch_enable: "true",
+                touch_mode: "true",
+                enhanced_touch: "false",
+                config_id: exportConfigId,
+                config_name: configName
+            });
+            const md5 = computeMD5(String(version) + settingsStr + elementsStr);
+            const payloadText = JSON.stringify({
+                version, settings: settingsStr, elements: elementsStr, md5
+            });
+            const blob = new Blob([JSON.stringify(JSON.parse(payloadText), null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "moonlight-config-" + Date.now() + ".mdat";
+            link.click();
+        }
+
+        function createButtonDom(btn) {
+            if (!btn.id) {
+                btn.id = nextElementId();
+            }
+            const div = document.createElement("div");
+            div.className = "button";
+            div.dataset.buttonId = String(btn.id);
+            div.style.left = btn.x + "px";
+            div.style.top = btn.y + "px";
+            div.style.width = btn.width + "px";
+            div.style.height = btn.height + "px";
+            div.innerText = btn.type;
+            div.addEventListener("mousedown", (e) => startDrag(e, div));
+            div.addEventListener("touchstart", (e) => startDrag(e, div), { passive: false });
+            div.addEventListener("mouseup", stopDragf);
+            div.addEventListener("touchend", stopDragf);
+            document.getElementById("canvas").appendChild(div);
+        }
+
+        function togglePanelPosition() {
+            const controlPanel = document.getElementById("control-panel");
+            const isAtBottom = controlPanel.style.top === "60%";
+
+            if (isAtBottom) {
+                controlPanel.style.top = "10px"; // 复原控件位置
+            } else {
+                controlPanel.style.top = "60%"; // 将控件移至屏幕 50% 位置
+            }
+        }
+
+        // 监听标题点击，切换控件面板的位置
+        document.getElementById("panel-title").addEventListener("click", togglePanelPosition);
+    </script>
+    <script>
+        function changeBackground(event) {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("canvas").style.backgroundImage = `url(${e.target.result})`;
+            document.getElementById("canvas").style.backgroundSize = "cover";
+            document.getElementById("canvas").style.backgroundPosition = "center";
+        };
+        reader.readAsDataURL(file);
+    }
+}
+    </script>
+</body>
+</html>

@@ -937,6 +937,10 @@
     <string name="crown_store_profile_count">Profiles: %1$d</string>
     <string name="crown_store_profile_unit">Profiles</string>
     <string name="crown_store_profile_active">Active</string>
+    <string name="crown_quick_creator_title">Quick Crown Layout Creator</string>
+    <string name="crown_quick_creator_summary">Design controls in the built-in editor and save directly to My Crowns.</string>
+    <string name="toast_crown_quick_creator_save_success">Saved to My Crowns</string>
+    <string name="toast_crown_quick_creator_save_failed">Could not save the layout. Check the configuration and try again.</string>
     <string name="crown_store_legacy_tool_summary">Restore a Crown profile from a legacy .mdat file.</string>
     <string name="crown_store_action_open">Open</string>
     <string name="crown_store_action_import_package">Import package</string>
