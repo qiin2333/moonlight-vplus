@@ -3,6 +3,10 @@ package com.limelight.utils
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.os.Build
+import android.util.Log
 import com.limelight.PcView
 
 /**
@@ -23,6 +27,49 @@ object LauncherIcon {
     private fun aliasComponent(context: Context, variant: String): ComponentName {
         val alias = if (variant == VARIANT_SABA_DARK) ".LauncherSabaDark" else ".LauncherSaba"
         return ComponentName(context.packageName, aliasClassPrefix + alias)
+    }
+
+    /** The currently enabled MAIN/LAUNCHER component used by ShortcutManager. */
+    fun currentLauncherComponent(context: Context): ComponentName {
+        return aliasComponent(context, currentVariant(context))
+    }
+
+    /**
+     * Rebind shortcuts that survived an application update to the active launcher alias.
+     * Android launchers may keep the shortcut records while filtering them by the old
+     * activity component. A launcher that already deleted a pinned icon cannot be repaired
+     * silently, but this recovers dynamic and pinned records still owned by ShortcutManager.
+     */
+    fun migrateShortcutsToCurrentLauncher(
+        context: Context,
+        launcherComponent: ComponentName = currentLauncherComponent(context)
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
+
+        val appContext = context.applicationContext
+        val shortcutManager = appContext.getSystemService(ShortcutManager::class.java) ?: return
+        try {
+            val updates = ArrayList<ShortcutInfo>()
+
+            for (shortcut in (shortcutManager.dynamicShortcuts + shortcutManager.pinnedShortcuts).distinctBy { it.id }) {
+                if (shortcut.activity != launcherComponent) {
+                    updates.add(
+                        ShortcutInfo.Builder(appContext, shortcut.id)
+                            .setActivity(launcherComponent)
+                            .build()
+                    )
+                }
+            }
+
+            if (updates.isNotEmpty()) {
+                shortcutManager.updateShortcuts(updates)
+            }
+        } catch (e: RuntimeException) {
+            // Some launchers reject updates for shortcuts they already detached, and
+            // the system can reject shortcut access while the user is locked.
+            // Shortcut repair must never prevent the app from starting.
+            Log.w("LauncherIcon", "Unable to migrate launcher shortcuts", e)
+        }
     }
 
     /** 当前生效的图标变体；未设置过（DEFAULT 状态）一律视为标准版。 */
@@ -49,6 +96,9 @@ object LauncherIcon {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             PackageManager.DONT_KILL_APP
         )
+        // Rebind shortcuts while both aliases are still valid. This avoids launchers
+        // rejecting an update because the old target is already disabled.
+        migrateShortcutsToCurrentLauncher(appContext, aliasComponent(appContext, variant))
         pm.setComponentEnabledSetting(
             aliasComponent(appContext, if (variant == VARIANT_SABA_DARK) VARIANT_SABA else VARIANT_SABA_DARK),
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
