@@ -337,6 +337,10 @@ class VirtualController(
                 addOrUpdateSettingsButton()
             }
         }
+        // A running SurfaceView does not necessarily schedule a UI traversal. In
+        // particular, creating the controller after the stream layout has settled
+        // must request a frame so the pre-draw callback can build its controls.
+        frameLayout.invalidate()
     }
 
     private fun refreshSettingsButtonLayout() {
