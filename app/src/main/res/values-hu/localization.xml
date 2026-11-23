@@ -18,7 +18,7 @@
     <string name="mic_error_resume">A mikrofon nem folytatható: az inicializálás sikertelen</string>
     <string name="mic_error_init_detail">A mikrofon inicializálása sikertelen: %1$s</string>
     <string name="connection_not_paired">Az eszköz nincs párosítva a számítógéppel</string>
-    <string name="connection_hdr_unsupported">A PC GPU-ja nem támogatja a HDR-továbbítást. A stream SDR lesz.</string>
+    <string name="connection_hdr_unsupported">A GPU/kijelző nem támogatja a HDR–SDR átalakítást. A stream SDR lesz.</string>
     <string name="connection_above_4k_host">A host PC nem támogatja a 4K fölötti felbontású továbbítást.</string>
     <string name="connection_above_4k_client">A 4K fölötti továbbításhoz az eszköznek HEVC-t vagy AV1-et kell támogatnia.</string>
     <string name="connection_4k_update">A 4K-s továbbításhoz frissítsd a GeForce Experience-t. A stream 1080p lesz.</string>

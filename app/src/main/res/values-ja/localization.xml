@@ -18,7 +18,7 @@
     <string name="mic_error_resume">マイクを再開できません: 初期化に失敗しました</string>
     <string name="mic_error_init_detail">マイクの初期化に失敗しました: %1$s</string>
     <string name="connection_not_paired">端末が PC とペアリングされていません</string>
-    <string name="connection_hdr_unsupported">PC の GPU は HDR ストリーミングに対応していません。SDR で配信します。</string>
+    <string name="connection_hdr_unsupported">GPU/ディスプレイが HDR から SDR への変換に対応していません。ストリームは SDR になります。</string>
     <string name="connection_above_4k_host">ホスト PC は 4K を超える解像度のストリーミングに対応していません。</string>
     <string name="connection_above_4k_client">4K を超えるストリーミングには、端末が HEVC または AV1 に対応している必要があります。</string>
     <string name="connection_4k_update">4K でストリーミングするには GeForce Experience を更新してください。1080p で配信します。</string>

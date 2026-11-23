@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Kan microfoon niet hervatten: initialisatie mislukt</string>
     <string name="mic_error_init_detail">Initialisatie van microfoon mislukt: %1$s</string>
     <string name="connection_not_paired">Apparaat niet gekoppeld aan de computer</string>
-    <string name="connection_hdr_unsupported">De GPU van je pc ondersteunt geen HDR-streaming. De stream wordt SDR.</string>
+    <string name="connection_hdr_unsupported">De GPU/het scherm ondersteunt geen conversie van HDR naar SDR. De stream wordt SDR.</string>
     <string name="connection_above_4k_host">Je host-pc ondersteunt geen streaming op resoluties boven 4K.</string>
     <string name="connection_above_4k_client">Je apparaat moet HEVC of AV1 ondersteunen om boven 4K te streamen.</string>
     <string name="connection_4k_update">Werk GeForce Experience bij om in 4K te streamen. De stream wordt 1080p.</string>

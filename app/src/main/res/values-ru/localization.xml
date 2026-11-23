@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Не удалось возобновить микрофон: ошибка настройки</string>
     <string name="mic_error_init_detail">Ошибка настройки микрофона: %1$s</string>
     <string name="connection_not_paired">Устройство не сопряжено с ПК</string>
-    <string name="connection_hdr_unsupported">Видеокарта ПК не поддерживает HDR-трансляцию. Будет использован SDR.</string>
+    <string name="connection_hdr_unsupported">Видеокарта/дисплей не поддерживают преобразование HDR в SDR. Поток будет в SDR.</string>
     <string name="connection_above_4k_host">ПК не поддерживает трансляцию выше 4K.</string>
     <string name="connection_above_4k_client">Для трансляции выше 4K устройство должно поддерживать HEVC или AV1.</string>
     <string name="connection_4k_update">Обновите GeForce Experience для 4K. Сейчас будет 1080p.</string>

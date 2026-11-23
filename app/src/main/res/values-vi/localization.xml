@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Không thể tiếp tục micrô: khởi tạo thất bại</string>
     <string name="mic_error_init_detail">Khởi tạo micrô thất bại: %1$s</string>
     <string name="connection_not_paired">Thiết bị chưa ghép nối với máy tính</string>
-    <string name="connection_hdr_unsupported">GPU của PC không hỗ trợ truyền HDR. Luồng sẽ là SDR.</string>
+    <string name="connection_hdr_unsupported">GPU/màn hình không hỗ trợ chuyển đổi HDR sang SDR. Luồng sẽ sử dụng SDR.</string>
     <string name="connection_above_4k_host">Máy chủ PC không hỗ trợ truyền ở độ phân giải trên 4K.</string>
     <string name="connection_above_4k_client">Thiết bị phải hỗ trợ HEVC hoặc AV1 để truyền trên 4K.</string>
     <string name="connection_4k_update">Cập nhật GeForce Experience để truyền 4K. Luồng sẽ là 1080p.</string>

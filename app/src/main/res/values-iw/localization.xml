@@ -18,7 +18,7 @@
     <string name="mic_error_resume">לא ניתן לחדש את המיקרופון: האתחול נכשל</string>
     <string name="mic_error_init_detail">אתחול המיקרופון נכשל: %1$s</string>
     <string name="connection_not_paired">המכשיר אינו מותאם למחשב</string>
-    <string name="connection_hdr_unsupported">ה-GPU של ה-PC אינו תומך בהזרמת HDR. ההזרמה תהיה SDR.</string>
+    <string name="connection_hdr_unsupported">ה-GPU/הצג אינם תומכים בהמרת HDR ל-SDR. השידור יהיה ב-SDR.</string>
     <string name="connection_above_4k_host">ה-PC המארח אינו תומך בהזרמה ברזולוציות מעל 4K.</string>
     <string name="connection_above_4k_client">המכשיר חייב לתמוך ב-HEVC או ב-AV1 כדי להזרים מעל 4K.</string>
     <string name="connection_4k_update">עדכן את GeForce Experience כדי להזרים ב-4K. ההזרמה תהיה 1080p.</string>

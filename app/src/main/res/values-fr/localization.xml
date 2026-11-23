@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Impossible de reprendre le micro : échec de l\'initialisation</string>
     <string name="mic_error_init_detail">Échec de l\'initialisation du micro : %1$s</string>
     <string name="connection_not_paired">Appareil non apparié au PC</string>
-    <string name="connection_hdr_unsupported">Le GPU du PC ne prend pas en charge le HDR. Le flux sera en SDR.</string>
+    <string name="connection_hdr_unsupported">Le GPU/l’écran ne prend pas en charge la conversion HDR vers SDR. Le flux sera en SDR.</string>
     <string name="connection_above_4k_host">Le PC hôte ne prend pas en charge les résolutions au-delà de 4K.</string>
     <string name="connection_above_4k_client">L\'appareil doit prendre en charge HEVC ou AV1 pour dépasser le 4K.</string>
     <string name="connection_4k_update">Mettez à jour GeForce Experience pour le 4K. Le flux sera en 1080p.</string>
