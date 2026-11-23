@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Não foi possível retomar o microfone: falha na inicialização</string>
     <string name="mic_error_init_detail">Falha na inicialização do microfone: %1$s</string>
     <string name="connection_not_paired">Dispositivo não pareado com o computador</string>
-    <string name="connection_hdr_unsupported">A GPU do PC não é compatível com streaming HDR. O stream será SDR.</string>
+    <string name="connection_hdr_unsupported">O computador host não é compatível com streaming HDR. O stream será SDR.</string>
     <string name="connection_above_4k_host">O PC host não é compatível com streaming em resoluções acima de 4K.</string>
     <string name="connection_above_4k_client">O dispositivo precisa ser compatível com HEVC ou AV1 para stream acima de 4K.</string>
     <string name="connection_4k_update">Atualize o GeForce Experience para stream em 4K. O stream será 1080p.</string>

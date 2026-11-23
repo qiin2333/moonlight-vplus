@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Не вдалося відновити мікрофон: помилка ініціалізації</string>
     <string name="mic_error_init_detail">Не вдалося ініціалізувати мікрофон: %1$s</string>
     <string name="connection_not_paired">Пристрій не спарений із комп\'ютером</string>
-    <string name="connection_hdr_unsupported">GPU вашого PC не підтримує потокову передачу HDR. Потік буде SDR.</string>
+    <string name="connection_hdr_unsupported">Хост-комп’ютер не підтримує потокову передачу HDR. Потік буде SDR.</string>
     <string name="connection_above_4k_host">Хост-PC не підтримує передачу в роздільній здатності понад 4K.</string>
     <string name="connection_above_4k_client">Для передачі понад 4K пристрій має підтримувати HEVC або AV1.</string>
     <string name="connection_4k_update">Оновіть GeForce Experience для передачі в 4K. Потік буде 1080p.</string>

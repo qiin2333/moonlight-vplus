@@ -18,7 +18,7 @@
     <string name="mic_error_resume">No se pudo reanudar el micrófono: error de inicialización</string>
     <string name="mic_error_init_detail">Error al inicializar el micrófono: %1$s</string>
     <string name="connection_not_paired">Dispositivo no emparejado con el PC</string>
-    <string name="connection_hdr_unsupported">La GPU del PC no admite HDR. Se usará SDR.</string>
+    <string name="connection_hdr_unsupported">El equipo host no admite streaming HDR. La transmisión será SDR.</string>
     <string name="connection_above_4k_host">El PC host no admite resoluciones superiores a 4K.</string>
     <string name="connection_above_4k_client">El dispositivo debe admitir HEVC o AV1 para superar el 4K.</string>
     <string name="connection_4k_update">Actualiza GeForce Experience para 4K. Se usará 1080p.</string>

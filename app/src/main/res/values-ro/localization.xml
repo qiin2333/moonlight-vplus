@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Nu s-a putut relua microfonul: inițializarea a eșuat</string>
     <string name="mic_error_init_detail">Inițializarea microfonului a eșuat: %1$s</string>
     <string name="connection_not_paired">Dispozitivul nu este asociat cu computerul</string>
-    <string name="connection_hdr_unsupported">GPU-ul PC-ului nu acceptă transmisie HDR. Fluxul va fi SDR.</string>
+    <string name="connection_hdr_unsupported">Computerul gazdă nu acceptă transmisia HDR. Fluxul va fi SDR.</string>
     <string name="connection_above_4k_host">PC-ul gazdă nu acceptă transmisii la rezoluții peste 4K.</string>
     <string name="connection_above_4k_client">Dispozitivul trebuie să accepte HEVC sau AV1 pentru transmisii peste 4K.</string>
     <string name="connection_4k_update">Actualizați GeForce Experience pentru transmisie 4K. Fluxul va fi 1080p.</string>

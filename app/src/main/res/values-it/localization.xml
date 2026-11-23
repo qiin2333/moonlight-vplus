@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Impossibile riprendere il microfono: inizializzazione non riuscita</string>
     <string name="mic_error_init_detail">Inizializzazione del microfono non riuscita: %1$s</string>
     <string name="connection_not_paired">Dispositivo non abbinato al computer</string>
-    <string name="connection_hdr_unsupported">La GPU del PC non supporta lo streaming HDR. Lo stream sarà SDR.</string>
+    <string name="connection_hdr_unsupported">Il computer host non supporta lo streaming HDR. Lo stream sarà in SDR.</string>
     <string name="connection_above_4k_host">Il PC host non supporta lo streaming a risoluzioni superiori al 4K.</string>
     <string name="connection_above_4k_client">Il dispositivo deve supportare HEVC o AV1 per lo streaming oltre il 4K.</string>
     <string name="connection_4k_update">Aggiorna GeForce Experience per lo streaming in 4K. Lo stream sarà 1080p.</string>

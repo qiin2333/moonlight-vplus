@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Nelze obnovit mikrofon: inicializace se nezdařila</string>
     <string name="mic_error_init_detail">Inicializace mikrofonu se nezdařila: %1$s</string>
     <string name="connection_not_paired">Zařízení není spárováno s počítačem</string>
-    <string name="connection_hdr_unsupported">GPU vašeho PC nepodporuje streamování HDR. Stream bude SDR.</string>
+    <string name="connection_hdr_unsupported">Hostitelský počítač nepodporuje streamování HDR. Stream bude SDR.</string>
     <string name="connection_above_4k_host">Hostitelský PC nepodporuje streamování v rozlišení nad 4K.</string>
     <string name="connection_above_4k_client">Pro streamování nad 4K musí zařízení podporovat HEVC nebo AV1.</string>
     <string name="connection_4k_update">Pro streamování v 4K aktualizujte GeForce Experience. Stream bude 1080p.</string>

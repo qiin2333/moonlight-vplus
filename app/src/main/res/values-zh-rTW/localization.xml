@@ -18,7 +18,7 @@
     <string name="mic_error_resume">麥克風恢復失敗：重新初始化失敗</string>
     <string name="mic_error_init_detail">初始化麥克風串流失敗：%1$s</string>
     <string name="connection_not_paired">裝置尚未與電腦配對</string>
-    <string name="connection_hdr_unsupported">電腦顯示卡不支援 HDR 串流，將使用 SDR。</string>
+    <string name="connection_hdr_unsupported">主機不支援 HDR 串流，將使用 SDR。</string>
     <string name="connection_above_4k_host">主機不支援高於 4K 的串流解析度。</string>
     <string name="connection_above_4k_client">串流裝置必須支援 HEVC 或 AV1 才能使用高於 4K 的解析度。</string>
     <string name="connection_4k_update">請更新 GeForce Experience 以使用 4K 串流。目前將使用 1080p。</string>

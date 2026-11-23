@@ -18,7 +18,7 @@
     <string name="mic_error_resume">Unable to resume microphone: initialization failed</string>
     <string name="mic_error_init_detail">Microphone initialization failed: %1$s</string>
     <string name="connection_not_paired">Device not paired with computer</string>
-    <string name="connection_hdr_unsupported">Your PC GPU does not support streaming HDR. The stream will be SDR.</string>
+    <string name="connection_hdr_unsupported">Your host does not support streaming HDR. The stream will be SDR.</string>
     <string name="connection_above_4k_host">Your host PC does not support streaming at resolutions above 4K.</string>
     <string name="connection_above_4k_client">Your streaming device must support HEVC or AV1 to stream at resolutions above 4K.</string>
     <string name="connection_4k_update">Update GeForce Experience to stream in 4K. The stream will be 1080p.</string>
