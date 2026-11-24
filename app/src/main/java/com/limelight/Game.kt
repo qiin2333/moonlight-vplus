@@ -1849,7 +1849,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        keyboardInputHandler.clearModifierState()
+        resetVirtualKeyboardInput()
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             // Android only delivers OnPrimaryClipChangedListener events while
@@ -1857,6 +1857,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             // Game was paused are silently dropped. Re-poll on focus regain.
             clipboardSyncManager?.onFocusGained()
         }
+    }
+
+    private fun resetVirtualKeyboardInput() {
+        if (!::keyboardInputHandler.isInitialized) return
+        // Cancel pending local shortcuts before releasing any virtual modifiers.
+        keyboardInputHandler.clearModifierState()
+        standaloneKeyboardUI?.resetInputState()
+        controllerManager?.resetKeyboardInputState()
     }
 
     private fun selectDisplayModeForRendering(
@@ -2044,6 +2052,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible
         if (!intercepting && ::keyboardInputHandler.isInitialized) {
+            resetVirtualKeyboardInput()
             keyboardInputHandler.releaseForwardedKeys()
         }
         KeyboardAccessibilityService.setIntercepting(intercepting)
@@ -2358,6 +2367,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             touchInputHandler.releaseMouseNavigationButtons()
         }
         if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
+            resetVirtualKeyboardInput()
             keyboardInputHandler.releaseForwardedKeys()
         }
         if (grab && !prefConfig.usesSystemMousePointer) {
@@ -2614,6 +2624,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             touchInputHandler.releaseMouseNavigationButtons()
         }
         if (::keyboardInputHandler.isInitialized) {
+            resetVirtualKeyboardInput()
             keyboardInputHandler.releaseForwardedKeys()
         }
         setMetaKeyCaptureState(false)

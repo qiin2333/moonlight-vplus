@@ -7,6 +7,8 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.View
+import android.widget.FrameLayout
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,6 +19,7 @@ import androidx.test.runner.lifecycle.Stage
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.StartGestureReducer
+import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.services.KeyboardAccessibilityService
@@ -24,6 +27,9 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.InetAddress
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class AccessibilityControllerInterceptionTest {
@@ -101,6 +107,158 @@ class AccessibilityControllerInterceptionTest {
                 game.keyboardInputHandler.handleKeyUp(ctrlUp)
                 assertEquals(0, field(game.keyboardInputHandler, "modifierFlags"))
             }
+        }
+    }
+
+    @Test
+    fun releasingOnePhysicalModifierKeepsTheOtherSideActive() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val handler = game.keyboardInputHandler
+            val pairs = listOf(
+                Triple(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT, KeyboardPacket.MODIFIER_SHIFT),
+                Triple(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyboardPacket.MODIFIER_CTRL),
+                Triple(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT, KeyboardPacket.MODIFIER_ALT),
+                Triple(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT, KeyboardPacket.MODIFIER_META)
+            )
+            for ((leftCode, rightCode, mask) in pairs) {
+                val left = key(KeyEvent.ACTION_DOWN, leftCode, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                val right = key(KeyEvent.ACTION_DOWN, rightCode, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                handler.handleKeyDown(left)
+                handler.handleKeyDown(right)
+                handler.handleKeyDown(KeyEvent.changeTimeRepeat(right, SystemClock.uptimeMillis(), 1))
+                handler.handleKeyUp(KeyEvent.changeAction(left, KeyEvent.ACTION_UP))
+                assertEquals(mask.toInt(), field(handler, "modifierFlags"))
+                handler.handleKeyUp(KeyEvent.changeAction(right, KeyEvent.ACTION_UP))
+                assertEquals(0, field(handler, "modifierFlags"))
+            }
+        }
+    }
+
+    @Test
+    fun shiftedVirtualKeysCanHandOffBetweenSidesAndOrigins() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val handler = game.keyboardInputHandler
+            val left = KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            val right = KeyEvent.KEYCODE_SHIFT_RIGHT.toShort()
+            val mask = KeyboardPacket.MODIFIER_SHIFT.toInt()
+            handler.keyboardEvent(true, left, false)
+            handler.keyboardEvent(true, right, false)
+            handler.keyboardEvent(false, left, false)
+            assertEquals(mask, field(handler, "modifierFlags"))
+            handler.keyboardEvent(false, right, false)
+            assertEquals(0, field(handler, "modifierFlags"))
+
+            val physical = key(KeyEvent.ACTION_DOWN, left.toInt(), KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+            handler.keyboardEvent(true, left, false)
+            handler.handleKeyDown(physical)
+            handler.keyboardEvent(false, left, false)
+            assertEquals(mask, field(handler, "modifierFlags"))
+            handler.handleKeyUp(KeyEvent.changeAction(physical, KeyEvent.ACTION_UP))
+            assertEquals(0, field(handler, "modifierFlags"))
+
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                handler.keyboardEvent(true, left, false)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val accessible = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_RIGHT, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, accessible))
+                handler.keyboardEvent(false, left, false)
+                assertEquals(mask, field(handler, "modifierFlags"))
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(0, field(handler, "modifierFlags"))
+            }
+        }
+    }
+
+    @Test
+    fun concurrentModifierEventsAreSafeAcrossInputThreads() = withGame { scenario ->
+        lateinit var handler: KeyboardInputHandler
+        scenario.onActivity { game -> connect(game); handler = game.keyboardInputHandler }
+        val method = handler.javaClass.declaredMethods.single { it.name == "handleSpecialKeys" }.apply { isAccessible = true }
+        val origin = handler.javaClass.declaredClasses.single { it.simpleName == "KeyOrigin" }
+            .enumConstants.single { (it as Enum<*>).name == "ORDINARY" }
+        val start = CountDownLatch(1)
+        val done = CountDownLatch(2)
+        val error = AtomicReference<Throwable>()
+        for (code in listOf(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT)) {
+            Thread {
+                try {
+                    start.await()
+                    repeat(3000) {
+                        method.invoke(handler, code, true, false, null, origin)
+                        method.invoke(handler, code, false, false, null, origin)
+                    }
+                } catch (t: Throwable) {
+                    error.compareAndSet(null, t)
+                } finally {
+                    done.countDown()
+                }
+            }.start()
+        }
+        start.countDown()
+        assertTrue("concurrent inputs did not finish", done.await(20, TimeUnit.SECONDS))
+        assertNull(error.get())
+        assertEquals(0, field(handler, "modifierFlags"))
+    }
+
+    @Test
+    fun focusClearCancelsShortcutQueuedByInputThread() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val handler = game.keyboardInputHandler
+            val keys = listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT,
+                KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_Q)
+            val error = AtomicReference<Throwable>()
+            val worker = Thread {
+                try {
+                    keys.forEach { handler.keyboardEvent(true, it.toShort(), false) }
+                    keys.asReversed().forEach { handler.keyboardEvent(false, it.toShort(), false) }
+                } catch (t: Throwable) {
+                    error.set(t)
+                }
+            }
+            worker.start()
+            worker.join(5000)
+            assertFalse("input thread did not finish", worker.isAlive)
+            assertNull(error.get())
+            handler.clearModifierState()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        scenario.onActivity { assertFalse(it.isFinishing) }
+    }
+
+    @Test
+    fun focusLossReleasesVirtualKeysWithoutCompletingPendingShortcut() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val events = mutableListOf<Pair<Boolean, Short>>()
+            val controller = KeyboardUIController(FrameLayout(game), object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                    game.keyboardInputHandler.keyboardEvent(down, keyCode, false)
+                }
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+            }, game)
+            Game::class.java.getDeclaredField("standaloneKeyboardUI").apply { isAccessible = true }.set(game, controller)
+            val view = View(game)
+            val modifiers = listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT)
+            modifiers.forEach { controller.onKeyPress(view, it); controller.onKeyRelease(view, it) }
+            controller.onKeyPress(view, KeyEvent.KEYCODE_Q)
+            assertEquals(KeyEvent.KEYCODE_Q, field(game.keyboardInputHandler, "specialKeyCode"))
+
+            val beforeFocus = events.size
+            game.onWindowFocusChanged(false)
+            assertFalse(game.isFinishing)
+            assertEquals(KeyEvent.KEYCODE_UNKNOWN, field(game.keyboardInputHandler, "specialKeyCode"))
+            assertEquals(0, field(game.keyboardInputHandler, "modifierFlags"))
+            val releases = events.drop(beforeFocus)
+            assertEquals(4, releases.size)
+            assertTrue(releases.all { !it.first })
+            assertEquals((modifiers + KeyEvent.KEYCODE_Q).map { it.toShort() }.toSet(), releases.map { it.second }.toSet())
+            game.onWindowFocusChanged(true)
+            assertEquals(beforeFocus + 4, events.size)
         }
     }
 

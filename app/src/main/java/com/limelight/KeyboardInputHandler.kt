@@ -28,9 +28,12 @@ class KeyboardInputHandler(private val game: Game) {
     private var modifierFlags = 0
     private var ordinaryModifierFlags = 0
     private var accessibilityModifierFlags = 0
-    private var waitingForAllModifiersUp = false
+    private val ordinaryModifierKeys = HashSet<PhysicalKey>()
+    private val accessibilityModifierKeys = HashSet<PhysicalKey>()
     private var specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
     private var specialKeyUsesAccessibility = false
+    private var shortcutGeneration = 0L
+    private var accessibilityShortcutGeneration = 0L
     private var lastEscPressTime = 0L
     private var hasShownEscHint = false
     private enum class KeyOrigin { ORDINARY, ACCESSIBILITY }
@@ -68,6 +71,7 @@ class KeyboardInputHandler(private val game: Game) {
     private val ordinaryToggleGrab = Runnable { game.setInputGrabState(!game.grabbedInput) }
     private val accessibilityToggleGrab = Runnable { ordinaryToggleGrab.run() }
     // A capture loss cancels only shortcuts that involved accessibility input.
+    @get:Synchronized
     private val toggleGrab: Runnable
         get() = if (specialKeyUsesAccessibility) accessibilityToggleGrab else ordinaryToggleGrab
 
@@ -95,91 +99,102 @@ class KeyboardInputHandler(private val game: Game) {
 
     companion object {
         private const val ESC_DOUBLE_PRESS_INTERVAL = 500L // 500毫秒内按第二次ESC才有效
+        private const val DIRECT_KEYBOARD_DEVICE_ID = Int.MIN_VALUE
+    }
+
+    private fun modifierMaskFor(androidKeyCode: Int): Int = when (androidKeyCode) {
+        KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> KeyboardPacket.MODIFIER_CTRL.toInt()
+        KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> KeyboardPacket.MODIFIER_SHIFT.toInt()
+        KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> KeyboardPacket.MODIFIER_ALT.toInt()
+        KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT -> KeyboardPacket.MODIFIER_META.toInt()
+        else -> 0
     }
 
     // Returns true if the key stroke was consumed
-    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, isRepeat: Boolean = false): Boolean {
-        var modifierMask = 0
-        var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
+    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, isRepeat: Boolean = false,
+                                  physicalKey: PhysicalKey? = null, origin: KeyOrigin = keyOrigin()): Boolean {
+        val modifierMask = modifierMaskFor(androidKeyCode)
+        val nonModifierKeyCode = if (modifierMask == 0) androidKeyCode else KeyEvent.KEYCODE_UNKNOWN
+        var completedShortcut = KeyEvent.KEYCODE_UNKNOWN
+        var completedToggleGrab: Runnable? = null
+        var shortcutWasAccessible = false
+        var generation = 0L
+        var accessibilityGeneration = 0L
+        val consumed = synchronized(this) {
+            if (modifierMask != 0) {
+                val heldKeys = if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierKeys else ordinaryModifierKeys
+                val owner = physicalKey ?: PhysicalKey(DIRECT_KEYBOARD_DEVICE_ID, androidKeyCode, 0)
+                if (down) heldKeys.add(owner) else heldKeys.remove(owner)
+                val flags = heldKeys.fold(0) { current, key -> current or modifierMaskFor(key.code) }
+                if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierFlags = flags else ordinaryModifierFlags = flags
+                modifierFlags = ordinaryModifierFlags or accessibilityModifierFlags
+            }
 
-        when (androidKeyCode) {
-            KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_CTRL.toInt()
-            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_SHIFT.toInt()
-            KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_ALT.toInt()
-            KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_META.toInt()
-            else -> nonModifierKeyCode = androidKeyCode
-        }
-
-        val origin = keyOrigin()
-        val oldModifiers = if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierFlags else ordinaryModifierFlags
-        val newModifiers = if (down) oldModifiers or modifierMask else oldModifiers and modifierMask.inv()
-        if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierFlags = newModifiers else ordinaryModifierFlags = newModifiers
-        modifierFlags = ordinaryModifierFlags or accessibilityModifierFlags
-
-        // Handle the special combos on the key up
-        if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
-            if (origin == KeyOrigin.ACCESSIBILITY) specialKeyUsesAccessibility = true
-            if (specialKeyCode == androidKeyCode) {
-                return true
-            } else if (modifierFlags != 0) {
-                return down
-            } else {
-                when (specialKeyCode) {
-                    // Toggle input grab
-                    KeyEvent.KEYCODE_Z -> {
-                        handler.removeCallbacks(toggleGrab)
-                        handler.postDelayed(toggleGrab, 250)
+            // Handle the special combos on the key up
+            if (specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
+                if (origin == KeyOrigin.ACCESSIBILITY) specialKeyUsesAccessibility = true
+                if (specialKeyCode == androidKeyCode) {
+                    return@synchronized true
+                } else if (modifierFlags != 0) {
+                    return@synchronized down
+                } else {
+                    completedShortcut = specialKeyCode
+                    completedToggleGrab = toggleGrab
+                    shortcutWasAccessible = specialKeyUsesAccessibility
+                    generation = shortcutGeneration
+                    accessibilityGeneration = accessibilityShortcutGeneration
+                    specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                    specialKeyUsesAccessibility = false
+                }
+            } else if ((modifierFlags and (KeyboardPacket.MODIFIER_CTRL.toInt() or KeyboardPacket.MODIFIER_ALT.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt())) ==
+                (KeyboardPacket.MODIFIER_CTRL.toInt() or KeyboardPacket.MODIFIER_ALT.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt()) &&
+                (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)
+            ) {
+                when (androidKeyCode) {
+                    KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_M -> {
+                        // A repeat may belong to a key that was already forwarded to the
+                        // host; activating the shortcut here would swallow its release.
+                        if (isRepeat) return@synchronized false
+                        // Let the host keep Ctrl+Alt+Shift+M when the local shortcut is unavailable.
+                        if (androidKeyCode == KeyEvent.KEYCODE_M && !game.prefConfig.supportsDesktopMouseMode) return@synchronized false
+                        specialKeyCode = androidKeyCode
+                        specialKeyUsesAccessibility = origin == KeyOrigin.ACCESSIBILITY || accessibilityModifierFlags != 0
+                        return@synchronized true
                     }
-                    // Quit
+                    else -> return@synchronized false
+                }
+            }
+            false
+        }
+        if (completedShortcut != KeyEvent.KEYCODE_UNKNOWN) {
+            val action = Runnable {
+                val valid = synchronized(this) {
+                    generation == shortcutGeneration &&
+                        (!shortcutWasAccessible || accessibilityGeneration == accessibilityShortcutGeneration)
+                }
+                if (!valid) return@Runnable
+                when (completedShortcut) {
+                    KeyEvent.KEYCODE_Z -> completedToggleGrab?.let {
+                        handler.removeCallbacks(it)
+                        handler.postDelayed(it, 250)
+                    }
                     KeyEvent.KEYCODE_Q -> game.finish()
-                    // Toggle cursor visibility
                     KeyEvent.KEYCODE_C -> {
                         if (!game.grabbedInput) {
-                            // This shortcut also captures the pointer in native mouse mode.
                             game.inputCaptureProvider.enableCapture()
                             game.grabbedInput = true
                             game.setMetaKeyCaptureState(game.connected)
                         }
                         game.cursorVisible = !game.cursorVisible
-                        if (game.cursorVisible) {
-                            game.inputCaptureProvider.showCursor()
-                        } else {
-                            game.inputCaptureProvider.hideCursor()
-                        }
+                        if (game.cursorVisible) game.inputCaptureProvider.showCursor()
+                        else game.inputCaptureProvider.hideCursor()
                     }
-                    // Toggle absolute and relative movement for the external mouse.
                     KeyEvent.KEYCODE_M -> game.toggleExternalMouseDesktopMode()
                 }
-
-                specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-                waitingForAllModifiersUp = false
-                specialKeyUsesAccessibility = false
             }
-        } else if ((modifierFlags and (KeyboardPacket.MODIFIER_CTRL.toInt() or KeyboardPacket.MODIFIER_ALT.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt())) ==
-            (KeyboardPacket.MODIFIER_CTRL.toInt() or KeyboardPacket.MODIFIER_ALT.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt()) &&
-            (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)
-        ) {
-            when (androidKeyCode) {
-                KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_M -> {
-                    // A repeat may belong to a key that was already forwarded to the
-                    // host; activating the shortcut here would swallow its release.
-                    if (isRepeat) return false
-                    // Let the host keep Ctrl+Alt+Shift+M when the local shortcut is unavailable.
-                    if (androidKeyCode == KeyEvent.KEYCODE_M && !game.prefConfig.supportsDesktopMouseMode) return false
-                    specialKeyCode = androidKeyCode
-                    waitingForAllModifiersUp = true
-                    specialKeyUsesAccessibility = origin == KeyOrigin.ACCESSIBILITY || accessibilityModifierFlags != 0
-                    return true
-                }
-                else -> return false
-            }
+            if (Looper.myLooper() == Looper.getMainLooper()) action.run() else handler.post(action)
         }
-
-        return false
+        return consumed
     }
 
     private fun getModifierState(event: KeyEvent): Byte {
@@ -191,12 +206,19 @@ class KeyboardInputHandler(private val game: Game) {
         return modifier.toByte()
     }
 
+    @Synchronized
     private fun getModifierState(): Byte = modifierFlags.toByte()
 
+    @Synchronized
     fun clearModifierState() {
+        shortcutGeneration++
+        ordinaryModifierKeys.clear()
+        accessibilityModifierKeys.clear()
         ordinaryModifierFlags = 0
         accessibilityModifierFlags = 0
         modifierFlags = 0
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        specialKeyUsesAccessibility = false
     }
 
     private fun cancelAccessibilityToggle() {
@@ -228,9 +250,11 @@ class KeyboardInputHandler(private val game: Game) {
         escState = 0
         escStateFromAccessibility = false
         escComboKeys.clear()
-        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-        waitingForAllModifiersUp = false
-        specialKeyUsesAccessibility = false
+        synchronized(this) {
+            shortcutGeneration++
+            specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+            specialKeyUsesAccessibility = false
+        }
         cancelAccessibilityToggle()
         handler.removeCallbacks(ordinaryToggleGrab)
         game.window.decorView.handler?.removeCallbacks(ordinaryToggleGrab)
@@ -263,15 +287,18 @@ class KeyboardInputHandler(private val game: Game) {
         }
         accessibilityPressedKeys.clear()
         pressedKeys.retainAll(ordinaryPressedKeys.map { it.code }.toSet())
-        accessibilityModifierFlags = 0
-        modifierFlags = ordinaryModifierFlags
+        synchronized(this) {
+            accessibilityShortcutGeneration++
+            accessibilityModifierKeys.clear()
+            accessibilityModifierFlags = 0
+            modifierFlags = ordinaryModifierFlags
+            if (specialKeyUsesAccessibility) {
+                specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                specialKeyUsesAccessibility = false
+            }
+        }
         releasedKeys.forEach { key ->
             game.conn?.sendKeyboardInput(key.translated, KeyboardPacket.KEY_UP, getModifierState(), key.flags)
-        }
-        if (specialKeyUsesAccessibility) {
-            specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-            waitingForAllModifiersUp = false
-            specialKeyUsesAccessibility = false
         }
         cancelAccessibilityToggle()
         if (escStateFromAccessibility) {
@@ -440,7 +467,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
+            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0, physicalKey, origin)) {
                 return true
             }
 
@@ -607,7 +634,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, false)) {
+            if (handleSpecialKeys(event.keyCode, false, physicalKey = physicalKey, origin = origin)) {
                 return true
             }
 
@@ -649,7 +676,7 @@ class KeyboardInputHandler(private val game: Game) {
     fun keyboardEvent(buttonDown: Boolean, keyCode: Short, isRepeat: Boolean) {
         val keyMap = keyboardTranslator.translate(keyCode.toInt(), -1)
         if (keyMap.toInt() != 0) {
-            if (handleSpecialKeys(keyCode.toInt(), buttonDown, isRepeat)) {
+            if (handleSpecialKeys(keyCode.toInt(), buttonDown, isRepeat, origin = KeyOrigin.ORDINARY)) {
                 return
             }
             if (buttonDown) {

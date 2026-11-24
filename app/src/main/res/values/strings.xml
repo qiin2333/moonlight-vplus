@@ -1802,7 +1802,6 @@ Tap again to replace it.</string>
     <string name="layout_page_device_text_dsc">DS5 Touchpad</string>
     <string name="layout_page_device_text_mmo_true_text">Mouse movement only</string>
     <string name="layout_page_device_text_mmo_false_text">Mouse movement + click</string>
-    <string name="layout_keyboard_mini_text_3ae7b">Back to Keyboard</string>
     <string name="layout_number_seekbar_text_e12e7">Mouse Passthrough Sensitivity</string>
     <string name="layout_page_analog_stick_text_dedb8">Type: Analog Stick</string>
     <string name="layout_page_analog_stick_text_34170">Stick</string>

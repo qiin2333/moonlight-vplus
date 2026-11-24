@@ -2,19 +2,16 @@ package com.limelight.binding.input.advance_setting
 
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 
-class KeyboardGestureDetector(view: View, private val listener: GestureListener) {
+class KeyboardGestureDetector(private val listener: GestureListener) {
 
     interface GestureListener {
-        fun onKeyPress(keyCode: Int)
-        fun onKeyRelease(keyCode: Int)
-        fun onModifierHoldRelease(keyCode: Int)
-        fun onLongPress(keyCode: Int)
-        fun onDoubleTap(keyCode: Int)
+        fun onKeyPress(view: View, keyCode: Int)
+        fun onKeyRelease(view: View, keyCode: Int)
+        fun onModifierHoldRelease(view: View, keyCode: Int)
+        fun onDoubleTap(view: View, keyCode: Int)
     }
 
-    private val touchSlop = ViewConfiguration.get(view.context).scaledTouchSlop
     private var lastDownTime = 0L
     private var downTimeMs = 0L
 
@@ -31,10 +28,10 @@ class KeyboardGestureDetector(view: View, private val listener: GestureListener)
 
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastDownTime < DOUBLE_TAP_TIMEOUT) {
-                    listener.onDoubleTap(keyCode)
+                    listener.onDoubleTap(v, keyCode)
                     lastDownTime = 0
                 } else {
-                    listener.onKeyPress(keyCode)
+                    listener.onKeyPress(v, keyCode)
                     lastDownTime = currentTime
                 }
                 return true
@@ -47,9 +44,9 @@ class KeyboardGestureDetector(view: View, private val listener: GestureListener)
                 v.refreshDrawableState()
                 val pressDuration = System.currentTimeMillis() - downTimeMs
                 if (pressDuration >= HOLD_THRESHOLD) {
-                    listener.onModifierHoldRelease(keyCode)
+                    listener.onModifierHoldRelease(v, keyCode)
                 } else {
-                    listener.onKeyRelease(keyCode)
+                    listener.onKeyRelease(v, keyCode)
                 }
                 return true
             }

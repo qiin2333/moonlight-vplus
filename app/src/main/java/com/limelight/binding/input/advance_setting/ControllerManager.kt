@@ -75,13 +75,14 @@ class ControllerManager(layout: FrameLayout, context: Context) {
         private set
     @JvmField
     val pageSuperMenuController: PageSuperMenuController?
-    var keyboardUIController: KeyboardUIController? = null
+    private var keyboardUIControllerInstance: KeyboardUIController? = null
+    var keyboardUIController: KeyboardUIController?
         get() {
-            if (field == null) {
+            if (keyboardUIControllerInstance == null) {
                 val layoutKeyboard =
                     advanceSettingView!!.findViewById<FrameLayout?>(R.id.layer_6_keyboard)
                 if (layoutKeyboard != null) {
-                    field = KeyboardUIController(advanceSettingView, object : KeyboardUIController.OnKeyboardEventListener {
+                    keyboardUIControllerInstance = KeyboardUIController(advanceSettingView, object : KeyboardUIController.OnKeyboardEventListener {
                         override fun sendKeyEvent(down: Boolean, keyCode: Short) {
                             elementController?.sendKeyEvent(down, keyCode)
                         }
@@ -96,8 +97,13 @@ class ControllerManager(layout: FrameLayout, context: Context) {
                     }, context)
                 }
             }
-            return field
+            return keyboardUIControllerInstance
         }
+        set(value) { keyboardUIControllerInstance = value }
+
+    fun resetKeyboardInputState() {
+        keyboardUIControllerInstance?.resetInputState()
+    }
     private val context: Context
 
     init {
