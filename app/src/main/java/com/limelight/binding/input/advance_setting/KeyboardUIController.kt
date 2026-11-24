@@ -75,12 +75,17 @@ class KeyboardUIController(
     private var mainBuilt = false
     private var lastWidthPx = 0
     private var lastHeightPx = 0
-    private var storedTransX = 0f
-    private var storedTransY = 0f
+    private var fullTransX = 0f
+    private var fullTransY = 0f
+    private var miniTransX = 0f
+    private var miniTransY = 0f
     private var dragStartRawX = 0f
     private var dragStartRawY = 0f
     private var dragStartTransX = 0f
     private var dragStartTransY = 0f
+
+    private fun activeTransX(): Float = if (isMini) miniTransX else fullTransX
+    private fun activeTransY(): Float = if (isMini) miniTransY else fullTransY
 
     init {
         prefs = hostContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -152,8 +157,10 @@ class KeyboardUIController(
         val pageName = prefs.getString(KEY_PAGE, KeyboardPage.MAIN.name) ?: KeyboardPage.MAIN.name
         currentPage = runCatching { KeyboardPage.valueOf(pageName) }.getOrDefault(KeyboardPage.MAIN)
 
-        storedTransX = prefs.getFloat(KEY_X, 0f)
-        storedTransY = prefs.getFloat(KEY_Y, 0f)
+        fullTransX = prefs.getFloat(KEY_X, 0f)
+        fullTransY = prefs.getFloat(KEY_Y, 0f)
+        miniTransX = prefs.getFloat(KEY_MINI_X, 0f)
+        miniTransY = prefs.getFloat(KEY_MINI_Y, 0f)
     }
 
     private fun setupRail() {
@@ -243,8 +250,8 @@ class KeyboardUIController(
             val detector = KeyboardGestureDetector(key, this)
             key.setOnTouchListener { view, event -> detector.onTouchEvent(view, event) }
             key.setOnClickListener {
-                onKeyPress(spec.code)
-                onKeyRelease(spec.code)
+                onKeyPress(key, spec.code)
+                onKeyRelease(key, spec.code)
             }
         }
     }
@@ -329,6 +336,9 @@ class KeyboardUIController(
         btnMain.contentDescription = mainLabel
         btnNum.contentDescription = numLabel
         btnNav.contentDescription = navLabel
+        val hideSecondaryTools = dockDp < 300f
+        btnMini.visibility = if (hideSecondaryTools) View.GONE else View.VISIBLE
+        btnResize.visibility = if (hideSecondaryTools) View.GONE else View.VISIBLE
     }
 
     private fun toggleResizePopover() {
@@ -529,8 +539,8 @@ class KeyboardUIController(
             MotionEvent.ACTION_DOWN -> {
                 dragStartRawX = event.rawX
                 dragStartRawY = event.rawY
-                dragStartTransX = keyboardContent.translationX
-                dragStartTransY = keyboardContent.translationY
+                dragStartTransX = activeTransX()
+                dragStartTransY = activeTransY()
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -553,9 +563,15 @@ class KeyboardUIController(
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                storedTransX = keyboardContent.translationX
-                storedTransY = keyboardContent.translationY
-                prefs.edit().putFloat(KEY_X, storedTransX).putFloat(KEY_Y, storedTransY).apply()
+                if (isMini) {
+                    miniTransX = keyboardContent.translationX
+                    miniTransY = keyboardContent.translationY
+                    prefs.edit().putFloat(KEY_MINI_X, miniTransX).putFloat(KEY_MINI_Y, miniTransY).apply()
+                } else {
+                    fullTransX = keyboardContent.translationX
+                    fullTransY = keyboardContent.translationY
+                    prefs.edit().putFloat(KEY_X, fullTransX).putFloat(KEY_Y, fullTransY).apply()
+                }
                 return true
             }
         }
@@ -577,15 +593,21 @@ class KeyboardUIController(
         val maxX = (width - m.dockWidthPx - baseLeft).coerceAtLeast(minX)
         val minY = -baseTop
         val maxY = (height - m.dockHeightPx - baseTop).coerceAtLeast(minY)
-        storedTransX = storedTransX.coerceIn(minX, maxX)
-        storedTransY = storedTransY.coerceIn(minY, maxY)
-        keyboardContent.translationX = storedTransX
-        keyboardContent.translationY = storedTransY
+        if (isMini) {
+            miniTransX = miniTransX.coerceIn(minX, maxX)
+            miniTransY = miniTransY.coerceIn(minY, maxY)
+            keyboardContent.translationX = miniTransX
+            keyboardContent.translationY = miniTransY
+        } else {
+            fullTransX = fullTransX.coerceIn(minX, maxX)
+            fullTransY = fullTransY.coerceIn(minY, maxY)
+            keyboardContent.translationX = fullTransX
+            keyboardContent.translationY = fullTransY
+        }
         positionModifierChips()
     }
 
-    override fun onKeyPress(keyCode: Int) {
-        val view = findCurrentKeyView(keyCode)
+    override fun onKeyPress(view: View, keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
             triggerHaptic("toggle")
             val currentState = modifierStates[keyCode] ?: MOD_NEUTRAL
@@ -608,7 +630,7 @@ class KeyboardUIController(
                 syntheticShiftOwners.add(keyCode)
             }
             listener.sendKeyEvent(true, (spec?.sendCode ?: keyCode).toShort())
-            if (view != null && view.isShown) {
+            if (view.isShown) {
                 showPopup(view)
             }
         }
@@ -617,14 +639,6 @@ class KeyboardUIController(
     private fun triggerHaptic(type: String) {
         val duration = if (type == "toggle" || type == "heavy") 20 else 10
         listener.rumbleSingleVibrator(1000.toShort(), 1000.toShort(), duration)
-    }
-
-    private fun findCurrentKeyView(keyCode: Int): View? {
-        return when (currentPage) {
-            KeyboardPage.MAIN -> layoutMain.findKey(keyCode)
-            KeyboardPage.NUM -> layoutNum.findKey(keyCode)
-            KeyboardPage.NAV -> layoutNav.findKey(keyCode)
-        }
     }
 
     private fun showPopup(view: View) {
@@ -646,7 +660,7 @@ class KeyboardUIController(
         popup.visibility = View.VISIBLE
     }
 
-    override fun onKeyRelease(keyCode: Int) {
+    override fun onKeyRelease(view: View, keyCode: Int) {
         if (!modifierStates.containsKey(keyCode)) {
             releasePressedKey(keyCode)
             resetSingleModifiers()
@@ -670,7 +684,7 @@ class KeyboardUIController(
         (modifierStates[KEY_LSHIFT] ?: MOD_NEUTRAL) != MOD_NEUTRAL ||
             (modifierStates[KEY_RSHIFT] ?: MOD_NEUTRAL) != MOD_NEUTRAL
 
-    override fun onModifierHoldRelease(keyCode: Int) {
+    override fun onModifierHoldRelease(view: View, keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
             physicallyHeldModifiers.remove(keyCode)
             val currentState = modifierStates[keyCode] ?: MOD_NEUTRAL
@@ -686,9 +700,9 @@ class KeyboardUIController(
         }
     }
 
-    override fun onLongPress(keyCode: Int) = Unit
+    override fun onLongPress(view: View, keyCode: Int) = Unit
 
-    override fun onDoubleTap(keyCode: Int) {
+    override fun onDoubleTap(view: View, keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
             triggerHaptic("heavy")
             modifierStates[keyCode] = MOD_NEUTRAL
@@ -696,7 +710,7 @@ class KeyboardUIController(
             updateModifierUI(keyCode, MOD_NEUTRAL)
             listener.sendKeyEvent(false, keyCode.toShort())
         } else {
-            onKeyPress(keyCode)
+            onKeyPress(view, keyCode)
         }
     }
 
@@ -786,6 +800,7 @@ class KeyboardUIController(
     }
 
     private fun positionModifierChips() {
+        if (keyboardLayout.visibility != View.VISIBLE) return
         if (modifierChips.visibility != View.VISIBLE) return
         if (modifierChips.height <= 0) {
             modifierChips.post { positionModifierChips() }
@@ -814,6 +829,7 @@ class KeyboardUIController(
         keyboardLayout.post {
             updateLayout()
             pageVisibility()
+            positionModifierChips()
         }
     }
 
@@ -839,6 +855,8 @@ class KeyboardUIController(
         private const val KEY_HEIGHT_DP = "keyboard_key_height_dp"
         private const val KEY_X = "keyboard_x"
         private const val KEY_Y = "keyboard_y"
+        private const val KEY_MINI_X = "keyboard_mini_x"
+        private const val KEY_MINI_Y = "keyboard_mini_y"
 
         private const val MOD_NEUTRAL = 0
         private const val MOD_SINGLE = 1

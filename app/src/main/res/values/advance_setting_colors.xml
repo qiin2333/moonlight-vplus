@@ -114,7 +114,7 @@
     <color name="crown_section_label">#FFB8406C</color>
     <color name="crown_keyboard_single_background">@color/ui_shell_accent_soft</color>
     <color name="crown_keyboard_single_border">@color/ui_shell_accent</color>
-    <color name="crown_keyboard_locked_background">@color/app_dialog_accent_soft</color>
+    <color name="crown_keyboard_locked_background">@color/ui_shell_accent</color>
     <color name="crown_keyboard_locked_border">@color/ui_shell_accent</color>
     <color name="crown_keyboard_popup_background">@color/ui_shell_surface_elevated</color>
     <color name="crown_keyboard_popup_text">@color/ui_shell_text_primary</color>

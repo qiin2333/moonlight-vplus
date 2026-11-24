@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Shared immersive UI shell for system dark theme. -->
     <color name="ui_shell_surface">#E61C1D22</color>
@@ -79,7 +79,7 @@
     <color name="crown_button_focused">@color/ui_shell_surface_pressed</color>
     <color name="crown_keyboard_single_background">@color/ui_shell_accent_soft</color>
     <color name="crown_keyboard_single_border">@color/ui_shell_accent</color>
-    <color name="crown_keyboard_locked_background">@color/app_dialog_accent_soft</color>
+    <color name="crown_keyboard_locked_background">@color/ui_shell_accent</color>
     <color name="crown_keyboard_locked_border">@color/ui_shell_accent</color>
     <color name="crown_keyboard_popup_background">@color/ui_shell_surface_elevated</color>
     <color name="crown_keyboard_popup_text">@color/ui_shell_text_primary</color>

@@ -165,11 +165,16 @@ class KeyboardUIControllerTouchTest {
             activity.findViewById<View>(R.id.btn_key_page_num).performClick()
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        var symbolStart = 0
         activityRule.scenario.onActivity { activity ->
-            activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008")?.performClick()
+            symbolStart = events.size
+            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            symbol.performClick()
         }
+        val symbolEvents = events.drop(symbolStart)
         assertTrue(events.any { it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
-        assertFalse(events.any { !it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
+        assertTrue(symbolEvents.any { it.first && it.second == KeyEvent.KEYCODE_1.toShort() })
+        assertFalse(symbolEvents.any { !it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
     }
 
     @Test
@@ -208,6 +213,28 @@ class KeyboardUIControllerTouchTest {
             assertEquals((336 * density).toInt(), miniWidth)
             assertTrue(miniWidth < normalWidth)
             assertEquals(normalWidth, content.layoutParams.width)
+        }
+    }
+
+    @Test
+    fun narrowDockKeepsHideVisible() {
+        activityRule.scenario.onActivity { activity ->
+            val density = activity.resources.displayMetrics.density
+            val root = FrameLayout(activity)
+            val parent = FrameLayout(activity)
+            parent.layoutParams = FrameLayout.LayoutParams((240 * density).toInt(), FrameLayout.LayoutParams.MATCH_PARENT)
+            root.addView(parent)
+            KeyboardUIController(parent, NoOpKeyboardListener, activity).show()
+            activity.setContentView(root)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val hide = activity.findViewById<View>(R.id.btn_keyboard_hide)
+            val rect = Rect()
+            assertTrue(hide.getGlobalVisibleRect(rect))
+            assertTrue(rect.width() > 0)
+            assertEquals(View.GONE, activity.findViewById<View>(R.id.btn_keyboard_mini).visibility)
+            assertEquals(View.GONE, activity.findViewById<View>(R.id.btn_keyboard_resize).visibility)
         }
     }
 
