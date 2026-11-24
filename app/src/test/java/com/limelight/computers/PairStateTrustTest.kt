@@ -6,7 +6,9 @@ import com.limelight.nvstream.http.PairStateTrust
 import okhttp3.tls.HeldCertificate
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PairStateTrustTest {
@@ -112,6 +114,27 @@ class PairStateTrustTest {
         assertEquals(PairingManager.PairState.NOT_PAIRED, sanitized.pairState)
     }
 
+    @Test
+    fun sameHostIdentityAcceptsKnownMatchingUuid() {
+        assertTrue(PairStateTrust.isSameHostIdentity(HOST_A_UUID, HOST_A_UUID))
+    }
+
+    @Test
+    fun sameHostIdentityRejectsDifferentHostsSharingOneAddress() {
+        // Several hosts can answer on the same address (for example, separate Sunshine
+        // instances that reuse one port on the same machine). They are still different
+        // hosts and must never share poll results.
+        assertFalse(PairStateTrust.isSameHostIdentity(HOST_A_UUID, HOST_B_UUID))
+    }
+
+    @Test
+    fun sameHostIdentityAcceptsUnknownIdentity() {
+        // Manual add / first discovery has no UUID yet.
+        assertTrue(PairStateTrust.isSameHostIdentity(null, HOST_B_UUID))
+        assertTrue(PairStateTrust.isSameHostIdentity(HOST_A_UUID, null))
+        assertTrue(PairStateTrust.isSameHostIdentity(null, null))
+    }
+
     private fun pairedComputer(hasServerCert: Boolean): ComputerDetails {
         return ComputerDetails().apply {
             pairState = PairingManager.PairState.PAIRED
@@ -131,6 +154,8 @@ class PairStateTrustTest {
     }
 
     private companion object {
+        const val HOST_A_UUID = "11111111-1111-1111-1111-111111111111"
+        const val HOST_B_UUID = "22222222-2222-2222-2222-222222222222"
         val serverCertificate = HeldCertificate.Builder().commonName("test-server").build().certificate
     }
 }

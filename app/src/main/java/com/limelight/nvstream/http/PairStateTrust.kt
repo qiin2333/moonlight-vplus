@@ -26,6 +26,18 @@ internal object PairStateTrust {
         return hasLocalPairing(current) && isUntrustedNotPaired(incoming)
     }
 
+    /**
+     * Returns whether two poll participants refer to the same host.
+     *
+     * A host may be identified before its UUID is known (manual add / first discovery),
+     * so an unknown UUID is treated as compatible. Two known but different UUIDs are
+     * different hosts even when they share the same address: a single PC can dual-boot
+     * multiple Sunshine installs that all listen on the same IP and port.
+     */
+    fun isSameHostIdentity(currentUuid: String?, incomingUuid: String?): Boolean {
+        return currentUuid == null || incomingUuid == null || currentUuid == incomingUuid
+    }
+
     fun isTrustedPaired(details: ComputerDetails): Boolean {
         return details.pairState == PairingManager.PairState.PAIRED &&
                 details.serverInfoTrustedByCert &&
