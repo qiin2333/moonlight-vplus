@@ -35,6 +35,18 @@ class KeyboardPageLayoutsTest {
     }
 
     @Test
+    fun compactNumKeepsBackslashAndShiftedParentheses() {
+        val spec = KeyboardPageLayouts.spec(KeyboardPage.NUM, KeyboardTier.POCKET)
+        val keys = spec.blocks
+            .filterIsInstance<KeyboardBlockSpec.Rows>()
+            .flatMap { block -> block.rows.flatMap { it.keys } }
+        assertTrue(keys.any { it.code == KeyEvent.KEYCODE_BACKSLASH })
+        val parentheses = keys.filter { it.label == "(" || it.label == ")" }
+        assertEquals(2, parentheses.size)
+        assertTrue(parentheses.all { it.shift })
+    }
+
+    @Test
     fun fullNavPageHasFunctionRowAndSystemKeys() {
         val spec = KeyboardPageLayouts.spec(KeyboardPage.NAV, KeyboardTier.STANDARD)
         assertEquals(15, spec.units)

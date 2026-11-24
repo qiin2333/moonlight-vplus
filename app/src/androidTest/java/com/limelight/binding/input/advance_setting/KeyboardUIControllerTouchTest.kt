@@ -72,6 +72,33 @@ class KeyboardUIControllerTouchTest {
     }
 
     @Test
+    fun accessibilityClickSendsPairedKeyEvents() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                }
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+                override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
+            }
+            KeyboardUIController(parent, listener, activity).show()
+            activity.setContentView(parent)
+            parent.findViewById<View>(R.id.btn_key_page_main).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            activity.findViewById<View>(R.id.layout_main).findViewWithTag<View>("k45")?.performClick()
+        }
+        assertEquals(
+            listOf(true to KeyEvent.KEYCODE_Q.toShort(), false to KeyEvent.KEYCODE_Q.toShort()),
+            events
+        )
+    }
+
+    @Test
     fun shiftedSymbolSendsShiftChord() {
         val events = mutableListOf<Pair<Boolean, Short>>()
         activityRule.scenario.onActivity { activity ->
@@ -111,14 +138,53 @@ class KeyboardUIControllerTouchTest {
     }
 
     @Test
+    fun lockedShiftIsNotReleasedByShiftedSymbol() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                }
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+                override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
+            }
+            KeyboardUIController(parent, listener, activity).show()
+            activity.setContentView(parent)
+            parent.findViewById<View>(R.id.btn_key_page_main).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val shift = activity.findViewById<View>(R.id.layout_main).findViewWithTag<View>("k59")
+            shift.performClick()
+            shift.performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            activity.findViewById<View>(R.id.btn_key_page_num).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008")?.performClick()
+        }
+        assertTrue(events.any { it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
+        assertFalse(events.any { !it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
+    }
+
+    @Test
     fun miniModeUsesCompactDockAndRestores() {
         activityRule.scenario.onActivity { activity ->
             activity.getSharedPreferences("keyboard_settings", 0).edit()
                 .putBoolean("keyboard_mini", false)
                 .commit()
+            val density = activity.resources.displayMetrics.density
+            val root = FrameLayout(activity)
             val parent = FrameLayout(activity)
+            parent.layoutParams = FrameLayout.LayoutParams((360 * density).toInt(), FrameLayout.LayoutParams.MATCH_PARENT)
+            root.addView(parent)
             KeyboardUIController(parent, NoOpKeyboardListener, activity).show()
-            activity.setContentView(parent)
+            activity.setContentView(root)
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         var normalWidth = 0
@@ -137,7 +203,10 @@ class KeyboardUIControllerTouchTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity { activity ->
             val content = activity.findViewById<View>(R.id.keyboard_content)
-            assertTrue(miniWidth in 1 until normalWidth)
+            val density = activity.resources.displayMetrics.density
+            assertEquals((348 * density).toInt(), normalWidth)
+            assertEquals((336 * density).toInt(), miniWidth)
+            assertTrue(miniWidth < normalWidth)
             assertEquals(normalWidth, content.layoutParams.width)
         }
     }

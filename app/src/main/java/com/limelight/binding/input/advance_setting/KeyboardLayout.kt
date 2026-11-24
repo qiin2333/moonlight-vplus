@@ -64,6 +64,7 @@ internal data class KeyboardMetrics(
     val blockGapPx: Float,
     val keyWidthPx: Float,
     val keyHeightPx: Float,
+    val maxKeyHeightDp: Float,
     val fieldWidthPx: Float,
     val fieldHeightPx: Float,
     val gutterPx: Float,
@@ -92,7 +93,7 @@ internal object KeyboardGeometry {
         mini: Boolean = false,
         keyHeightOverrideDp: Float? = null
     ): KeyboardMetrics {
-        val densitySafe = density.coerceAtLeast(1f)
+        val densitySafe = if (density > 0f) density else 1f
         val widthDp = screenWidthPx / densitySafe
         val heightDp = screenHeightPx / densitySafe
         val tier = if (mini) KeyboardTier.POCKET else tierFor(widthDp)
@@ -136,7 +137,11 @@ internal object KeyboardGeometry {
         val fieldWidthDp = totalColumns * keyWidthDp + internalGaps
         val gutterDp = ((contentWidthDp - fieldWidthDp) / 2f).coerceAtLeast(0f)
         val verticalGaps = (rows - 1) * keyGapDp
-        val maxKeyHeightDp = if (tier == KeyboardTier.POCKET) 46f else 50f
+        val tierMaxKeyHeightDp = if (tier == KeyboardTier.POCKET) 46f else 50f
+        val viewportMaxKeyHeightDp = (heightDp - marginDp - railDp - railGapDp - padDp - verticalGaps) / rows
+        val maxKeyHeightDp = floor(
+            min(tierMaxKeyHeightDp, viewportMaxKeyHeightDp).toDouble()
+        ).toFloat().coerceAtLeast(31f)
         val computedKeyHeightDp = floor(
             ((heightDp * 0.64f - railDp - railGapDp - padDp - verticalGaps) / rows).toDouble()
         ).toFloat()
@@ -168,6 +173,7 @@ internal object KeyboardGeometry {
             blockGapPx = blockGapDp * densitySafe,
             keyWidthPx = keyWidthDp * densitySafe,
             keyHeightPx = keyHeightPx,
+            maxKeyHeightDp = maxKeyHeightDp,
             fieldWidthPx = fieldWidthDp * densitySafe,
             fieldHeightPx = fieldHeightPx.toFloat(),
             gutterPx = gutterDp * densitySafe,

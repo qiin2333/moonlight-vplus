@@ -79,6 +79,20 @@ class KeyboardGeometryTest {
     }
 
     @Test
+    fun densityBelowOneUsesRealDensity() {
+        val metrics = KeyboardGeometry.compute(480f, 640f, 0.75f)
+        assertEquals(KeyboardTier.STANDARD, metrics.tier)
+        assertEquals(640f, metrics.screenWidthDp, 0.01f)
+    }
+
+    @Test
+    fun keyHeightOverrideIsCappedByViewport() {
+        val metrics = KeyboardGeometry.compute(640f, 280f, 1f, keyHeightOverrideDp = 50f)
+        assertEquals(38f, metrics.maxKeyHeightDp, 0.01f)
+        assertTrue(metrics.dockHeightPx + metrics.marginPx <= 280)
+    }
+
+    @Test
     fun breakpointChangesAt600And900() {
         assertEquals(KeyboardTier.POCKET, KeyboardGeometry.compute(599f, 600f, 1f).tier)
         assertEquals(KeyboardTier.STANDARD, KeyboardGeometry.compute(600f, 600f, 1f).tier)

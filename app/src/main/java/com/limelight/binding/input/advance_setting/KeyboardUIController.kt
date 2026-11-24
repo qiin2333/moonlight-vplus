@@ -57,6 +57,7 @@ class KeyboardUIController(
     private val modifierStates: MutableMap<Int, Int> = HashMap()
     private val physicallyHeldModifiers: MutableSet<Int> = HashSet()
     private val pressedSpecs: MutableMap<Int, KeySpec> = HashMap()
+    private val syntheticShiftOwners: MutableSet<Int> = HashSet()
 
     private var currentPage = KeyboardPage.MAIN
     private var opacityPercent = 100
@@ -144,7 +145,7 @@ class KeyboardUIController(
             prefs.getInt(KEY_OPACITY, 10) * 10
         }
         opacityPercent = storedPercent.coerceIn(30, 100)
-        isMini = prefs.getBoolean(KEY_MINI, false)
+        isMini = prefs.getBoolean(KEY_MINI, prefs.getBoolean(KEY_IS_MINI, false))
         val storedHeight = prefs.getFloat(KEY_HEIGHT_DP, -1f)
         keyHeightOverrideDp = if (storedHeight >= 31f) storedHeight else null
 
@@ -241,6 +242,10 @@ class KeyboardUIController(
             key.tag = "k" + spec.code
             val detector = KeyboardGestureDetector(key, this)
             key.setOnTouchListener { view, event -> detector.onTouchEvent(view, event) }
+            key.setOnClickListener {
+                onKeyPress(spec.code)
+                onKeyRelease(spec.code)
+            }
         }
     }
 
@@ -351,7 +356,12 @@ class KeyboardUIController(
         resizeValue = value
         resizePresets = presets
         val current = currentKeyHeightDp()
-        seek.progress = (current - 31).coerceIn(0, 19)
+        val maxHeight = effectiveMaxKeyHeightDp()
+        seek.max = (maxHeight - 31).coerceAtLeast(0)
+        seek.progress = (current - 31).coerceIn(0, seek.max)
+        presets.forEach { preset ->
+            preset.visibility = if ((preset.tag as? Int ?: 0) <= maxHeight) View.VISIBLE else View.GONE
+        }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) setKeyHeightDp(progress + 31)
@@ -392,15 +402,19 @@ class KeyboardUIController(
         resizePopup = popup
     }
 
+    private fun effectiveMaxKeyHeightDp(): Int =
+        (metrics?.maxKeyHeightDp ?: 50f).roundToInt().coerceIn(31, 50)
+
     private fun currentKeyHeightDp(): Int {
         val density = hostContext.resources.displayMetrics.density
         val heightPx = metrics?.keyHeightPx ?: (42f * density)
-        return (heightPx / density).roundToInt().coerceIn(31, 50)
+        return (heightPx / density).roundToInt().coerceIn(31, effectiveMaxKeyHeightDp())
     }
 
     private fun setKeyHeightDp(heightDp: Int) {
-        keyHeightOverrideDp = heightDp.coerceIn(31, 50).toFloat()
-        prefs.edit().putFloat(KEY_HEIGHT_DP, keyHeightOverrideDp!!).apply()
+        val applied = heightDp.coerceIn(31, effectiveMaxKeyHeightDp())
+        keyHeightOverrideDp = applied.toFloat()
+        prefs.edit().putFloat(KEY_HEIGHT_DP, applied.toFloat()).apply()
         lastWidthPx = 0
         lastHeightPx = 0
         updateLayout()
@@ -409,12 +423,17 @@ class KeyboardUIController(
 
     private fun applyKeyHeightPopover() {
         val current = currentKeyHeightDp()
+        val maxHeight = effectiveMaxKeyHeightDp()
         resizeSeek?.let { seek ->
-            val target = (current - 31).coerceIn(0, 19)
+            seek.max = (maxHeight - 31).coerceAtLeast(0)
+            val target = (current - 31).coerceIn(0, seek.max)
             if (seek.progress != target) seek.progress = target
         }
         resizeValue?.text = current.toString() + "dp"
-        resizePresets.forEach { preset -> preset.isSelected = preset.tag == current }
+        resizePresets.forEach { preset ->
+            preset.visibility = if ((preset.tag as? Int ?: 0) <= maxHeight) View.VISIBLE else View.GONE
+            preset.isSelected = preset.tag == current
+        }
         btnResize.contentDescription = hostContext.getString(R.string.keyboard_resize) + " " + current + "dp"
     }
 
@@ -493,8 +512,8 @@ class KeyboardUIController(
     }
 
     private fun applyOpacity() {
-        keyboardLayout.alpha = opacityPercent / 100f
-        modifierChips.alpha = opacityPercent / 100f
+        keyboardContent.alpha = opacityPercent / 100f
+        keyboardLayout.alpha = 1f
         btnOpacity.contentDescription = hostContext.getString(R.string.keyboard_opacity) + " " + opacityPercent + "%"
         opacitySeek?.let { seek ->
             val target = (opacityPercent - 30).coerceIn(0, 70)
@@ -582,8 +601,11 @@ class KeyboardUIController(
             triggerHaptic("normal")
             val spec = (view as? KeyboardKeyView)?.keySpec
             pressedSpecs[keyCode] = spec ?: KeySpec(label = "")
-            if (spec?.shift == true) {
-                listener.sendKeyEvent(true, KEY_LSHIFT.toShort())
+            if (spec?.shift == true && !hasActiveExplicitShift()) {
+                if (syntheticShiftOwners.isEmpty()) {
+                    listener.sendKeyEvent(true, KEY_LSHIFT.toShort())
+                }
+                syntheticShiftOwners.add(keyCode)
             }
             listener.sendKeyEvent(true, (spec?.sendCode ?: keyCode).toShort())
             if (view != null && view.isShown) {
@@ -637,10 +659,16 @@ class KeyboardUIController(
     private fun releasePressedKey(keyCode: Int) {
         val spec = pressedSpecs.remove(keyCode)
         listener.sendKeyEvent(false, (spec?.sendCode ?: keyCode).toShort())
-        if (spec?.shift == true) {
+        if (spec?.shift == true && syntheticShiftOwners.remove(keyCode) &&
+            syntheticShiftOwners.isEmpty() && !hasActiveExplicitShift()
+        ) {
             listener.sendKeyEvent(false, KEY_LSHIFT.toShort())
         }
     }
+
+    private fun hasActiveExplicitShift(): Boolean =
+        (modifierStates[KEY_LSHIFT] ?: MOD_NEUTRAL) != MOD_NEUTRAL ||
+            (modifierStates[KEY_RSHIFT] ?: MOD_NEUTRAL) != MOD_NEUTRAL
 
     override fun onModifierHoldRelease(keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
@@ -765,7 +793,13 @@ class KeyboardUIController(
         }
         val density = hostContext.resources.displayMetrics.density
         modifierChips.x = keyboardContent.x + (metrics?.padPx ?: 0)
-        modifierChips.y = (keyboardContent.y - modifierChips.height - 4 * density).coerceAtLeast(0f)
+        val above = keyboardContent.y - modifierChips.height - 4 * density
+        val below = keyboardContent.y + keyboardContent.height + 4 * density
+        val fallback = if (above >= 0f) above else below
+        modifierChips.y = fallback.coerceIn(
+            0f,
+            (keyboardLayout.height - modifierChips.height).toFloat().coerceAtLeast(0f)
+        )
     }
 
     fun toggle() {
@@ -801,6 +835,7 @@ class KeyboardUIController(
         private const val KEY_OPACITY_PERCENT = "keyboard_opacity_percent"
         private const val KEY_PAGE = "keyboard_page"
         private const val KEY_MINI = "keyboard_mini"
+        private const val KEY_IS_MINI = "keyboard_is_mini"
         private const val KEY_HEIGHT_DP = "keyboard_key_height_dp"
         private const val KEY_X = "keyboard_x"
         private const val KEY_Y = "keyboard_y"

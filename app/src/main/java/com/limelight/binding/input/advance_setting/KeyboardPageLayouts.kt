@@ -215,7 +215,7 @@ internal object KeyboardPageLayouts {
         row(
             normal(KeyEvent.KEYCODE_MINUS, "-"), normal(KeyEvent.KEYCODE_SLASH, "/"),
             shifted(KeyEvent.KEYCODE_SEMICOLON, ":"), normal(KeyEvent.KEYCODE_SEMICOLON, ";"),
-            normal(KeyEvent.KEYCODE_9, "("), normal(KeyEvent.KEYCODE_0, ")"),
+            shifted(KeyEvent.KEYCODE_9, "("), shifted(KeyEvent.KEYCODE_0, ")"),
             shifted(KeyEvent.KEYCODE_4, "$"), shifted(KeyEvent.KEYCODE_7, "&"),
             shifted(KeyEvent.KEYCODE_2, "@"), shifted(KeyEvent.KEYCODE_APOSTROPHE, "\"")
         ),
@@ -224,7 +224,8 @@ internal object KeyboardPageLayouts {
             shifted(KeyEvent.KEYCODE_LEFT_BRACKET, "{"), shifted(KeyEvent.KEYCODE_RIGHT_BRACKET, "}"),
             shifted(KeyEvent.KEYCODE_3, "#"), shifted(KeyEvent.KEYCODE_5, "%"),
             shifted(KeyEvent.KEYCODE_6, "^"), shifted(KeyEvent.KEYCODE_8, "*"),
-            shifted(KeyEvent.KEYCODE_EQUALS, "+"), normal(KeyEvent.KEYCODE_EQUALS, "=")
+            shifted(KeyEvent.KEYCODE_EQUALS, "+"), normal(KeyEvent.KEYCODE_EQUALS, "="),
+            normal(KeyEvent.KEYCODE_BACKSLASH, "\\")
         ),
         row(
             page("ABC", KeyboardPage.MAIN, 1.2f), space(2.2f),
