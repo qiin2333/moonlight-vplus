@@ -24,6 +24,9 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.InetAddress
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class AccessibilityControllerInterceptionTest {
@@ -164,6 +167,63 @@ class AccessibilityControllerInterceptionTest {
                 assertEquals(0, field(handler, "modifierFlags"))
             }
         }
+    }
+
+    @Test
+    fun concurrentModifierEventsAreSafeAcrossInputThreads() = withGame { scenario ->
+        lateinit var handler: KeyboardInputHandler
+        scenario.onActivity { game -> connect(game); handler = game.keyboardInputHandler }
+        val method = handler.javaClass.declaredMethods.single { it.name == "handleSpecialKeys" }.apply { isAccessible = true }
+        val origin = handler.javaClass.declaredClasses.single { it.simpleName == "KeyOrigin" }
+            .enumConstants.single { (it as Enum<*>).name == "ORDINARY" }
+        val start = CountDownLatch(1)
+        val done = CountDownLatch(2)
+        val error = AtomicReference<Throwable>()
+        for (code in listOf(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT)) {
+            Thread {
+                try {
+                    start.await()
+                    repeat(3000) {
+                        method.invoke(handler, code, true, false, null, origin)
+                        method.invoke(handler, code, false, false, null, origin)
+                    }
+                } catch (t: Throwable) {
+                    error.compareAndSet(null, t)
+                } finally {
+                    done.countDown()
+                }
+            }.start()
+        }
+        start.countDown()
+        assertTrue("concurrent inputs did not finish", done.await(20, TimeUnit.SECONDS))
+        assertNull(error.get())
+        assertEquals(0, field(handler, "modifierFlags"))
+    }
+
+    @Test
+    fun focusClearCancelsShortcutQueuedByInputThread() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val handler = game.keyboardInputHandler
+            val keys = listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT,
+                KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_Q)
+            val error = AtomicReference<Throwable>()
+            val worker = Thread {
+                try {
+                    keys.forEach { handler.keyboardEvent(true, it.toShort(), false) }
+                    keys.asReversed().forEach { handler.keyboardEvent(false, it.toShort(), false) }
+                } catch (t: Throwable) {
+                    error.set(t)
+                }
+            }
+            worker.start()
+            worker.join(5000)
+            assertFalse("input thread did not finish", worker.isAlive)
+            assertNull(error.get())
+            handler.clearModifierState()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        scenario.onActivity { assertFalse(it.isFinishing) }
     }
 
     @Test

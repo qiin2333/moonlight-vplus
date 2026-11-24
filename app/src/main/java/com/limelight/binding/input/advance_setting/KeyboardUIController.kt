@@ -491,7 +491,8 @@ class KeyboardUIController(
             View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
-        val popup = PopupWindow(content, widthPx, content.measuredHeight, true)
+        // Do not steal the game window's focus: focus changes clear its modifier state.
+        val popup = PopupWindow(content, widthPx, content.measuredHeight, false)
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popup.isOutsideTouchable = true
         popup.elevation = 18 * density
