@@ -7,6 +7,8 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.View
+import android.widget.FrameLayout
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,6 +19,7 @@ import androidx.test.runner.lifecycle.Stage
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.InputDeviceContext
 import com.limelight.binding.input.StartGestureReducer
+import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.services.KeyboardAccessibilityService
@@ -224,6 +227,39 @@ class AccessibilityControllerInterceptionTest {
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         scenario.onActivity { assertFalse(it.isFinishing) }
+    }
+
+    @Test
+    fun focusLossReleasesVirtualKeysWithoutCompletingPendingShortcut() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val events = mutableListOf<Pair<Boolean, Short>>()
+            val controller = KeyboardUIController(FrameLayout(game), object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                    game.keyboardInputHandler.keyboardEvent(down, keyCode, false)
+                }
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+            }, game)
+            Game::class.java.getDeclaredField("standaloneKeyboardUI").apply { isAccessible = true }.set(game, controller)
+            val view = View(game)
+            val modifiers = listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT)
+            modifiers.forEach { controller.onKeyPress(view, it); controller.onKeyRelease(view, it) }
+            controller.onKeyPress(view, KeyEvent.KEYCODE_Q)
+            assertEquals(KeyEvent.KEYCODE_Q, field(game.keyboardInputHandler, "specialKeyCode"))
+
+            val beforeFocus = events.size
+            game.onWindowFocusChanged(false)
+            assertFalse(game.isFinishing)
+            assertEquals(KeyEvent.KEYCODE_UNKNOWN, field(game.keyboardInputHandler, "specialKeyCode"))
+            assertEquals(0, field(game.keyboardInputHandler, "modifierFlags"))
+            val releases = events.drop(beforeFocus)
+            assertEquals(4, releases.size)
+            assertTrue(releases.all { !it.first })
+            assertEquals((modifiers + KeyEvent.KEYCODE_Q).map { it.toShort() }.toSet(), releases.map { it.second }.toSet())
+            game.onWindowFocusChanged(true)
+            assertEquals(beforeFocus + 4, events.size)
+        }
     }
 
     @Test

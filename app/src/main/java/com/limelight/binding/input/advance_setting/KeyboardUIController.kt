@@ -844,6 +844,30 @@ class KeyboardUIController(
         modifierChips.y = y
     }
 
+    fun resetInputState() {
+        if (pressedSpecs.isEmpty() && physicallyHeldModifiers.isEmpty() &&
+            modifierStates.values.all { it == MOD_NEUTRAL } && !sentLeftShift && !sentRightShift
+        ) return
+
+        val pressedCodes = pressedSpecs.values.map { it.sendCode }.toSet()
+        pressedSpecs.clear()
+        pressedCodes.forEach { listener.sendKeyEvent(false, it.toShort()) }
+        val activeModifiers = modifierStates.filterValues { it != MOD_NEUTRAL }.keys.toList()
+        modifierStates.keys.forEach { modifierStates[it] = MOD_NEUTRAL }
+        physicallyHeldModifiers.clear()
+        activeModifiers.filter { it != KEY_LSHIFT && it != KEY_RSHIFT }
+            .forEach { listener.sendKeyEvent(false, it.toShort()) }
+        syncShiftKeys()
+        keyPopup?.visibility = View.GONE
+
+        if (mainBuilt) {
+            val keys = layoutMain.keys() + layoutNum.keys() + layoutNav.keys()
+            keys.forEach { it.isPressed = false }
+            attachKeys(keys)
+            applyModifierStates()
+        }
+    }
+
     fun toggle() {
         if (isVisible) hide() else show()
     }
