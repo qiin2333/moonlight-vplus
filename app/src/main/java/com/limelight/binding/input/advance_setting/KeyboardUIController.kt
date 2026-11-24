@@ -257,7 +257,7 @@ class KeyboardUIController(
             val spec = key.keySpec ?: return@forEach
             if (spec.isPageKey || spec.code <= 0) return@forEach
             key.tag = "k" + spec.code
-            val detector = KeyboardGestureDetector(key, this)
+            val detector = KeyboardGestureDetector(this)
             key.setOnTouchListener { view, event -> detector.onTouchEvent(view, event) }
             key.setOnClickListener {
                 if (pressedSpecs.containsKey(key)) return@setOnClickListener
@@ -268,9 +268,11 @@ class KeyboardUIController(
     }
 
     private fun applyModifierStates() {
-        modifierStates.forEach { (keyCode, state) ->
-            updateModifierUI(keyCode, state)
+        if (!mainBuilt) return
+        (layoutMain.keys() + layoutNum.keys() + layoutNav.keys()).forEach { key ->
+            key.keySpec?.let { spec -> modifierStates[spec.code]?.let { key.setModifierState(it) } }
         }
+        refreshModifierChips()
     }
 
     private fun pageVisibility() {
@@ -372,13 +374,6 @@ class KeyboardUIController(
         resizeSeek = seek
         resizeValue = value
         resizePresets = presets
-        val current = currentKeyHeightDp()
-        val maxHeight = effectiveMaxKeyHeightDp()
-        seek.max = (maxHeight - 31).coerceAtLeast(0)
-        seek.progress = (current - 31).coerceIn(0, seek.max)
-        presets.forEach { preset ->
-            preset.visibility = if ((preset.tag as? Int ?: 0) <= maxHeight) View.VISIBLE else View.GONE
-        }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) setKeyHeightDp(progress + 31)
@@ -446,7 +441,6 @@ class KeyboardUIController(
         opacityValue = value
         opacityPresets = presets
         seek.max = 70
-        seek.progress = (opacityPercent - 30).coerceIn(0, 70)
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) setOpacityPercent(progress + 30)
@@ -620,12 +614,12 @@ class KeyboardUIController(
             triggerHaptic("normal")
             if (pressedSpecs.containsKey(view)) return
             val spec = (view as? KeyboardKeyView)?.keySpec ?: KeySpec(code = keyCode, label = "")
-            val alreadyPressed = pressedSpecs.values.any { it.sendCode == spec.sendCode }
+            val alreadyPressed = pressedSpecs.values.any { it.code == spec.code }
             pressedSpecs[view] = spec
             if (spec.shift) {
                 syncShiftKeys()
             }
-            if (!alreadyPressed) listener.sendKeyEvent(true, spec.sendCode.toShort())
+            if (!alreadyPressed) listener.sendKeyEvent(true, spec.code.toShort())
             if (view.isShown) {
                 showPopup(view)
             }
@@ -668,8 +662,8 @@ class KeyboardUIController(
 
     private fun releasePressedKey(view: View): Boolean {
         val spec = pressedSpecs.remove(view) ?: return false
-        if (pressedSpecs.values.none { it.sendCode == spec.sendCode }) {
-            listener.sendKeyEvent(false, spec.sendCode.toShort())
+        if (pressedSpecs.values.none { it.code == spec.code }) {
+            listener.sendKeyEvent(false, spec.code.toShort())
         }
         if (spec.shift) {
             syncShiftKeys()
@@ -716,8 +710,6 @@ class KeyboardUIController(
             keyPopup?.visibility = View.GONE
         }
     }
-
-    override fun onLongPress(view: View, keyCode: Int) = Unit
 
     override fun onDoubleTap(view: View, keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
@@ -813,7 +805,6 @@ class KeyboardUIController(
             }
         }
         applyModifierStates()
-        refreshModifierChips()
     }
 
     private fun positionModifierChips() {
@@ -849,7 +840,7 @@ class KeyboardUIController(
             modifierStates.values.all { it == MOD_NEUTRAL } && !sentLeftShift && !sentRightShift
         ) return
 
-        val pressedCodes = pressedSpecs.values.map { it.sendCode }.toSet()
+        val pressedCodes = pressedSpecs.values.map { it.code }.toSet()
         pressedSpecs.clear()
         pressedCodes.forEach { listener.sendKeyEvent(false, it.toShort()) }
         val activeModifiers = modifierStates.filterValues { it != MOD_NEUTRAL }.keys.toList()

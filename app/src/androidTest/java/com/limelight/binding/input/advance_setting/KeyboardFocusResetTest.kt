@@ -44,7 +44,7 @@ class KeyboardFocusResetTest {
             val shift = checkNotNull(main.findViewWithTag<View>("k${KeyEvent.KEYCODE_SHIFT_LEFT}"))
             val ctrl = checkNotNull(main.findViewWithTag<View>("k${KeyEvent.KEYCODE_CTRL_LEFT}"))
             val q = checkNotNull(main.findViewWithTag<View>("k${KeyEvent.KEYCODE_Q}"))
-            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            val symbol = findShiftedOne(activity.findViewById(R.id.layout_num))
 
             touch(shift, MotionEvent.ACTION_DOWN)
             touch(shift, MotionEvent.ACTION_UP)
@@ -53,7 +53,7 @@ class KeyboardFocusResetTest {
             controller.onKeyPress(ctrl, KeyEvent.KEYCODE_CTRL_LEFT) // Lock Ctrl.
             controller.onKeyRelease(ctrl, KeyEvent.KEYCODE_CTRL_LEFT)
             controller.onKeyPress(q, KeyEvent.KEYCODE_Q)
-            controller.onKeyPress(symbol, 1008)
+            controller.onKeyPress(symbol, KeyEvent.KEYCODE_1)
             assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.keyboard_modifier_chips).visibility)
 
             val beforeReset = events.size
@@ -68,7 +68,7 @@ class KeyboardFocusResetTest {
 
             controller.resetInputState()
             controller.onKeyRelease(q, KeyEvent.KEYCODE_Q)
-            controller.onKeyRelease(symbol, 1008)
+            controller.onKeyRelease(symbol, KeyEvent.KEYCODE_1)
             controller.onModifierHoldRelease(shift, KeyEvent.KEYCODE_SHIFT_LEFT)
             assertEquals(beforeReset + 4, events.size)
 

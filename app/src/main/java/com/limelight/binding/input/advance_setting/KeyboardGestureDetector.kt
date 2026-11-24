@@ -2,19 +2,16 @@ package com.limelight.binding.input.advance_setting
 
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 
-class KeyboardGestureDetector(view: View, private val listener: GestureListener) {
+class KeyboardGestureDetector(private val listener: GestureListener) {
 
     interface GestureListener {
         fun onKeyPress(view: View, keyCode: Int)
         fun onKeyRelease(view: View, keyCode: Int)
         fun onModifierHoldRelease(view: View, keyCode: Int)
-        fun onLongPress(view: View, keyCode: Int)
         fun onDoubleTap(view: View, keyCode: Int)
     }
 
-    private val touchSlop = ViewConfiguration.get(view.context).scaledTouchSlop
     private var lastDownTime = 0L
     private var downTimeMs = 0L
 

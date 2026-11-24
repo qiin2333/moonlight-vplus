@@ -33,8 +33,7 @@ internal data class KeySpec(
     val weight: Float = 1f,
     val kind: KeyKind = KeyKind.NORMAL,
     val page: KeyboardPage? = null,
-    val shift: Boolean = false,
-    val sendCode: Int = code
+    val shift: Boolean = false
 ) {
     val isPageKey: Boolean get() = page != null
     val isModifier: Boolean get() = kind == KeyKind.MODIFIER

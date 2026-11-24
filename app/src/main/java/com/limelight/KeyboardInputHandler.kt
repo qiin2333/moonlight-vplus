@@ -30,7 +30,6 @@ class KeyboardInputHandler(private val game: Game) {
     private var accessibilityModifierFlags = 0
     private val ordinaryModifierKeys = HashSet<PhysicalKey>()
     private val accessibilityModifierKeys = HashSet<PhysicalKey>()
-    private var waitingForAllModifiersUp = false
     private var specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
     private var specialKeyUsesAccessibility = false
     private var shortcutGeneration = 0L
@@ -132,7 +131,7 @@ class KeyboardInputHandler(private val game: Game) {
             }
 
             // Handle the special combos on the key up
-            if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
+            if (specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
                 if (origin == KeyOrigin.ACCESSIBILITY) specialKeyUsesAccessibility = true
                 if (specialKeyCode == androidKeyCode) {
                     return@synchronized true
@@ -145,7 +144,6 @@ class KeyboardInputHandler(private val game: Game) {
                     generation = shortcutGeneration
                     accessibilityGeneration = accessibilityShortcutGeneration
                     specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-                    waitingForAllModifiersUp = false
                     specialKeyUsesAccessibility = false
                 }
             } else if ((modifierFlags and (KeyboardPacket.MODIFIER_CTRL.toInt() or KeyboardPacket.MODIFIER_ALT.toInt() or KeyboardPacket.MODIFIER_SHIFT.toInt())) ==
@@ -160,7 +158,6 @@ class KeyboardInputHandler(private val game: Game) {
                         // Let the host keep Ctrl+Alt+Shift+M when the local shortcut is unavailable.
                         if (androidKeyCode == KeyEvent.KEYCODE_M && !game.prefConfig.supportsDesktopMouseMode) return@synchronized false
                         specialKeyCode = androidKeyCode
-                        waitingForAllModifiersUp = true
                         specialKeyUsesAccessibility = origin == KeyOrigin.ACCESSIBILITY || accessibilityModifierFlags != 0
                         return@synchronized true
                     }
@@ -221,7 +218,6 @@ class KeyboardInputHandler(private val game: Game) {
         accessibilityModifierFlags = 0
         modifierFlags = 0
         specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-        waitingForAllModifiersUp = false
         specialKeyUsesAccessibility = false
     }
 
@@ -257,7 +253,6 @@ class KeyboardInputHandler(private val game: Game) {
         synchronized(this) {
             shortcutGeneration++
             specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-            waitingForAllModifiersUp = false
             specialKeyUsesAccessibility = false
         }
         cancelAccessibilityToggle()
@@ -299,7 +294,6 @@ class KeyboardInputHandler(private val game: Game) {
             modifierFlags = ordinaryModifierFlags
             if (specialKeyUsesAccessibility) {
                 specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-                waitingForAllModifiersUp = false
                 specialKeyUsesAccessibility = false
             }
         }

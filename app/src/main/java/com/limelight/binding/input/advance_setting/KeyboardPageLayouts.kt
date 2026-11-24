@@ -35,7 +35,6 @@ internal data class KeyboardPageSpec(
 }
 
 internal object KeyboardPageLayouts {
-    private const val SHIFTED_CODE_BASE = 1000
     private const val BACKSPACE = KeyEvent.KEYCODE_DEL
     private const val ENTER = KeyEvent.KEYCODE_ENTER
     private const val SPACE = KeyEvent.KEYCODE_SPACE
@@ -133,11 +132,10 @@ internal object KeyboardPageLayouts {
 
     private fun shifted(code: Int, label: String, weight: Float = 1f): KeySpec =
         KeySpec(
-            code = SHIFTED_CODE_BASE + code,
+            code = code,
             label = label,
             weight = weight,
-            shift = true,
-            sendCode = code
+            shift = true
         )
 
     private fun special(code: Int, label: String, weight: Float = 1f, kind: KeyKind = KeyKind.SPECIAL): KeySpec =

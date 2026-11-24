@@ -76,9 +76,9 @@ class KeyboardPageLayoutsTest {
     @Test
     fun compactSymbolsIncludeApostropheAndBothGraveVariants() {
         val keys = KeyboardPageLayouts.spec(KeyboardPage.NUM, KeyboardTier.POCKET).rowKeys()
-        assertTrue(keys.any { it.label == "'" && it.sendCode == KeyEvent.KEYCODE_APOSTROPHE && !it.shift })
-        assertTrue(keys.any { it.label == "`" && it.sendCode == KeyEvent.KEYCODE_GRAVE && !it.shift })
-        assertTrue(keys.any { it.label == "~" && it.sendCode == KeyEvent.KEYCODE_GRAVE && it.shift })
+        assertTrue(keys.any { it.label == "'" && it.code == KeyEvent.KEYCODE_APOSTROPHE && !it.shift })
+        assertTrue(keys.any { it.label == "`" && it.code == KeyEvent.KEYCODE_GRAVE && !it.shift })
+        assertTrue(keys.any { it.label == "~" && it.code == KeyEvent.KEYCODE_GRAVE && it.shift })
     }
 
     @Test
@@ -91,7 +91,7 @@ class KeyboardPageLayoutsTest {
         assertEquals(4, numpad.rows)
         val keys = numpad.rowKeys()
         for (code in KeyEvent.KEYCODE_NUM_LOCK..KeyEvent.KEYCODE_NUMPAD_DOT) {
-            assertTrue("numpad code " + code, keys.any { it.sendCode == code })
+            assertTrue("numpad code " + code, keys.any { it.code == code })
         }
         assertTrue(keys.any { it.page == KeyboardPage.NUM })
         assertTrue(keys.any { it.page == KeyboardPage.MAIN })

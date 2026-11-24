@@ -24,6 +24,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+internal fun findShiftedOne(root: View): View {
+    fun find(view: View): KeyboardKeyView? {
+        if (view is KeyboardKeyView && view.keySpec?.let {
+                it.code == KeyEvent.KEYCODE_1 && it.shift && it.label == "!"
+            } == true) return view
+        if (view is ViewGroup) for (i in 0 until view.childCount) {
+            find(view.getChildAt(i))?.let { return it }
+        }
+        return null
+    }
+    return checkNotNull(find(root)) { "Shifted 1 key is missing" }
+}
+
 @RunWith(AndroidJUnit4::class)
 class KeyboardUIControllerTouchTest {
     @get:Rule
@@ -120,7 +133,7 @@ class KeyboardUIControllerTouchTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity { activity ->
             val numPage = activity.findViewById<View>(R.id.layout_num)
-            val key = numPage.findViewWithTag<View>("k1008")
+            val key = findShiftedOne(numPage)
             val time = SystemClock.uptimeMillis()
             for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
                 val event = MotionEvent.obtain(time, time, action, key.width / 2f, key.height / 2f, 0)
@@ -170,7 +183,7 @@ class KeyboardUIControllerTouchTest {
         var symbolStart = 0
         activityRule.scenario.onActivity { activity ->
             symbolStart = events.size
-            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            val symbol = findShiftedOne(activity.findViewById(R.id.layout_num))
             symbol.performClick()
         }
         val symbolEvents = events.drop(symbolStart)
@@ -201,8 +214,8 @@ class KeyboardUIControllerTouchTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity { activity ->
             val c = checkNotNull(controller)
-            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
-            c.onKeyPress(symbol, 1008)
+            val symbol = findShiftedOne(activity.findViewById(R.id.layout_num))
+            c.onKeyPress(symbol, KeyEvent.KEYCODE_1)
             c.onKeyPress(symbol, KeyEvent.KEYCODE_SHIFT_RIGHT)
             assertEquals(listOf(
                 true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
@@ -210,7 +223,7 @@ class KeyboardUIControllerTouchTest {
                 true to KeyEvent.KEYCODE_SHIFT_RIGHT.toShort(),
                 false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
             ), events)
-            c.onKeyRelease(symbol, 1008)
+            c.onKeyRelease(symbol, KeyEvent.KEYCODE_1)
             assertEquals(listOf(
                 true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
                 true to KeyEvent.KEYCODE_1.toShort(),
@@ -237,11 +250,11 @@ class KeyboardUIControllerTouchTest {
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity { activity ->
-            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            val symbol = findShiftedOne(activity.findViewById(R.id.layout_num))
             val left = KeyEvent.KEYCODE_SHIFT_LEFT
             controller.onKeyPress(symbol, left)
             controller.onKeyRelease(symbol, left)
-            controller.onKeyPress(symbol, 1008)
+            controller.onKeyPress(symbol, KeyEvent.KEYCODE_1)
             val chips = activity.findViewById<ViewGroup>(R.id.keyboard_modifier_chips)
             assertTrue(chips.getChildAt(0).performClick())
             assertEquals(View.GONE, chips.visibility)
@@ -249,7 +262,7 @@ class KeyboardUIControllerTouchTest {
                 true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
                 true to KeyEvent.KEYCODE_1.toShort()
             ), events)
-            controller.onKeyRelease(symbol, 1008)
+            controller.onKeyRelease(symbol, KeyEvent.KEYCODE_1)
         }
         assertEquals(listOf(
             true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
@@ -275,12 +288,12 @@ class KeyboardUIControllerTouchTest {
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity { activity ->
-            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            val symbol = findShiftedOne(activity.findViewById(R.id.layout_num))
             val right = KeyEvent.KEYCODE_SHIFT_RIGHT
             controller.onKeyPress(symbol, right)
-            controller.onKeyPress(symbol, 1008)
+            controller.onKeyPress(symbol, KeyEvent.KEYCODE_1)
             controller.onModifierHoldRelease(symbol, right)
-            controller.onKeyRelease(symbol, 1008)
+            controller.onKeyRelease(symbol, KeyEvent.KEYCODE_1)
         }
         assertEquals(listOf(
             true to KeyEvent.KEYCODE_SHIFT_RIGHT.toShort(),
@@ -303,7 +316,7 @@ class KeyboardUIControllerTouchTest {
             fun key(spec: KeySpec): KeyboardKeyView = KeyboardKeyView(activity).apply {
                 bind(spec, 40f) { }
                 tag = "k${spec.code}"
-                val detector = KeyboardGestureDetector(this, controller)
+                val detector = KeyboardGestureDetector(controller)
                 setOnTouchListener { view, event -> detector.onTouchEvent(view, event) }
             }
             fun touch(view: View, action: Int) {
@@ -315,7 +328,7 @@ class KeyboardUIControllerTouchTest {
             }
             val minus = KeyEvent.KEYCODE_MINUS
             val plain = key(KeySpec(code = minus, label = "-"))
-            val shifted = key(KeySpec(code = 1000 + minus, label = "_", shift = true, sendCode = minus))
+            val shifted = key(KeySpec(code = minus, label = "_", shift = true))
             touch(plain, MotionEvent.ACTION_DOWN)
             touch(shifted, MotionEvent.ACTION_DOWN)
             touch(plain, MotionEvent.ACTION_CANCEL)
