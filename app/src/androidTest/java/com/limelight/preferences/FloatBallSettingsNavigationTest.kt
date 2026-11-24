@@ -126,8 +126,19 @@ class FloatBallSettingsNavigationTest {
         }
         for (query in queries) {
             settings.search(query)
-            assertMainEntryContainsNoChildren()
-            settings.focusPreference(SCREEN_KEY)
+            val resultKey = "settings.search.result.$SCREEN_KEY.$SINGLE_CLICK_KEY"
+            val result = settings.adapterItems().single { it.key == resultKey }
+            settings.withFragment { fragment ->
+                val target = requireNotNull(fragment.findPreference<Preference>(SINGLE_CLICK_KEY))
+                assertEquals("Search must identify the matching setting", target.title.toString(), result.title.toString())
+                assertTrue("Search results must identify their page",
+                    result.summary.toString().contains(requireNotNull(fragment.findPreference<Preference>(SCREEN_KEY)).title.toString()))
+                if (query != target.title.toString()) {
+                    assertTrue("A match in an action option must show the matching label",
+                        result.summary.toString().contains(query))
+                }
+            }
+            settings.focusPreference(resultKey)
             settings.press(KeyEvent.KEYCODE_BUTTON_A)
 
             settings.awaitScreen(SCREEN_KEY)
@@ -136,7 +147,7 @@ class FloatBallSettingsNavigationTest {
             settings.press(KeyEvent.KEYCODE_BUTTON_B)
             settings.awaitScreen(null)
             assertEquals(query, settings.query())
-            settings.assertFocusedPreference(SCREEN_KEY)
+            settings.assertFocusedPreference(resultKey)
         }
     }
 

@@ -322,6 +322,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 menuToggleView?.visibility = View.GONE
                 // 焦点目标和可见性必须同源，否则重建后列表“向上”会指向隐藏的控件
                 searchBarExpanded = true
+                updateSearchListInset()
             }
         }
 
@@ -370,7 +371,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
             preferenceContainer.setPadding(
                 initialPaddingLeft,
-                initialPaddingTop,
+                initialPaddingTop + searchListInset(),
                 initialPaddingRight + if (isLandscape) safeRight else 0,
                 initialPaddingBottom + if (isLandscape) safeBottom else 0
             )
@@ -572,6 +573,7 @@ class StreamSettings : ThemedAppCompatActivity() {
 
     private fun showSearchBar(enterInput: Boolean = false) {
         searchBarExpanded = true
+        updateSearchListInset()
         fadeOut(searchToggle)
         fadeOut(menuToggleView)
         fadeIn(searchBar)
@@ -614,6 +616,7 @@ class StreamSettings : ThemedAppCompatActivity() {
     private fun hideSearchBar() {
         val focusInsideBar = searchBar?.hasFocus() == true
         searchBarExpanded = false
+        updateSearchListInset()
         // 收起时无条件复位输入态，不依赖输入框的 onFocusChange 回调
         searchInput?.clearFocus()
         searchBar?.clearFocus()
@@ -623,6 +626,17 @@ class StreamSettings : ThemedAppCompatActivity() {
         fadeIn(menuToggleView)
         updateSearchFocusRoutes()
         if (focusInsideBar) searchToggle?.requestFocus()
+    }
+
+    /** The portrait search bar overlays the list; reserve its height only while expanded. */
+    private fun searchListInset(): Int = if (searchToggle != null && searchBarExpanded) {
+        (searchBar?.layoutParams?.height ?: 0).coerceAtLeast(0) + dpToPx(8)
+    } else 0
+
+    private fun updateSearchListInset() {
+        val insetSource = findViewById<View>(R.id.drawer_layout)
+            ?: findViewById(R.id.settings_layout_root)
+        insetSource?.let(ViewCompat::requestApplyInsets)
     }
 
     /** 收起时焦点目标是搜索按钮，展开（或横屏常驻）时是搜索栏本身。 */
@@ -1216,6 +1230,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             private const val FLOAT_BALL_SCREEN_KEY = "settings_float_ball"
             private const val DETAIL_SCREEN = "settings.detail.screen"
             private const val DETAIL_FOCUS = "settings.detail.focus"
+            private const val SEARCH_RETURN_FOCUS = "settings.search.return.focus"
             private const val DETAIL_HARDWARE = "settings.detail.hardware"
             private const val MAIN_LIST_STATE = "settings.main.listState"
             private const val DIALOG_RETURN_KEY = "settings.dialog.returnKey"
@@ -1254,6 +1269,7 @@ class StreamSettings : ThemedAppCompatActivity() {
         private var mainListPadding: IntArray? = null
         private var detailHardwareInput = false
         private var pendingNavigationFocusKey: String? = null
+        private var searchReturnPreferenceKey: String? = null
         private var navigationGeneration = 0
         private val navigationWindowFocusListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
             if (hasFocus) restoreNavigationFocus()
@@ -1805,6 +1821,10 @@ class StreamSettings : ThemedAppCompatActivity() {
             SettingsVisibilityController(
                 screenProvider = { preferenceScreen },
                 onCategoryEligibilityChanged = { rebuildCategoryList() },
+                onSearchResultClick = { screen, target, resultKey ->
+                    setSearchReturnPreferenceKey(resultKey)
+                    openSettingsScreen(screen.key, target.key)
+                },
             )
         }
         private var pendingCategoryRevealKey: String? = null
@@ -2894,15 +2914,6 @@ class StreamSettings : ThemedAppCompatActivity() {
                 getString(R.string.summary_crown_enabled_state, name, count)
             }
 
-            findPreference<Preference>("crown_edit_current")?.apply {
-                isEnabled = name.isNotBlank()
-                summary = if (name.isBlank()) {
-                    getString(R.string.summary_crown_current_profile_empty)
-                } else {
-                    getString(R.string.summary_crown_edit_current)
-                }
-            }
-
             // Design P1: the profiles row shows how many setups exist.
             findPreference<Preference>("crown_config_management")?.apply {
                 summary = if (profileCount > 0) {
@@ -2940,6 +2951,12 @@ class StreamSettings : ThemedAppCompatActivity() {
             updateExternalSyncDirectorySummary()
             updateConfigSyncStatusSummary()
             refreshCrownPreferenceSummary()
+            // These summaries may change while another activity is open, without a
+            // preference change notification to refresh an active search.
+            if (visibilityController.isSearching()) {
+                visibilityController.refreshSearch()
+                refreshSearchPresentation()
+            }
             resumeDeveloperUnlockVerificationIfPending()
         }
 
@@ -3044,9 +3061,13 @@ class StreamSettings : ThemedAppCompatActivity() {
             if (activeSettingsScreenKey != null) detailHardwareInput = true
         }
 
+        fun setSearchReturnPreferenceKey(key: String?) {
+            searchReturnPreferenceKey = key
+        }
+
         fun openSettingsScreen(key: String, targetKey: String? = null) {
             val screen = findPreference<PreferenceScreen>(key) ?: return
-            if (screen === preferenceScreen || !screen.isVisible) return
+            if (screen === preferenceScreen || !visibilityController.isRuntimeVisible(screen)) return
             val recycler = listView ?: return
             if (activeSettingsScreenKey == null) {
                 mainListState = recycler.layoutManager?.onSaveInstanceState()
@@ -3072,7 +3093,8 @@ class StreamSettings : ThemedAppCompatActivity() {
             navigationGeneration++
             val restoreFocus = detailHardwareInput || listView?.isInTouchMode == false
             activeSettingsScreenKey = null
-            pendingNavigationFocusKey = if (restoreFocus) entryKey else null
+            pendingNavigationFocusKey = if (restoreFocus) searchReturnPreferenceKey ?: entryKey else null
+            searchReturnPreferenceKey = null
             replaceVisibleAdapter(mainListState)
             (activity as? StreamSettings)?.hideDetailSettings(this)
             mainListPadding?.let { listView.setPadding(it[0], it[1], it[2], it[3]) }
@@ -3118,6 +3140,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             putParcelable(MAIN_LIST_STATE, mainListState)
             putBoolean(DETAIL_HARDWARE, detailHardwareInput)
             putString(DETAIL_FOCUS, pendingNavigationFocusKey ?: focusedPreferenceKey())
+            putString(SEARCH_RETURN_FOCUS, searchReturnPreferenceKey)
         }
 
         @SuppressLint("RestrictedApi")
@@ -3137,16 +3160,16 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
         }
 
-        /** Wait beyond window-focus dispatch: older releases can otherwise overwrite the row. */
+        /** Reveal the requested row for touch as well as hardware navigation. */
         @SuppressLint("RestrictedApi")
         private fun restoreNavigationFocus(attempts: Int = 5) {
             val key = pendingNavigationFocusKey ?: return
             val recycler = listView ?: return
-            if (settingsChoiceViewDestroyed || !recycler.hasWindowFocus()) return
+            if (settingsChoiceViewDestroyed) return
             val generation = navigationGeneration
             recycler.post {
                 if (!isAdded || settingsChoiceViewDestroyed || generation != navigationGeneration ||
-                    !recycler.hasWindowFocus() || settingsChoiceDialog != null) return@post
+                    settingsChoiceDialog != null) return@post
                 if (!recycler.isLaidOut || recycler.isLayoutRequested || recycler.isComputingLayout ||
                     recycler.hasPendingAdapterUpdates()) {
                     recycler.postOnAnimation {
@@ -3155,25 +3178,51 @@ class StreamSettings : ThemedAppCompatActivity() {
                     return@post
                 }
                 val adapter = recycler.adapter as? PreferenceGroupAdapter ?: return@post
+                val focusRequested = activeSettingsScreenKey == null || detailHardwareInput
                 val requestedPosition = adapter.getPreferenceAdapterPosition(key).takeIf { it >= 0 }
-                val position = requestedPosition?.takeIf {
-                    adapter.getItem(it)?.let { item -> item.isEnabled && item.isSelectable } == true
-                } ?: (0 until adapter.itemCount).firstOrNull {
-                    adapter.getItem(it)?.let { item -> item.isEnabled && item.isSelectable } == true
-                }
+                val position = requestedPosition ?: if (focusRequested) {
+                    (0 until adapter.itemCount).firstOrNull {
+                        adapter.getItem(it)?.let { item -> item.isEnabled && item.isSelectable } == true
+                    }
+                } else null
                 if (position == null) {
                     pendingNavigationFocusKey = null
                     return@post
                 }
+                val layout = recycler.layoutManager as? LinearLayoutManager
                 val row = recycler.findViewHolderForAdapterPosition(position)?.itemView
-                if (row != null && row.isShown && row.requestFocusFromTouch()) {
+                val viewportHeight = recycler.height - recycler.paddingTop - recycler.paddingBottom
+                val isFullyVisible = row != null && row.isShown && row.top >= recycler.paddingTop &&
+                    (row.bottom <= recycler.height - recycler.paddingBottom ||
+                        // A row taller than the viewport cannot fit; reveal its beginning.
+                        (row.height > viewportHeight && row.top == recycler.paddingTop))
+                if (!isFullyVisible) {
+                    if (attempts > 0) {
+                        if (layout != null) layout.scrollToPositionWithOffset(position, 0)
+                        else recycler.scrollToPosition(position)
+                        recycler.postOnAnimation {
+                            if (generation == navigationGeneration) restoreNavigationFocus(attempts - 1)
+                        }
+                    } else {
+                        pendingNavigationFocusKey = null
+                    }
+                    return@post
+                }
+                val item = adapter.getItem(position)
+                if (!focusRequested || item?.isEnabled != true || !item.isSelectable) {
                     pendingNavigationFocusKey = null
-                } else if (attempts > 0) {
-                    recycler.scrollToPosition(position)
-                    recycler.postOnAnimation {
-                        if (generation == navigationGeneration) restoreNavigationFocus(attempts - 1)
+                } else if (recycler.hasWindowFocus()) {
+                    if (row?.requestFocusFromTouch() == true) {
+                        pendingNavigationFocusKey = null
+                    } else if (attempts > 0) {
+                        recycler.postOnAnimation {
+                            if (generation == navigationGeneration) restoreNavigationFocus(attempts - 1)
+                        }
+                    } else {
+                        pendingNavigationFocusKey = null
                     }
                 }
+                // If the window is not focused, the window-focus listener retries the focus.
             }
         }
 
@@ -3213,6 +3262,7 @@ class StreamSettings : ThemedAppCompatActivity() {
             mainListState = navigation?.getParcelable(MAIN_LIST_STATE)
             detailHardwareInput = navigation?.getBoolean(DETAIL_HARDWARE) ?: false
             pendingNavigationFocusKey = navigation?.getString(DETAIL_FOCUS)
+            searchReturnPreferenceKey = navigation?.getString(SEARCH_RETURN_FOCUS)
             // Keep search updates local instead of rebinding the entire list.
             preferenceManager.preferenceComparisonCallback = PreferenceManager.SimplePreferenceComparisonCallback()
             // 添加阴影主题
@@ -3593,23 +3643,15 @@ class StreamSettings : ThemedAppCompatActivity() {
                     }
             findPreference<Preference>(PreferenceConfiguration.CROWN_CONFIG_MANAGEMENT_STRING)!!.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
-                        startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
+                        startActivity(
+                            Intent(requireActivity(), CrownStoreActivity::class.java)
+                                .putExtra(CrownStoreActivity.EXTRA_OPEN_MY_CROWNS, true)
+                        )
                         true
                     }
-            findPreference<Preference>("crown_edit_current")?.apply {
-                widgetLayoutResource = R.layout.preference_widget_navigation
-                onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                    startActivity(
-                        Intent(requireActivity(), CrownStoreActivity::class.java)
-                            .putExtra(CrownStoreActivity.EXTRA_OPEN_MY_CROWNS, true)
-                    )
-                    true
-                }
-            }
             listOf("crown_config_management", "crown_store_view", "crown_import_package").forEach { key ->
                 findPreference<Preference>(key)?.widgetLayoutResource = R.layout.preference_widget_navigation
             }
-            findPreference<Preference>("checkbox_show_onscreen_keyboard")?.isIconSpaceReserved = true
             findPreference<Preference>("crown_store_view")?.onPreferenceClickListener =
                     Preference.OnPreferenceClickListener {
                         startActivity(Intent(requireActivity(), CrownStoreActivity::class.java))
@@ -4160,6 +4202,12 @@ class StreamSettings : ThemedAppCompatActivity() {
             }
             refreshFeaturePageVisibility(preferenceScreen)
             updateFeaturePageSummaries()
+            // Searchable summaries can include current values or other derived state.
+            // Re-evaluate them after presentation updates, including while a detail page is open.
+            if (visibilityController.isSearching()) {
+                visibilityController.refreshSearch()
+                refreshSearchPresentation()
+            }
         }
 
         private fun updateHapticsPreferences() {
@@ -4492,10 +4540,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 }
                 getString(R.string.float_ball_summary_enabled, position, delay)
             }
-            val matched = visibilityController.matchingDescendant(screen)?.title
-            screen.summary = if (matched != null) {
-                getString(R.string.float_ball_summary_search, status, matched)
-            } else status
+            screen.summary = status
         }
 
         private fun setupPerfOverlayPreferences() {

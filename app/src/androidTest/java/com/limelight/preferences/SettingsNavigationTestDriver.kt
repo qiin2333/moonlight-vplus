@@ -5,10 +5,14 @@ import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.widget.EditText
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.lifecycle.Lifecycle
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroupAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -32,6 +36,8 @@ internal class SettingsNavigationTestDriver(private val compose: ComposeTestRule
     }
 
     fun close() { scenario?.close() }
+
+    fun moveToState(state: Lifecycle.State) { requireNotNull(scenario).moveToState(state) }
 
     fun withActivity(action: (StreamSettings) -> Unit) { requireNotNull(scenario).onActivity(action) }
 
@@ -119,6 +125,48 @@ internal class SettingsNavigationTestDriver(private val compose: ComposeTestRule
         }
         assertFocusedPreference(key)
         awaitStableViewport(key)
+    }
+
+    /** Tap the actual row through the input system, so navigation runs in touch mode. */
+    fun tapPreference(key: String) {
+        var position = RecyclerView.NO_POSITION
+        withActivity { activity ->
+            val list = recycler(activity)
+            val adapter = list.adapter as PreferenceGroupAdapter
+            position = (0 until adapter.itemCount).first { adapter.getItem(it)?.key == key }
+            (list.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(position, 0)
+        }
+        awaitReady { activity ->
+            recycler(activity).findViewHolderForAdapterPosition(position)?.itemView?.isShown == true
+        }
+        var x = 0f
+        var y = 0f
+        withActivity { activity ->
+            val row = requireNotNull(recycler(activity).findViewHolderForAdapterPosition(position)?.itemView)
+            val location = IntArray(2)
+            row.getLocationOnScreen(location)
+            x = location[0] + row.width / 2f
+            y = location[1] + row.height / 2f
+        }
+        val downTime = SystemClock.uptimeMillis()
+        listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
+            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
+            event.source = InputDevice.SOURCE_TOUCHSCREEN
+            try { instrumentation.sendPointerSync(event) } finally { event.recycle() }
+        }
+        compose.waitForIdle()
+        instrumentation.waitForIdleSync()
+    }
+
+    fun assertPreferenceVisible(key: String) {
+        awaitReady { activity ->
+            val list = recycler(activity)
+            val adapter = list.adapter as PreferenceGroupAdapter
+            val position = (0 until adapter.itemCount).firstOrNull { adapter.getItem(it)?.key == key }
+                ?: return@awaitReady false
+            val row = list.findViewHolderForAdapterPosition(position)?.itemView ?: return@awaitReady false
+            row.isShown && row.top < list.height - list.paddingBottom && row.bottom > list.paddingTop
+        }
     }
 
     fun assertFocusedPreference(key: String) {

@@ -9,6 +9,7 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.preference.CheckBoxPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceManager
@@ -242,9 +243,9 @@ class SettingsDetailNavigationTest {
         }
         settings.search(query)
         val searchKeys = settings.adapterKeys()
-        assertTrue("The feature entry must match its deep setting", INPUT_SCREEN_KEY in searchKeys)
-        assertFalse("Search must keep deep settings within their feature", ESC_MENU_KEY in searchKeys)
-        settings.focusPreference(INPUT_SCREEN_KEY)
+        val resultKey = searchResultKey(INPUT_SCREEN_KEY, ESC_MENU_KEY)
+        assertTrue("Search must show a result for the matching deep setting", resultKey in searchKeys)
+        settings.focusPreference(resultKey)
         settings.press(KeyEvent.KEYCODE_BUTTON_A)
 
         settings.awaitScreen(INPUT_SCREEN_KEY)
@@ -253,10 +254,80 @@ class SettingsDetailNavigationTest {
 
         // If search opened a dialog automatically, Escape would only close that dialog.
         settings.awaitScreen(null)
-        settings.assertFocusedPreference(INPUT_SCREEN_KEY)
+        settings.assertFocusedPreference(resultKey)
         assertEquals(query, settings.query())
         assertEquals(searchKeys, settings.adapterKeys())
     }
+
+    @Test
+    fun tappingDeepSearchResultRevealsDisabledSettingInTouchMode() {
+        settings.withFragment { fragment ->
+            requireNotNull(fragment.findPreference<CheckBoxPreference>("checkbox_enable_esc_menu")).isChecked = false
+        }
+        var query = ""
+        compose.waitUntil(5_000) {
+            var disabled = false
+            settings.withFragment { fragment ->
+                val target = requireNotNull(fragment.findPreference<Preference>(ESC_MENU_KEY))
+                query = target.title.toString()
+                disabled = !target.isEnabled
+            }
+            disabled
+        }
+
+        settings.search(query)
+        settings.tapPreference(searchResultKey(INPUT_SCREEN_KEY, ESC_MENU_KEY))
+        settings.awaitScreen(INPUT_SCREEN_KEY)
+        settings.assertPreferenceVisible(ESC_MENU_KEY)
+        settings.withFragment { fragment ->
+            assertFalse("Navigation must not enable the target", requireNotNull(
+                fragment.findPreference<Preference>(ESC_MENU_KEY)).isEnabled)
+            assertTrue("The tap must exercise touch navigation", fragment.listView.isInTouchMode)
+        }
+
+        settings.pressSystemBack()
+        settings.awaitScreen(null)
+        assertEquals(query, settings.query())
+    }
+
+    @Test
+    fun multipleDeepSearchResultsOpenTheirOwnSettingsAndClearRestoresTheMainList() {
+        val targetKeys = listOf("checkbox_enable_start_key_menu", "checkbox_multi_controller")
+        val mainKeys = settings.adapterKeys()
+        settings.search("checkbox_")
+        val searchKeys = settings.adapterKeys()
+        val resultKeys = targetKeys.map { searchResultKey(GAMEPAD_SCREEN_KEY, it) }
+        resultKeys.forEach { key ->
+            assertEquals("Each matching setting must have its own result", 1, searchKeys.count { it == key })
+        }
+        val searchItems = settings.adapterItems()
+        settings.withFragment { fragment ->
+            targetKeys.zip(resultKeys).forEach { (targetKey, resultKey) ->
+                val target = requireNotNull(fragment.findPreference<Preference>(targetKey))
+                val result = searchItems.single { it.key == resultKey }
+                assertEquals("The result must identify the actual setting", target.title.toString(), result.title.toString())
+            }
+        }
+
+        targetKeys.zip(resultKeys).forEach { (targetKey, resultKey) ->
+            settings.focusPreference(resultKey)
+            settings.press(KeyEvent.KEYCODE_BUTTON_A)
+            settings.awaitScreen(GAMEPAD_SCREEN_KEY)
+            settings.assertFocusedPreference(targetKey)
+            settings.press(KeyEvent.KEYCODE_BUTTON_B)
+            settings.awaitScreen(null)
+            settings.assertFocusedPreference(resultKey)
+            assertEquals("checkbox_", settings.query())
+            assertEquals(searchKeys, settings.adapterKeys())
+        }
+
+        settings.search("")
+        assertEquals("Clearing the query must restore the original list", mainKeys, settings.adapterKeys())
+        assertTrue("Search results must be removed after clearing", resultKeys.none { it in settings.adapterKeys() })
+    }
+
+    private fun searchResultKey(screenKey: String, targetKey: String) =
+        "settings.search.result.$screenKey.$targetKey"
 
     @Test
     fun rotationThemeChangeAndRecreationKeepTheActiveFeatureAndItsReturnDestination() {
