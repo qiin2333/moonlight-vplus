@@ -14,7 +14,8 @@ internal enum class KeyboardTier {
 internal enum class KeyboardPage {
     MAIN,
     NUM,
-    NAV
+    NAV,
+    NUMPAD
 }
 
 internal enum class KeyKind {
@@ -51,8 +52,6 @@ internal data class KeyboardRowSpec(val keys: List<KeySpec>)
 
 internal data class KeyboardMetrics(
     val tier: KeyboardTier,
-    val screenWidthDp: Float,
-    val screenHeightDp: Float,
     val dockWidthPx: Int,
     val dockHeightPx: Int,
     val contentWidthPx: Int,
@@ -65,16 +64,8 @@ internal data class KeyboardMetrics(
     val keyWidthPx: Float,
     val keyHeightPx: Float,
     val maxKeyHeightDp: Float,
-    val fieldWidthPx: Float,
-    val fieldHeightPx: Float,
-    val gutterPx: Float,
-    val alphaColumns: Int,
-    val navColumns: Int,
-    val rows: Int,
     val tabTextSp: Float
-) {
-    val totalColumns: Int get() = alphaColumns + navColumns
-}
+)
 
 internal object KeyboardGeometry {
     const val MAX_WIDTH_DP = 1280f
@@ -134,8 +125,6 @@ internal object KeyboardGeometry {
         val internalGaps = (totalColumns - blocks) * keyGapDp + (blocks - 1) * blockGapDp
         val rawKeyWidth = (contentWidthDp - internalGaps) / totalColumns
         val keyWidthDp = min(rawKeyWidth, MAX_KEY_WIDTH_DP).coerceAtLeast(1f)
-        val fieldWidthDp = totalColumns * keyWidthDp + internalGaps
-        val gutterDp = ((contentWidthDp - fieldWidthDp) / 2f).coerceAtLeast(0f)
         val verticalGaps = (rows - 1) * keyGapDp
         val tierMaxKeyHeightDp = if (tier == KeyboardTier.POCKET) 46f else 50f
         val viewportMaxKeyHeightDp = (heightDp - marginDp - railDp - railGapDp - padDp - verticalGaps) / rows
@@ -160,8 +149,6 @@ internal object KeyboardGeometry {
         val dockHeightPx = railHeightPx + railGapPx + fieldHeightPx + padPx
         return KeyboardMetrics(
             tier = tier,
-            screenWidthDp = widthDp,
-            screenHeightDp = heightDp,
             dockWidthPx = (dockWidthDp * densitySafe).toInt(),
             dockHeightPx = dockHeightPx,
             contentWidthPx = (contentWidthDp * densitySafe).toInt(),
@@ -174,12 +161,6 @@ internal object KeyboardGeometry {
             keyWidthPx = keyWidthDp * densitySafe,
             keyHeightPx = keyHeightPx,
             maxKeyHeightDp = maxKeyHeightDp,
-            fieldWidthPx = fieldWidthDp * densitySafe,
-            fieldHeightPx = fieldHeightPx.toFloat(),
-            gutterPx = gutterDp * densitySafe,
-            alphaColumns = alphaColumns,
-            navColumns = navColumns,
-            rows = rows,
             tabTextSp = tabTextSp
         )
     }

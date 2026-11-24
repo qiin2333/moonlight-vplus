@@ -40,7 +40,7 @@ class KeyboardUIController(
     private val keyboardContent: KeyboardTouchGuardLayout
     private val rail: LinearLayout
     private val pageHost: FrameLayout
-    private val layoutMain: KeyboardMainPageView
+    private val layoutMain: KeyboardPageView
     private val layoutNav: KeyboardPageView
     private val layoutNum: KeyboardPageView
     private val btnMain: TextView
@@ -57,7 +57,8 @@ class KeyboardUIController(
     private val modifierStates: MutableMap<Int, Int> = HashMap()
     private val physicallyHeldModifiers: MutableSet<Int> = HashSet()
     private val pressedSpecs: MutableMap<Int, KeySpec> = HashMap()
-    private val syntheticShiftOwners: MutableSet<Int> = HashSet()
+    private var sentLeftShift = false
+    private var sentRightShift = false
 
     private var currentPage = KeyboardPage.MAIN
     private var opacityPercent = 100
@@ -198,6 +199,10 @@ class KeyboardUIController(
             keyHeightOverrideDp
         )
         metrics = m
+        if (m.tier != KeyboardTier.POCKET && currentPage == KeyboardPage.NUMPAD) {
+            currentPage = KeyboardPage.NUM
+            prefs.edit().putString(KEY_PAGE, currentPage.name).apply()
+        }
 
         val contentParams = (keyboardContent.layoutParams as? FrameLayout.LayoutParams)
             ?: FrameLayout.LayoutParams(m.dockWidthPx, m.dockHeightPx)
@@ -226,11 +231,10 @@ class KeyboardUIController(
         btnNav.setTextSize(TypedValue.COMPLEX_UNIT_SP, m.tabTextSp)
         applyTabLabels(m)
 
-        layoutMain.bind(m.tier, m) { page -> setPage(page) }
-        layoutNum.bind(KeyboardPageLayouts.spec(KeyboardPage.NUM, m.tier), m) { page -> setPage(page) }
+        layoutMain.bind(KeyboardPageLayouts.spec(KeyboardPage.MAIN, m.tier), m) { page -> setPage(page) }
+        bindNumPage(m)
         layoutNav.bind(KeyboardPageLayouts.spec(KeyboardPage.NAV, m.tier), m) { page -> setPage(page) }
         attachKeys(layoutMain.keys())
-        attachKeys(layoutNum.keys())
         attachKeys(layoutNav.keys())
         mainBuilt = true
 
@@ -240,6 +244,12 @@ class KeyboardUIController(
         applyOpacity()
         keyboardContent.requestLayout()
         keyboardLayout.requestLayout()
+    }
+
+    private fun bindNumPage(m: KeyboardMetrics) {
+        val page = if (currentPage == KeyboardPage.NUMPAD) KeyboardPage.NUMPAD else KeyboardPage.NUM
+        layoutNum.bind(KeyboardPageLayouts.spec(page, m.tier), m) { setPage(it) }
+        attachKeys(layoutNum.keys())
     }
 
     private fun attachKeys(keys: List<KeyboardKeyView>) {
@@ -265,7 +275,7 @@ class KeyboardUIController(
     private fun pageVisibility() {
         layoutMain.visibility = if (currentPage == KeyboardPage.MAIN) View.VISIBLE else View.GONE
         layoutNav.visibility = if (currentPage == KeyboardPage.NAV) View.VISIBLE else View.GONE
-        layoutNum.visibility = if (currentPage == KeyboardPage.NUM) View.VISIBLE else View.GONE
+        layoutNum.visibility = if (currentPage == KeyboardPage.NUM || currentPage == KeyboardPage.NUMPAD) View.VISIBLE else View.GONE
         styleTabs()
         keyPopup?.visibility = View.GONE
     }
@@ -274,20 +284,26 @@ class KeyboardUIController(
         val active = ContextCompat.getColor(hostContext, R.color.crown_keyboard_single_border)
         val idle = ContextCompat.getColor(hostContext, R.color.crown_text_secondary)
         btnMain.isSelected = currentPage == KeyboardPage.MAIN
-        btnNum.isSelected = currentPage == KeyboardPage.NUM
+        val numSelected = currentPage == KeyboardPage.NUM || currentPage == KeyboardPage.NUMPAD
+        btnNum.isSelected = numSelected
         btnNav.isSelected = currentPage == KeyboardPage.NAV
         btnMain.setTextColor(if (currentPage == KeyboardPage.MAIN) active else idle)
-        btnNum.setTextColor(if (currentPage == KeyboardPage.NUM) active else idle)
+        btnNum.setTextColor(if (numSelected) active else idle)
         btnNav.setTextColor(if (currentPage == KeyboardPage.NAV) active else idle)
         TextViewCompat.setCompoundDrawableTintList(btnMain, ColorStateList.valueOf(if (currentPage == KeyboardPage.MAIN) active else idle))
-        TextViewCompat.setCompoundDrawableTintList(btnNum, ColorStateList.valueOf(if (currentPage == KeyboardPage.NUM) active else idle))
+        TextViewCompat.setCompoundDrawableTintList(btnNum, ColorStateList.valueOf(if (numSelected) active else idle))
         TextViewCompat.setCompoundDrawableTintList(btnNav, ColorStateList.valueOf(if (currentPage == KeyboardPage.NAV) active else idle))
     }
 
     private fun setPage(page: KeyboardPage) {
         opacityPopup?.dismiss()
         resizePopup?.dismiss()
+        val previousPage = currentPage
         currentPage = page
+        if ((previousPage == KeyboardPage.NUMPAD) != (page == KeyboardPage.NUMPAD)) {
+            metrics?.let { bindNumPage(it) }
+            applyModifierStates()
+        }
         pageVisibility()
         prefs.edit().putString(KEY_PAGE, page.name).apply()
     }
@@ -347,21 +363,10 @@ class KeyboardUIController(
         resizePopup?.dismiss()
         if (wasShowing) return
 
-        val content = LayoutInflater.from(hostContext)
-            .inflate(R.layout.keyboard_key_height_popover, keyboardLayout, false)
-        val seek = content.findViewById<SeekBar>(R.id.keyboard_key_height_seek)
-        val value = content.findViewById<TextView>(R.id.keyboard_key_height_value)
-        val presets = listOf(
-            31 to R.id.keyboard_key_height_31,
-            38 to R.id.keyboard_key_height_38,
-            44 to R.id.keyboard_key_height_44,
-            50 to R.id.keyboard_key_height_50
-        ).map { (height, id) ->
-            content.findViewById<TextView>(id).apply {
-                tag = height
-                setOnClickListener { setKeyHeightDp(height) }
-            }
-        }
+        val content = sliderContent(R.string.keyboard_key_height)
+        val seek = content.findViewById<SeekBar>(R.id.keyboard_slider_seek)
+        val value = content.findViewById<TextView>(R.id.keyboard_slider_value)
+        val presets = sliderPresets(content, listOf(31, 38, 44, 50), "", ::setKeyHeightDp)
         resizeSeek = seek
         resizeValue = value
         resizePresets = presets
@@ -382,34 +387,12 @@ class KeyboardUIController(
         })
         applyKeyHeightPopover()
 
-        val density = hostContext.resources.displayMetrics.density
-        val screenWidth = hostContext.resources.displayMetrics.widthPixels
-        val widthPx = minOf((250 * density).toInt(), screenWidth - (16 * density).toInt())
-            .coerceAtLeast((180 * density).toInt())
-        content.measure(
-            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        val popup = PopupWindow(content, widthPx, content.measuredHeight, true)
-        popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        popup.isOutsideTouchable = true
-        popup.elevation = 18 * density
-        popup.setOnDismissListener {
+        resizePopup = showPopover(content) {
             resizePopup = null
             resizeSeek = null
             resizeValue = null
             resizePresets = emptyList()
         }
-        val location = IntArray(2)
-        keyboardContent.getLocationOnScreen(location)
-        var x = location[0] + keyboardContent.width - widthPx - (metrics?.padPx ?: 0)
-        var y = location[1] - content.measuredHeight - (6 * density).toInt()
-        x = x.coerceIn((8 * density).toInt(), (screenWidth - widthPx - 8 * density).toInt().coerceAtLeast(0))
-        if (y < (8 * density).toInt()) {
-            y = location[1] + keyboardContent.height + (6 * density).toInt()
-        }
-        popup.showAtLocation(keyboardLayout, Gravity.NO_GRAVITY, x, y)
-        resizePopup = popup
     }
 
     private fun effectiveMaxKeyHeightDp(): Int =
@@ -453,24 +436,14 @@ class KeyboardUIController(
         opacityPopup?.dismiss()
         if (wasShowing) return
 
-        val content = LayoutInflater.from(hostContext)
-            .inflate(R.layout.keyboard_opacity_popover, keyboardLayout, false)
-        val seek = content.findViewById<SeekBar>(R.id.keyboard_opacity_seek)
-        val value = content.findViewById<TextView>(R.id.keyboard_opacity_value)
-        val presets = listOf(
-            100 to R.id.keyboard_opacity_100,
-            85 to R.id.keyboard_opacity_85,
-            70 to R.id.keyboard_opacity_70,
-            50 to R.id.keyboard_opacity_50
-        ).map { (percent, id) ->
-            content.findViewById<TextView>(id).apply {
-                tag = percent
-                setOnClickListener { setOpacityPercent(percent) }
-            }
-        }
+        val content = sliderContent(R.string.keyboard_opacity_title)
+        val seek = content.findViewById<SeekBar>(R.id.keyboard_slider_seek)
+        val value = content.findViewById<TextView>(R.id.keyboard_slider_value)
+        val presets = sliderPresets(content, listOf(100, 85, 70, 50), "%", ::setOpacityPercent)
         opacitySeek = seek
         opacityValue = value
         opacityPresets = presets
+        seek.max = 70
         seek.progress = (opacityPercent - 30).coerceIn(0, 70)
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -482,6 +455,32 @@ class KeyboardUIController(
         })
         applyOpacity()
 
+        opacityPopup = showPopover(content) {
+            opacityPopup = null
+            opacitySeek = null
+            opacityValue = null
+            opacityPresets = emptyList()
+        }
+    }
+
+    private fun sliderContent(title: Int): View = LayoutInflater.from(hostContext)
+        .inflate(R.layout.keyboard_slider_popover, keyboardLayout, false).apply {
+            findViewById<TextView>(R.id.keyboard_slider_title).setText(title)
+        }
+
+    private fun sliderPresets(content: View, values: List<Int>, suffix: String, onClick: (Int) -> Unit): List<TextView> {
+        val ids = listOf(R.id.keyboard_slider_preset_1, R.id.keyboard_slider_preset_2,
+            R.id.keyboard_slider_preset_3, R.id.keyboard_slider_preset_4)
+        return values.zip(ids).map { (value, id) ->
+            content.findViewById<TextView>(id).apply {
+                text = value.toString() + suffix
+                tag = value
+                setOnClickListener { onClick(value) }
+            }
+        }
+    }
+
+    private fun showPopover(content: View, onDismiss: () -> Unit): PopupWindow {
         val density = hostContext.resources.displayMetrics.density
         val screenWidth = hostContext.resources.displayMetrics.widthPixels
         val widthPx = minOf((250 * density).toInt(), screenWidth - (16 * density).toInt())
@@ -494,12 +493,7 @@ class KeyboardUIController(
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popup.isOutsideTouchable = true
         popup.elevation = 18 * density
-        popup.setOnDismissListener {
-            opacityPopup = null
-            opacitySeek = null
-            opacityValue = null
-            opacityPresets = emptyList()
-        }
+        popup.setOnDismissListener { onDismiss() }
         val location = IntArray(2)
         keyboardContent.getLocationOnScreen(location)
         var x = location[0] + keyboardContent.width - widthPx - (metrics?.padPx ?: 0)
@@ -509,7 +503,7 @@ class KeyboardUIController(
             y = location[1] + keyboardContent.height + (6 * density).toInt()
         }
         popup.showAtLocation(keyboardLayout, Gravity.NO_GRAVITY, x, y)
-        opacityPopup = popup
+        return popup
     }
 
     private fun setOpacityPercent(percent: Int) {
@@ -614,7 +608,7 @@ class KeyboardUIController(
             if (currentState == MOD_NEUTRAL) {
                 modifierStates[keyCode] = MOD_SINGLE
                 physicallyHeldModifiers.add(keyCode)
-                listener.sendKeyEvent(true, keyCode.toShort())
+                sendModifierState(keyCode, true)
                 updateModifierUI(keyCode, MOD_SINGLE)
             } else {
                 handleModifierDown(keyCode)
@@ -623,11 +617,8 @@ class KeyboardUIController(
             triggerHaptic("normal")
             val spec = (view as? KeyboardKeyView)?.keySpec
             pressedSpecs[keyCode] = spec ?: KeySpec(label = "")
-            if (spec?.shift == true && !hasActiveExplicitShift()) {
-                if (syntheticShiftOwners.isEmpty()) {
-                    listener.sendKeyEvent(true, KEY_LSHIFT.toShort())
-                }
-                syntheticShiftOwners.add(keyCode)
+            if (spec?.shift == true) {
+                syncShiftKeys()
             }
             listener.sendKeyEvent(true, (spec?.sendCode ?: keyCode).toShort())
             if (view.isShown) {
@@ -673,18 +664,34 @@ class KeyboardUIController(
     private fun releasePressedKey(keyCode: Int) {
         val spec = pressedSpecs.remove(keyCode)
         listener.sendKeyEvent(false, (spec?.sendCode ?: keyCode).toShort())
-        if (spec?.shift == true && syntheticShiftOwners.remove(keyCode) &&
-            syntheticShiftOwners.isEmpty() && !isExplicitShiftActive(KEY_LSHIFT)
-        ) {
-            listener.sendKeyEvent(false, KEY_LSHIFT.toShort())
+        if (spec?.shift == true) {
+            syncShiftKeys()
         }
     }
 
-    private fun hasActiveExplicitShift(): Boolean =
-        isExplicitShiftActive(KEY_LSHIFT) || isExplicitShiftActive(KEY_RSHIFT)
-
     private fun isExplicitShiftActive(keyCode: Int): Boolean =
         (modifierStates[keyCode] ?: MOD_NEUTRAL) != MOD_NEUTRAL
+
+    // A shifted key owns Shift until key-up, even if an explicit Shift is cleared.
+    private fun syncShiftKeys() {
+        val right = isExplicitShiftActive(KEY_RSHIFT)
+        val left = isExplicitShiftActive(KEY_LSHIFT) || (pressedSpecs.values.any { it.shift } && !right)
+        // Press a replacement before releasing the previous Shift.
+        if (left && !sentLeftShift) listener.sendKeyEvent(true, KEY_LSHIFT.toShort())
+        if (right && !sentRightShift) listener.sendKeyEvent(true, KEY_RSHIFT.toShort())
+        if (!left && sentLeftShift) listener.sendKeyEvent(false, KEY_LSHIFT.toShort())
+        if (!right && sentRightShift) listener.sendKeyEvent(false, KEY_RSHIFT.toShort())
+        sentLeftShift = left
+        sentRightShift = right
+    }
+
+    private fun sendModifierState(keyCode: Int, down: Boolean) {
+        if (keyCode == KEY_LSHIFT || keyCode == KEY_RSHIFT) {
+            syncShiftKeys()
+        } else {
+            listener.sendKeyEvent(down, keyCode.toShort())
+        }
+    }
 
     override fun onModifierHoldRelease(view: View, keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
@@ -692,7 +699,7 @@ class KeyboardUIController(
             val currentState = modifierStates[keyCode] ?: MOD_NEUTRAL
             if (currentState == MOD_SINGLE) {
                 modifierStates[keyCode] = MOD_NEUTRAL
-                listener.sendKeyEvent(false, keyCode.toShort())
+                sendModifierState(keyCode, false)
                 updateModifierUI(keyCode, MOD_NEUTRAL)
             }
         } else {
@@ -710,7 +717,7 @@ class KeyboardUIController(
             modifierStates[keyCode] = MOD_NEUTRAL
             physicallyHeldModifiers.remove(keyCode)
             updateModifierUI(keyCode, MOD_NEUTRAL)
-            listener.sendKeyEvent(false, keyCode.toShort())
+            sendModifierState(keyCode, false)
         } else {
             onKeyPress(view, keyCode)
         }
@@ -721,8 +728,8 @@ class KeyboardUIController(
         val newState = (currentState + 1) % 3
         modifierStates[keyCode] = newState
         when (newState) {
-            MOD_NEUTRAL -> listener.sendKeyEvent(false, keyCode.toShort())
-            MOD_SINGLE -> listener.sendKeyEvent(true, keyCode.toShort())
+            MOD_NEUTRAL -> sendModifierState(keyCode, false)
+            MOD_SINGLE -> sendModifierState(keyCode, true)
             MOD_LOCKED -> Unit
         }
         updateModifierUI(keyCode, newState)
@@ -733,7 +740,7 @@ class KeyboardUIController(
         keys.forEach { keyCode ->
             if (modifierStates[keyCode] == MOD_SINGLE && !physicallyHeldModifiers.contains(keyCode)) {
                 modifierStates[keyCode] = MOD_NEUTRAL
-                listener.sendKeyEvent(false, keyCode.toShort())
+                sendModifierState(keyCode, false)
                 updateModifierUI(keyCode, MOD_NEUTRAL)
             }
         }
@@ -794,7 +801,7 @@ class KeyboardUIController(
             if ((modifierStates[code] ?: MOD_NEUTRAL) != MOD_NEUTRAL) {
                 modifierStates[code] = MOD_NEUTRAL
                 physicallyHeldModifiers.remove(code)
-                listener.sendKeyEvent(false, code.toShort())
+                sendModifierState(code, false)
             }
         }
         applyModifierStates()

@@ -43,16 +43,13 @@ internal class KeyboardKeyView(context: Context) : View(context) {
         isFocusable = true
     }
 
-    fun bind(newSpec: KeySpec, keyHeight: Float, pageListener: ((KeyboardPage) -> Unit)?) {
+    fun bind(newSpec: KeySpec, keyHeight: Float, pageListener: (KeyboardPage) -> Unit) {
         spec = newSpec
         val heightDp = keyHeight / density
         baseTextSp = (heightDp * 0.34f).coerceIn(10f, 16f)
         contentDescription = newSpec.label.ifEmpty { newSpec.page?.name?.lowercase() ?: "" }
         updateBackground()
-        val listener = pageListener
-        if (newSpec.page != null && listener != null) {
-            setOnClickListener { newSpec.page?.let(listener) }
-        }
+        newSpec.page?.let { page -> setOnClickListener { pageListener(page) } }
         invalidate()
     }
 
@@ -79,24 +76,17 @@ internal class KeyboardKeyView(context: Context) : View(context) {
     }
 
     private fun textColor(current: KeySpec): Int = when {
-        current.kind == KeyKind.MODIFIER -> when (modifierState) {
-            1 -> accentColor
-            2 -> onAccentColor
-            else -> secondaryColor
-        }
+        current.kind == KeyKind.MODIFIER -> secondaryTextColor()
         current.kind == KeyKind.ACCENT -> accentColor
         current.kind == KeyKind.SPECIAL -> secondaryColor
         current.kind == KeyKind.SPACE -> secondaryColor
         else -> primaryColor
     }
 
-    private fun secondaryTextColor(current: KeySpec): Int = when (current.kind) {
-        KeyKind.MODIFIER -> when (modifierState) {
-            1 -> accentColor
-            2 -> onAccentColor
-            else -> secondaryColor
-        }
-        else -> if (modifierState == 2) onAccentColor else if (modifierState == 1) accentColor else secondaryColor
+    private fun secondaryTextColor(): Int = when (modifierState) {
+        1 -> accentColor
+        2 -> onAccentColor
+        else -> secondaryColor
     }
 
     private fun textSizePx(current: KeySpec): Float {
@@ -142,7 +132,7 @@ internal class KeyboardKeyView(context: Context) : View(context) {
         }
         val secondary = current.secondary
         if (!secondary.isNullOrEmpty()) {
-            secondaryPaint.color = secondaryTextColor(current)
+            secondaryPaint.color = secondaryTextColor()
             val start = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_SP,
                 (baseTextSp * 0.58f).coerceAtLeast(6.5f),
@@ -219,65 +209,6 @@ internal class KeyboardRowView(context: Context) : ViewGroup(context) {
         }
     }
 }
-
-internal class KeyboardNavGridView(context: Context) : ViewGroup(context) {
-    private val keyViews = ArrayList<KeyboardKeyView>()
-    private val cells = ArrayList<View>()
-    private var keyWidthPx = 0f
-    private var keyHeightPx = 0f
-    private var gapPx = 0f
-    private var verticalGapPx = 0f
-
-    fun bind(cellSpecs: List<KeySpec?>, keyWidth: Float, keyHeight: Float, gap: Float) {
-        removeAllViews()
-        keyViews.clear()
-        cells.clear()
-        keyWidthPx = keyWidth
-        keyHeightPx = keyHeight.roundToInt().toFloat()
-        gapPx = gap
-        verticalGapPx = gap.roundToInt().toFloat()
-        cellSpecs.forEach { spec ->
-            if (spec == null) {
-                val blank = View(context)
-                blank.isFocusable = false
-                blank.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                cells.add(blank)
-                addView(blank)
-            } else {
-                val key = KeyboardKeyView(context)
-                key.bind(spec, keyHeight, null)
-                keyViews.add(key)
-                cells.add(key)
-                addView(key)
-            }
-        }
-    }
-
-    fun keys(): List<KeyboardKeyView> = keyViews
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        cells.forEach { child ->
-            child.measure(
-                MeasureSpec.makeMeasureSpec(keyWidthPx.roundToInt(), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(keyHeightPx.roundToInt(), MeasureSpec.EXACTLY)
-            )
-        }
-        val width = (keyWidthPx * 3f + gapPx * 2f).roundToInt()
-        val height = (keyHeightPx * 5f + verticalGapPx * 4f).roundToInt()
-        setMeasuredDimension(width, height)
-    }
-
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        cells.forEachIndexed { index, child ->
-            val column = index % 3
-            val row = index / 3
-            val x = (column * (keyWidthPx + gapPx)).roundToInt()
-            val y = (row * (keyHeightPx + verticalGapPx)).roundToInt()
-            child.layout(x, y, x + keyWidthPx.roundToInt(), y + keyHeightPx.roundToInt())
-        }
-    }
-}
-
 
 internal class KeyboardGridView(context: Context) : ViewGroup(context) {
     private val keyViews = ArrayList<KeyboardKeyView>()
@@ -438,8 +369,6 @@ class KeyboardPageView @JvmOverloads constructor(
         return result
     }
 
-    internal fun findKey(code: Int): KeyboardKeyView? = keys().firstOrNull { it.keySpec?.code == code }
-
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = fieldHeightPx.roundToInt()
@@ -458,98 +387,6 @@ class KeyboardPageView @JvmOverloads constructor(
         blockViews.forEachIndexed { index, block ->
             block.layout(x, 0, x + blockWidths[index], fieldHeightPx.roundToInt())
             x += blockWidths[index] + blockGap.roundToInt()
-        }
-    }
-}
-
-class KeyboardMainPageView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : ViewGroup(context, attrs, defStyleAttr) {
-    private var metrics: KeyboardMetrics? = null
-    private var alphaBlock: LinearLayout? = null
-    private var navGrid: KeyboardNavGridView? = null
-    private var alphaWidthPx = 0f
-    private var navWidthPx = 0f
-    private var fieldWidthPx = 0f
-    private var fieldHeightPx = 0f
-
-    internal fun bind(newTier: KeyboardTier, newMetrics: KeyboardMetrics, onPage: (KeyboardPage) -> Unit) {
-        metrics = newMetrics
-        removeAllViews()
-        alphaBlock = null
-        navGrid = null
-        val rows = KeyboardRows.rows(newTier)
-        alphaWidthPx = newMetrics.alphaColumns * newMetrics.keyWidthPx +
-            (newMetrics.alphaColumns - 1) * newMetrics.gapPx
-        navWidthPx = if (newMetrics.navColumns > 0) {
-            newMetrics.navColumns * newMetrics.keyWidthPx +
-                (newMetrics.navColumns - 1) * newMetrics.gapPx
-        } else {
-            0f
-        }
-        fieldWidthPx = alphaWidthPx + if (navWidthPx > 0f) newMetrics.blockGapPx + navWidthPx else 0f
-        val rowHeightPx = newMetrics.keyHeightPx.roundToInt()
-        val gapInt = newMetrics.gapPx.roundToInt()
-        fieldHeightPx = (rows.size * rowHeightPx + (rows.size - 1) * gapInt).toFloat()
-
-        val block = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        rows.forEachIndexed { index, rowSpec ->
-            val rowView = KeyboardRowView(context)
-            rowView.bind(rowSpec.keys, rowHeightPx.toFloat(), newMetrics.gapPx, onPage)
-            val params = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                rowHeightPx
-            )
-            if (index < rows.size - 1) params.bottomMargin = gapInt
-            block.addView(rowView, params)
-        }
-        addView(block, ViewGroup.LayoutParams(alphaWidthPx.roundToInt(), fieldHeightPx.roundToInt()))
-        alphaBlock = block
-
-        if (newMetrics.navColumns > 0) {
-            val grid = KeyboardNavGridView(context)
-            grid.bind(KeyboardRows.navCells(), newMetrics.keyWidthPx, newMetrics.keyHeightPx, newMetrics.gapPx)
-            addView(grid, ViewGroup.LayoutParams(navWidthPx.roundToInt(), fieldHeightPx.roundToInt()))
-            navGrid = grid
-        }
-        requestLayout()
-    }
-
-    internal fun keys(): List<KeyboardKeyView> {
-        val result = ArrayList<KeyboardKeyView>()
-        alphaBlock?.let { block ->
-            for (i in 0 until block.childCount) {
-                (block.getChildAt(i) as? KeyboardRowView)?.let { result.addAll(it.keys()) }
-            }
-        }
-        navGrid?.let { result.addAll(it.keys()) }
-        return result
-    }
-
-    internal fun findKey(code: Int): KeyboardKeyView? = keys().firstOrNull { it.keySpec?.code == code }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = fieldHeightPx.roundToInt()
-        alphaBlock?.measure(
-            MeasureSpec.makeMeasureSpec(alphaWidthPx.roundToInt(), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
-        )
-        navGrid?.measure(
-            MeasureSpec.makeMeasureSpec(navWidthPx.roundToInt(), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
-        )
-        setMeasuredDimension(width, height)
-    }
-
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        val left = ((width - fieldWidthPx) / 2f).roundToInt().coerceAtLeast(0)
-        alphaBlock?.layout(left, 0, left + alphaWidthPx.roundToInt(), fieldHeightPx.roundToInt())
-        navGrid?.let {
-            val navLeft = left + alphaWidthPx.roundToInt() + (metrics?.blockGapPx ?: 0f).roundToInt()
-            it.layout(navLeft, 0, navLeft + navWidthPx.roundToInt(), fieldHeightPx.roundToInt())
         }
     }
 }

@@ -8,9 +8,10 @@
     android:padding="12dp">
 
     <TextView
+        android:id="@+id/keyboard_slider_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/keyboard_key_height"
+        android:text="@string/keyboard_opacity_title"
         android:textColor="@color/crown_text_primary"
         android:textSize="12sp"
         android:textStyle="bold" />
@@ -23,22 +24,22 @@
         android:orientation="horizontal">
 
         <SeekBar
-            android:id="@+id/keyboard_key_height_seek"
+            android:id="@+id/keyboard_slider_seek"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:max="19"
-            android:progress="11"
+            android:max="70"
+            android:progress="70"
             android:progressBackgroundTint="@color/crown_input_background"
             android:progressTint="@color/crown_keyboard_single_border"
             android:thumbTint="@color/crown_keyboard_single_border" />
 
         <TextView
-            android:id="@+id/keyboard_key_height_value"
+            android:id="@+id/keyboard_slider_value"
             android:layout_width="46dp"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="42dp"
+            android:text="100%"
             android:textColor="@color/crown_text_primary"
             android:textSize="12sp" />
     </LinearLayout>
@@ -50,49 +51,49 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/keyboard_key_height_31"
+            android:id="@+id/keyboard_slider_preset_1"
             android:layout_width="0dp"
             android:layout_height="30dp"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:background="@drawable/keyboard_opacity_preset_bg"
             android:gravity="center"
-            android:text="31"
+            android:text="100%"
             android:textColor="@color/keyboard_opacity_preset_text"
             android:textSize="10sp" />
 
         <TextView
-            android:id="@+id/keyboard_key_height_38"
+            android:id="@+id/keyboard_slider_preset_2"
             android:layout_width="0dp"
             android:layout_height="30dp"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:background="@drawable/keyboard_opacity_preset_bg"
             android:gravity="center"
-            android:text="38"
+            android:text="85%"
             android:textColor="@color/keyboard_opacity_preset_text"
             android:textSize="10sp" />
 
         <TextView
-            android:id="@+id/keyboard_key_height_44"
+            android:id="@+id/keyboard_slider_preset_3"
             android:layout_width="0dp"
             android:layout_height="30dp"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:background="@drawable/keyboard_opacity_preset_bg"
             android:gravity="center"
-            android:text="44"
+            android:text="70%"
             android:textColor="@color/keyboard_opacity_preset_text"
             android:textSize="10sp" />
 
         <TextView
-            android:id="@+id/keyboard_key_height_50"
+            android:id="@+id/keyboard_slider_preset_4"
             android:layout_width="0dp"
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="@drawable/keyboard_opacity_preset_bg"
             android:gravity="center"
-            android:text="50"
+            android:text="50%"
             android:textColor="@color/keyboard_opacity_preset_text"
             android:textSize="10sp" />
     </LinearLayout>

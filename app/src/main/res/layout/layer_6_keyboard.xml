@@ -136,7 +136,7 @@
             android:paddingRight="10dp"
             android:paddingBottom="10dp">
 
-            <com.limelight.binding.input.advance_setting.KeyboardMainPageView
+            <com.limelight.binding.input.advance_setting.KeyboardPageView
                 android:id="@+id/layout_main"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />

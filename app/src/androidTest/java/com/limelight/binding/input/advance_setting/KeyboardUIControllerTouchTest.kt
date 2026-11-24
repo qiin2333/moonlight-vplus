@@ -1,6 +1,8 @@
 package com.limelight.binding.input.advance_setting
 
 import android.content.Intent
+import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
@@ -206,6 +208,72 @@ class KeyboardUIControllerTouchTest {
         }
         assertTrue(events.any { it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
         assertTrue(events.any { !it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
+    }
+
+    @Test
+    fun shiftedKeyKeepsShiftWhenExplicitModifierIsCleared() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        lateinit var controller: KeyboardUIController
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) { events.add(down to keyCode) }
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+            }
+            controller = KeyboardUIController(parent, listener, isolatedKeyboardContext(activity))
+            controller.show()
+            activity.setContentView(parent)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            val left = KeyEvent.KEYCODE_SHIFT_LEFT
+            controller.onKeyPress(symbol, left)
+            controller.onKeyRelease(symbol, left)
+            controller.onKeyPress(symbol, 1008)
+            val chips = activity.findViewById<ViewGroup>(R.id.keyboard_modifier_chips)
+            chips.getChildAt(0).performClick()
+            controller.onKeyRelease(symbol, 1008)
+        }
+        assertEquals(listOf(
+            true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+            true to KeyEvent.KEYCODE_1.toShort(),
+            false to KeyEvent.KEYCODE_1.toShort(),
+            false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+        ), events)
+    }
+
+    @Test
+    fun heldShiftedKeyTakesOverWhenRightShiftIsReleased() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        lateinit var controller: KeyboardUIController
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) { events.add(down to keyCode) }
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+            }
+            controller = KeyboardUIController(parent, listener, isolatedKeyboardContext(activity))
+            controller.show()
+            activity.setContentView(parent)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            val right = KeyEvent.KEYCODE_SHIFT_RIGHT
+            controller.onKeyPress(symbol, right)
+            controller.onKeyPress(symbol, 1008)
+            controller.onModifierHoldRelease(symbol, right)
+            controller.onKeyRelease(symbol, 1008)
+        }
+        assertEquals(listOf(
+            true to KeyEvent.KEYCODE_SHIFT_RIGHT.toShort(),
+            true to KeyEvent.KEYCODE_1.toShort(),
+            true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+            false to KeyEvent.KEYCODE_SHIFT_RIGHT.toShort(),
+            false to KeyEvent.KEYCODE_1.toShort(),
+            false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+        ), events)
     }
 
     @Test
@@ -426,6 +494,11 @@ class KeyboardUIControllerTouchTest {
             events
         )
     }
+
+    private fun isolatedKeyboardContext(context: Context): Context = object : ContextWrapper(context) {
+        override fun getSharedPreferences(name: String, mode: Int) =
+            super.getSharedPreferences("shift-ownership-test-$name", mode)
+    }.also { it.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE).edit().clear().commit() }
 
     private object NoOpKeyboardListener : KeyboardUIController.OnKeyboardEventListener {
         override fun sendKeyEvent(down: Boolean, keyCode: Short) = Unit

@@ -10,8 +10,6 @@ class KeyboardGeometryTest {
         val metrics = KeyboardGeometry.compute(360f, 640f, 1f)
         assertEquals(KeyboardTier.POCKET, metrics.tier)
         assertEquals(348, metrics.dockWidthPx)
-        assertEquals(4, metrics.rows)
-        assertEquals(10, metrics.totalColumns)
         assertEquals(31.8f, metrics.keyWidthPx, 0.2f)
         assertEquals(46f, metrics.keyHeightPx, 0.01f)
         assertEquals(234, metrics.dockHeightPx)
@@ -22,11 +20,9 @@ class KeyboardGeometryTest {
         val metrics = KeyboardGeometry.compute(640f, 360f, 1f)
         assertEquals(KeyboardTier.STANDARD, metrics.tier)
         assertEquals(608, metrics.dockWidthPx)
-        assertEquals(5, metrics.rows)
-        assertEquals(15, metrics.totalColumns)
         assertEquals(35.5f, metrics.keyWidthPx, 0.1f)
         assertEquals(32f, metrics.keyHeightPx, 0.01f)
-        assertEquals(0, metrics.navColumns)
+        assertEquals(230, metrics.dockHeightPx)
     }
 
     @Test
@@ -34,8 +30,6 @@ class KeyboardGeometryTest {
         val metrics = KeyboardGeometry.compute(900f, 600f, 1f)
         assertEquals(KeyboardTier.STUDIO, metrics.tier)
         assertEquals(868, metrics.dockWidthPx)
-        assertEquals(3, metrics.navColumns)
-        assertEquals(18, metrics.totalColumns)
         assertEquals(42.8f, metrics.keyWidthPx, 0.1f)
         assertEquals(50f, metrics.keyHeightPx, 0.01f)
     }
@@ -46,7 +40,8 @@ class KeyboardGeometryTest {
         assertEquals(KeyboardTier.STUDIO, metrics.tier)
         assertEquals(1248, metrics.dockWidthPx)
         assertEquals(56f, metrics.keyWidthPx, 0.01f)
-        assertTrue(metrics.gutterPx > 60f)
+        val fieldWidth = 18 * metrics.keyWidthPx + 16 * metrics.gapPx + metrics.blockGapPx
+        assertTrue((metrics.contentWidthPx - fieldWidth) / 2f > 60f)
         assertEquals(50f, metrics.keyHeightPx, 0.01f)
     }
 
@@ -70,9 +65,6 @@ class KeyboardGeometryTest {
         assertEquals(KeyboardTier.POCKET, metrics.tier)
         assertEquals(380, metrics.dockWidthPx)
         assertEquals(12, metrics.marginPx)
-        assertEquals(4, metrics.rows)
-        assertEquals(10, metrics.alphaColumns)
-        assertEquals(0, metrics.navColumns)
         assertEquals(35f, metrics.keyWidthPx, 0.2f)
         assertEquals(46f, metrics.keyHeightPx, 0.01f)
         assertEquals(234, metrics.dockHeightPx)
@@ -82,7 +74,7 @@ class KeyboardGeometryTest {
     fun densityBelowOneUsesRealDensity() {
         val metrics = KeyboardGeometry.compute(480f, 640f, 0.75f)
         assertEquals(KeyboardTier.STANDARD, metrics.tier)
-        assertEquals(640f, metrics.screenWidthDp, 0.01f)
+        assertEquals(456, metrics.dockWidthPx)
     }
 
     @Test

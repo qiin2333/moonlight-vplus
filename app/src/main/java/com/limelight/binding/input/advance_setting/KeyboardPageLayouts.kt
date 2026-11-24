@@ -63,6 +63,7 @@ internal object KeyboardPageLayouts {
         KeyboardPage.MAIN -> mainSpec(tier)
         KeyboardPage.NUM -> if (tier == KeyboardTier.POCKET) compactNum() else fullNum()
         KeyboardPage.NAV -> if (tier == KeyboardTier.POCKET) compactNav() else fullNav()
+        KeyboardPage.NUMPAD -> compactNumpad()
     }
 
     private fun mainSpec(tier: KeyboardTier): KeyboardPageSpec {
@@ -85,6 +86,32 @@ internal object KeyboardPageLayouts {
 
     private fun compactNum(): KeyboardPageSpec =
         KeyboardPageSpec(4, listOf(KeyboardBlockSpec.Rows(10, compactNumRows())))
+
+    private fun compactNumpad(): KeyboardPageSpec = KeyboardPageSpec(
+        4,
+        listOf(KeyboardBlockSpec.Rows(10, listOf(
+            row(
+                normal(KeyEvent.KEYCODE_NUMPAD_7, "7"), normal(KeyEvent.KEYCODE_NUMPAD_8, "8"),
+                normal(KeyEvent.KEYCODE_NUMPAD_9, "9"), special(KeyEvent.KEYCODE_NUMPAD_DIVIDE, "/"),
+                special(KeyEvent.KEYCODE_NUM_LOCK, "Num Lock")
+            ),
+            row(
+                normal(KeyEvent.KEYCODE_NUMPAD_4, "4"), normal(KeyEvent.KEYCODE_NUMPAD_5, "5"),
+                normal(KeyEvent.KEYCODE_NUMPAD_6, "6"), special(KeyEvent.KEYCODE_NUMPAD_MULTIPLY, "*"),
+                special(BACKSPACE, "⌫")
+            ),
+            row(
+                normal(KeyEvent.KEYCODE_NUMPAD_1, "1"), normal(KeyEvent.KEYCODE_NUMPAD_2, "2"),
+                normal(KeyEvent.KEYCODE_NUMPAD_3, "3"), special(KeyEvent.KEYCODE_NUMPAD_SUBTRACT, "-"),
+                page("ABC", KeyboardPage.MAIN)
+            ),
+            row(
+                normal(KeyEvent.KEYCODE_NUMPAD_0, "0"), normal(KeyEvent.KEYCODE_NUMPAD_DOT, "."),
+                special(KeyEvent.KEYCODE_NUMPAD_ADD, "+"), special(ENTER, "↵", kind = KeyKind.ACCENT),
+                page("?123", KeyboardPage.NUM)
+            )
+        )))
+    )
 
     private fun fullNum(): KeyboardPageSpec = KeyboardPageSpec(
         5,
@@ -229,7 +256,8 @@ internal object KeyboardPageLayouts {
         ),
         row(
             page("ABC", KeyboardPage.MAIN, 1.2f), space(2.2f),
-            normal(KeyEvent.KEYCODE_COMMA, ","), normal(KeyEvent.KEYCODE_PERIOD, "."),
+            normal(KeyEvent.KEYCODE_APOSTROPHE, "'"), normal(KeyEvent.KEYCODE_GRAVE, "`"),
+            shifted(KeyEvent.KEYCODE_GRAVE, "~"), page("NumPad", KeyboardPage.NUMPAD, 1.3f),
             shifted(KeyEvent.KEYCODE_1, "!"), shifted(KeyEvent.KEYCODE_SLASH, "?"),
             special(BACKSPACE, "⌫", 1.2f),
             special(ENTER, "↵", 1.4f, KeyKind.ACCENT)
