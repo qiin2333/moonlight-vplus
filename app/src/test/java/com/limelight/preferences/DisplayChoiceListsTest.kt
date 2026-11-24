@@ -93,6 +93,25 @@ class DisplayChoiceListsTest {
     }
 
     @Test
+    fun nativeSizePrefersThePhysicalModeOverTheScaledUiSize() {
+        assertEquals(3840 to 2160, DisplayChoiceLists.preferredNativeSize(3840, 2160, 1920, 1080))
+        assertEquals(1920 to 1080, DisplayChoiceLists.preferredNativeSize(1920, 1080, 1280, 720))
+        assertEquals(2400 to 1080, DisplayChoiceLists.preferredNativeSize(1080, 2400, 1080, 2400))
+        assertEquals(1920 to 1080, DisplayChoiceLists.preferredNativeSize(0, 0, 1080, 1920))
+        assertEquals(null, DisplayChoiceLists.preferredNativeSize(0, 0, 0, 0))
+    }
+
+    @Test
+    fun nativeSizeClampsPanelModesAboveUhd() {
+        assertEquals(3840 to 2160, DisplayChoiceLists.preferredNativeSize(4096, 2160, 1920, 1080))
+    }
+
+    @Test
+    fun nativeSizeKeepsTheUiSizeWhenTheModeIsSmaller() {
+        assertEquals(1920 to 1080, DisplayChoiceLists.preferredNativeSize(1280, 720, 1920, 1080))
+    }
+
+    @Test
     fun presetCapabilityLimitDoesNotBlockValidCustomDimensions() {
         val limits = DisplayChoiceLimits(1920, 60f)
         assertFalse(limits.supportsResolution("3840x2160"))
