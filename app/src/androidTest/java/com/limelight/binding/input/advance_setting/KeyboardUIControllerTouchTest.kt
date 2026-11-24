@@ -178,6 +178,37 @@ class KeyboardUIControllerTouchTest {
     }
 
     @Test
+    fun syntheticShiftReleasesWhenOnlyRightShiftIsActive() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        var controller: KeyboardUIController? = null
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                }
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+                override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
+            }
+            val c = KeyboardUIController(parent, listener, activity)
+            c.show()
+            controller = c
+            activity.setContentView(parent)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val c = checkNotNull(controller)
+            val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
+            c.onKeyPress(symbol, 1008)
+            c.onKeyPress(symbol, KeyEvent.KEYCODE_SHIFT_RIGHT)
+            c.onKeyRelease(symbol, 1008)
+        }
+        assertTrue(events.any { it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
+        assertTrue(events.any { !it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
+    }
+
+    @Test
     fun miniModeUsesCompactDockAndRestores() {
         activityRule.scenario.onActivity { activity ->
             activity.getSharedPreferences("keyboard_settings", 0).edit()

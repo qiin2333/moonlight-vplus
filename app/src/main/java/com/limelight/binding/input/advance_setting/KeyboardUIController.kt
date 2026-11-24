@@ -674,15 +674,17 @@ class KeyboardUIController(
         val spec = pressedSpecs.remove(keyCode)
         listener.sendKeyEvent(false, (spec?.sendCode ?: keyCode).toShort())
         if (spec?.shift == true && syntheticShiftOwners.remove(keyCode) &&
-            syntheticShiftOwners.isEmpty() && !hasActiveExplicitShift()
+            syntheticShiftOwners.isEmpty() && !isExplicitShiftActive(KEY_LSHIFT)
         ) {
             listener.sendKeyEvent(false, KEY_LSHIFT.toShort())
         }
     }
 
     private fun hasActiveExplicitShift(): Boolean =
-        (modifierStates[KEY_LSHIFT] ?: MOD_NEUTRAL) != MOD_NEUTRAL ||
-            (modifierStates[KEY_RSHIFT] ?: MOD_NEUTRAL) != MOD_NEUTRAL
+        isExplicitShiftActive(KEY_LSHIFT) || isExplicitShiftActive(KEY_RSHIFT)
+
+    private fun isExplicitShiftActive(keyCode: Int): Boolean =
+        (modifierStates[keyCode] ?: MOD_NEUTRAL) != MOD_NEUTRAL
 
     override fun onModifierHoldRelease(view: View, keyCode: Int) {
         if (modifierStates.containsKey(keyCode)) {
