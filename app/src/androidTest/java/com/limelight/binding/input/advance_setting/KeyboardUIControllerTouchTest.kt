@@ -193,7 +193,7 @@ class KeyboardUIControllerTouchTest {
                 override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
                 override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
             }
-            val c = KeyboardUIController(parent, listener, activity)
+            val c = KeyboardUIController(parent, listener, isolatedKeyboardContext(activity))
             c.show()
             controller = c
             activity.setContentView(parent)
@@ -204,10 +204,21 @@ class KeyboardUIControllerTouchTest {
             val symbol = checkNotNull(activity.findViewById<View>(R.id.layout_num).findViewWithTag<View>("k1008"))
             c.onKeyPress(symbol, 1008)
             c.onKeyPress(symbol, KeyEvent.KEYCODE_SHIFT_RIGHT)
+            assertEquals(listOf(
+                true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                true to KeyEvent.KEYCODE_1.toShort(),
+                true to KeyEvent.KEYCODE_SHIFT_RIGHT.toShort(),
+                false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            ), events)
             c.onKeyRelease(symbol, 1008)
+            assertEquals(listOf(
+                true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                true to KeyEvent.KEYCODE_1.toShort(),
+                true to KeyEvent.KEYCODE_SHIFT_RIGHT.toShort(),
+                false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                false to KeyEvent.KEYCODE_1.toShort()
+            ), events)
         }
-        assertTrue(events.any { it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
-        assertTrue(events.any { !it.first && it.second == KeyEvent.KEYCODE_SHIFT_LEFT.toShort() })
     }
 
     @Test
@@ -232,7 +243,12 @@ class KeyboardUIControllerTouchTest {
             controller.onKeyRelease(symbol, left)
             controller.onKeyPress(symbol, 1008)
             val chips = activity.findViewById<ViewGroup>(R.id.keyboard_modifier_chips)
-            chips.getChildAt(0).performClick()
+            assertTrue(chips.getChildAt(0).performClick())
+            assertEquals(View.GONE, chips.visibility)
+            assertEquals(listOf(
+                true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                true to KeyEvent.KEYCODE_1.toShort()
+            ), events)
             controller.onKeyRelease(symbol, 1008)
         }
         assertEquals(listOf(
@@ -303,6 +319,9 @@ class KeyboardUIControllerTouchTest {
             touch(plain, MotionEvent.ACTION_DOWN)
             touch(shifted, MotionEvent.ACTION_DOWN)
             touch(plain, MotionEvent.ACTION_CANCEL)
+            assertEquals(listOf(
+                true to minus.toShort(), true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            ), events)
             touch(shifted, MotionEvent.ACTION_UP)
             assertEquals(listOf(
                 true to minus.toShort(), true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
@@ -313,6 +332,10 @@ class KeyboardUIControllerTouchTest {
             touch(plain, MotionEvent.ACTION_DOWN)
             touch(shifted, MotionEvent.ACTION_DOWN)
             touch(shifted, MotionEvent.ACTION_UP)
+            assertEquals(listOf(
+                true to minus.toShort(), true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            ), events)
             touch(plain, MotionEvent.ACTION_UP)
             assertEquals(listOf(
                 true to minus.toShort(), true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
@@ -326,6 +349,7 @@ class KeyboardUIControllerTouchTest {
             touch(first, MotionEvent.ACTION_DOWN)
             touch(second, MotionEvent.ACTION_DOWN)
             touch(first, MotionEvent.ACTION_CANCEL)
+            assertEquals(listOf(true to left.toShort()), events)
             touch(second, MotionEvent.ACTION_UP)
             assertEquals(listOf(true to left.toShort(), false to left.toShort()), events)
 
@@ -333,7 +357,9 @@ class KeyboardUIControllerTouchTest {
             controller.onKeyPress(first, left)
             controller.onKeyPress(first, left)
             controller.onKeyRelease(second, left)
+            assertEquals(listOf(true to left.toShort()), events)
             controller.onKeyRelease(first, left)
+            assertEquals(listOf(true to left.toShort(), false to left.toShort()), events)
             controller.onKeyRelease(first, left)
             assertEquals(listOf(true to left.toShort(), false to left.toShort()), events)
 
@@ -342,6 +368,7 @@ class KeyboardUIControllerTouchTest {
             controller.onKeyPress(first, shift)
             controller.onKeyRelease(first, shift)
             controller.onKeyRelease(second, left)
+            assertEquals(listOf(true to shift.toShort()), events)
             controller.onDoubleTap(first, shift)
             assertEquals(listOf(true to shift.toShort(), false to shift.toShort()), events)
         }

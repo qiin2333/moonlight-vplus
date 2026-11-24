@@ -354,8 +354,9 @@ class KeyboardUIController(
         btnNum.contentDescription = numLabel
         btnNav.contentDescription = navLabel
         val hideSecondaryTools = dockDp < 300f
-        btnMini.visibility = if (hideSecondaryTools) View.GONE else View.VISIBLE
+        btnMini.visibility = if (hideSecondaryTools && !isMini) View.GONE else View.VISIBLE
         btnResize.visibility = if (hideSecondaryTools) View.GONE else View.VISIBLE
+        btnOpacity.visibility = if (dockDp < 260f && isMini) View.GONE else View.VISIBLE
     }
 
     private fun toggleResizePopover() {

@@ -105,6 +105,68 @@ class AccessibilityControllerInterceptionTest {
     }
 
     @Test
+    fun releasingOnePhysicalModifierKeepsTheOtherSideActive() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val handler = game.keyboardInputHandler
+            val pairs = listOf(
+                Triple(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT, KeyboardPacket.MODIFIER_SHIFT),
+                Triple(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyboardPacket.MODIFIER_CTRL),
+                Triple(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT, KeyboardPacket.MODIFIER_ALT),
+                Triple(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT, KeyboardPacket.MODIFIER_META)
+            )
+            for ((leftCode, rightCode, mask) in pairs) {
+                val left = key(KeyEvent.ACTION_DOWN, leftCode, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                val right = key(KeyEvent.ACTION_DOWN, rightCode, KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+                handler.handleKeyDown(left)
+                handler.handleKeyDown(right)
+                handler.handleKeyDown(KeyEvent.changeTimeRepeat(right, SystemClock.uptimeMillis(), 1))
+                handler.handleKeyUp(KeyEvent.changeAction(left, KeyEvent.ACTION_UP))
+                assertEquals(mask.toInt(), field(handler, "modifierFlags"))
+                handler.handleKeyUp(KeyEvent.changeAction(right, KeyEvent.ACTION_UP))
+                assertEquals(0, field(handler, "modifierFlags"))
+            }
+        }
+    }
+
+    @Test
+    fun shiftedVirtualKeysCanHandOffBetweenSidesAndOrigins() = withGame { scenario ->
+        scenario.onActivity { game ->
+            connect(game)
+            val handler = game.keyboardInputHandler
+            val left = KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            val right = KeyEvent.KEYCODE_SHIFT_RIGHT.toShort()
+            val mask = KeyboardPacket.MODIFIER_SHIFT.toInt()
+            handler.keyboardEvent(true, left, false)
+            handler.keyboardEvent(true, right, false)
+            handler.keyboardEvent(false, left, false)
+            assertEquals(mask, field(handler, "modifierFlags"))
+            handler.keyboardEvent(false, right, false)
+            assertEquals(0, field(handler, "modifierFlags"))
+
+            val physical = key(KeyEvent.ACTION_DOWN, left.toInt(), KeyCharacterMap.VIRTUAL_KEYBOARD, InputDevice.SOURCE_KEYBOARD)
+            handler.keyboardEvent(true, left, false)
+            handler.handleKeyDown(physical)
+            handler.keyboardEvent(false, left, false)
+            assertEquals(mask, field(handler, "modifierFlags"))
+            handler.handleKeyUp(KeyEvent.changeAction(physical, KeyEvent.ACTION_UP))
+            assertEquals(0, field(handler, "modifierFlags"))
+
+            withService(game) { service ->
+                KeyboardAccessibilityService.setIntercepting(false)
+                handler.keyboardEvent(true, left, false)
+                KeyboardAccessibilityService.setIntercepting(true)
+                val accessible = key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_RIGHT, controllerDeviceId(), InputDevice.SOURCE_KEYBOARD)
+                assertTrue(send(service, accessible))
+                handler.keyboardEvent(false, left, false)
+                assertEquals(mask, field(handler, "modifierFlags"))
+                KeyboardAccessibilityService.setIntercepting(false)
+                assertEquals(0, field(handler, "modifierFlags"))
+            }
+        }
+    }
+
+    @Test
     fun captureLossDoesNotCancelOrdinaryEscapeHold() = withGame { scenario ->
         var deviceId = 0
         scenario.onActivity { game ->

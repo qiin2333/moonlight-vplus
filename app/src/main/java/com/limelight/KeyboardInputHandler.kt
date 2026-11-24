@@ -28,6 +28,8 @@ class KeyboardInputHandler(private val game: Game) {
     private var modifierFlags = 0
     private var ordinaryModifierFlags = 0
     private var accessibilityModifierFlags = 0
+    private val ordinaryModifierKeys = HashSet<PhysicalKey>()
+    private val accessibilityModifierKeys = HashSet<PhysicalKey>()
     private var waitingForAllModifiersUp = false
     private var specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
     private var specialKeyUsesAccessibility = false
@@ -95,30 +97,32 @@ class KeyboardInputHandler(private val game: Game) {
 
     companion object {
         private const val ESC_DOUBLE_PRESS_INTERVAL = 500L // 500毫秒内按第二次ESC才有效
+        private const val DIRECT_KEYBOARD_DEVICE_ID = Int.MIN_VALUE
+    }
+
+    private fun modifierMaskFor(androidKeyCode: Int): Int = when (androidKeyCode) {
+        KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> KeyboardPacket.MODIFIER_CTRL.toInt()
+        KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> KeyboardPacket.MODIFIER_SHIFT.toInt()
+        KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> KeyboardPacket.MODIFIER_ALT.toInt()
+        KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT -> KeyboardPacket.MODIFIER_META.toInt()
+        else -> 0
     }
 
     // Returns true if the key stroke was consumed
-    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, isRepeat: Boolean = false): Boolean {
-        var modifierMask = 0
-        var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
-
-        when (androidKeyCode) {
-            KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_CTRL.toInt()
-            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_SHIFT.toInt()
-            KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_ALT.toInt()
-            KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT ->
-                modifierMask = KeyboardPacket.MODIFIER_META.toInt()
-            else -> nonModifierKeyCode = androidKeyCode
-        }
+    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, isRepeat: Boolean = false,
+                                  physicalKey: PhysicalKey? = null): Boolean {
+        val modifierMask = modifierMaskFor(androidKeyCode)
+        val nonModifierKeyCode = if (modifierMask == 0) androidKeyCode else KeyEvent.KEYCODE_UNKNOWN
 
         val origin = keyOrigin()
-        val oldModifiers = if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierFlags else ordinaryModifierFlags
-        val newModifiers = if (down) oldModifiers or modifierMask else oldModifiers and modifierMask.inv()
-        if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierFlags = newModifiers else ordinaryModifierFlags = newModifiers
-        modifierFlags = ordinaryModifierFlags or accessibilityModifierFlags
+        if (modifierMask != 0) {
+            val heldKeys = if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierKeys else ordinaryModifierKeys
+            val owner = physicalKey ?: PhysicalKey(DIRECT_KEYBOARD_DEVICE_ID, androidKeyCode, 0)
+            if (down) heldKeys.add(owner) else heldKeys.remove(owner)
+            val flags = heldKeys.fold(0) { current, key -> current or modifierMaskFor(key.code) }
+            if (origin == KeyOrigin.ACCESSIBILITY) accessibilityModifierFlags = flags else ordinaryModifierFlags = flags
+            modifierFlags = ordinaryModifierFlags or accessibilityModifierFlags
+        }
 
         // Handle the special combos on the key up
         if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
@@ -194,6 +198,8 @@ class KeyboardInputHandler(private val game: Game) {
     private fun getModifierState(): Byte = modifierFlags.toByte()
 
     fun clearModifierState() {
+        ordinaryModifierKeys.clear()
+        accessibilityModifierKeys.clear()
         ordinaryModifierFlags = 0
         accessibilityModifierFlags = 0
         modifierFlags = 0
@@ -263,6 +269,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
         accessibilityPressedKeys.clear()
         pressedKeys.retainAll(ordinaryPressedKeys.map { it.code }.toSet())
+        accessibilityModifierKeys.clear()
         accessibilityModifierFlags = 0
         modifierFlags = ordinaryModifierFlags
         releasedKeys.forEach { key ->
@@ -440,7 +447,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
+            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0, physicalKey)) {
                 return true
             }
 
@@ -607,7 +614,7 @@ class KeyboardInputHandler(private val game: Game) {
         }
 
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, false)) {
+            if (handleSpecialKeys(event.keyCode, false, physicalKey = physicalKey)) {
                 return true
             }
 
