@@ -65,6 +65,25 @@
     <color name="app_dialog_text_disabled">#66C9D0D8</color>
     <color name="app_dialog_accent_soft">#33FF6B9D</color>
     <color name="app_dialog_accent_focus">#66FF6B9D</color>
+
+    <!-- Crown surfaces follow the shared dark app shell. -->
+    <color name="crown_panel_background">@color/appview_panel_surface</color>
+    <color name="crown_panel_border">@color/ui_shell_outline</color>
+    <color name="crown_section_background">@color/ui_shell_surface</color>
+    <color name="crown_section_border">@color/ui_shell_outline</color>
+    <color name="crown_input_background">@color/ui_shell_surface_pressed</color>
+    <color name="crown_input_border">@color/ui_shell_outline</color>
+    <color name="crown_text_primary">@color/ui_shell_text_primary</color>
+    <color name="crown_text_secondary">@color/ui_shell_text_secondary</color>
+    <color name="crown_text_danger">@color/app_action_sheet_danger</color>
+    <color name="crown_button_focused">@color/ui_shell_surface_pressed</color>
+    <color name="crown_keyboard_single_background">@color/ui_shell_accent_soft</color>
+    <color name="crown_keyboard_single_border">@color/ui_shell_accent</color>
+    <color name="crown_keyboard_locked_background">@color/app_dialog_accent_soft</color>
+    <color name="crown_keyboard_locked_border">@color/ui_shell_accent</color>
+    <color name="crown_keyboard_popup_background">@color/ui_shell_surface_elevated</color>
+    <color name="crown_keyboard_popup_text">@color/ui_shell_text_primary</color>
+    <color name="crown_keyboard_hint">@color/ui_shell_text_secondary</color>
     <color name="app_action_sheet_danger">#FFFF9AAA</color>
     <color name="app_action_sheet_danger_soft">#1AFF9AAA</color>
     <color name="app_action_sheet_danger_border">#4DFF9AAA</color>

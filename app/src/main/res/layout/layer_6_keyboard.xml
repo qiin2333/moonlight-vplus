@@ -1,125 +1,182 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/layer_6_keyboard"
-    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:visibility="gone">
+
     <com.limelight.binding.input.advance_setting.KeyboardTouchGuardLayout
         android:id="@+id/keyboard_content"
-        style="@style/VirtualKeyboardStyle"
-        android:orientation="vertical"
         android:layout_width="400dp"
         android:layout_height="220dp"
-        android:layout_gravity="bottom|right"
-        android:padding="4dp">
-
-        <!-- Resize Handle for Full Mode -->
-        <View
-            android:id="@+id/keyboard_resize_handle"
-            android:layout_width="60dp"
-            android:layout_height="6dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="2dp"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/keyboard_popup_bg"
-            android:visibility="gone" />
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="@drawable/keyboard_dock_bg"
+        android:clipChildren="false"
+        android:elevation="12dp"
+        android:orientation="vertical">
 
         <LinearLayout
-            android:orientation="horizontal"
+            android:id="@+id/keyboard_rail"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/keyboard_rail_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.limelight.binding.input.advance_setting.KeyboardGripView
+                android:id="@+id/keyboard_drag_grip"
+                android:layout_width="20dp"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/keyboard_drag_handle" />
+
+            <TextView
+                android:id="@+id/btn_key_page_main"
+                style="@style/KeyboardRailTab"
+                android:drawableStart="@drawable/ic_keyboard_tab_main"
+                android:text="@string/keyboard_tab_main" />
+
+            <TextView
+                android:id="@+id/btn_key_page_num"
+                style="@style/KeyboardRailTab"
+                android:drawableStart="@drawable/ic_keyboard_tab_num"
+                android:text="@string/keyboard_tab_num" />
+
+            <TextView
+                android:id="@+id/btn_key_page_nav"
+                style="@style/KeyboardRailTab"
+                android:drawableStart="@drawable/ic_keyboard_tab_nav"
+                android:text="@string/keyboard_tab_nav" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/btn_keyboard_opacity"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:contentDescription="@string/keyboard_opacity"
+                android:focusable="true"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_keyboard_opacity"
+                android:tint="@color/crown_text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btn_keyboard_mini"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:contentDescription="@string/keyboard_mini"
+                android:focusable="true"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_keyboard_mini"
+                android:tint="@color/crown_text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btn_keyboard_resize"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:contentDescription="@string/keyboard_resize"
+                android:focusable="true"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_keyboard_resize"
+                android:tint="@color/crown_text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btn_keyboard_hide"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:contentDescription="@string/keyboard_hide"
+                android:focusable="true"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_keyboard_hide"
+                android:tint="@color/crown_text_secondary" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/keyboard_page_host"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingBottom="10dp">
 
-            <!-- Left Sidebar (Panel Switch Buttons) -->
-            <LinearLayout
-                android:id="@+id/keyboard_left_sidebar"
-                android:orientation="vertical"
-                android:layout_width="46dp"
+            <com.limelight.binding.input.advance_setting.KeyboardMainPageView
+                android:id="@+id/layout_main"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.limelight.binding.input.advance_setting.KeyboardPageView
+                android:id="@+id/layout_nav"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:gravity="center"
-                android:padding="2dp">
-                <TextView android:id="@+id/btn_key_page_main" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_main" android:textSize="11sp"/>
-                <TextView android:id="@+id/btn_key_page_nav" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_nav" android:textSize="11sp"/>
-                <TextView android:id="@+id/btn_key_page_num" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_num" android:textSize="11sp"/>
-                <TextView android:id="@+id/btn_key_page_mini" style="@style/KeyboardKeyRefined.Modifier" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="@string/keyboard_tab_mini" android:textSize="11sp"/>
-            </LinearLayout>
+                android:visibility="gone" />
 
-            <!-- Keyboard Page Container & Functional Strip -->
-            <LinearLayout
-                android:orientation="vertical"
-                android:layout_width="0dp"
+            <com.limelight.binding.input.advance_setting.KeyboardPageView
+                android:id="@+id/layout_num"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:paddingLeft="2dp"
-                android:paddingRight="2dp">
-
-                <FrameLayout
-                    android:layout_weight="1"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp">
-                    <include layout="@layout/layout_keyboard_main" android:id="@+id/layout_main" />
-                    <include layout="@layout/layout_keyboard_nav" android:id="@+id/layout_nav" android:visibility="gone" />
-                    <include layout="@layout/layout_keyboard_numpad" android:id="@+id/layout_num" android:visibility="gone" />
-                    <include layout="@layout/layout_keyboard_mini" android:id="@+id/layout_mini" android:visibility="gone" />
-                </FrameLayout>
-            </LinearLayout>
-
-            <!-- Right Sidebar (Opacity only) -->
-            <LinearLayout
-                android:id="@+id/keyboard_right_sidebar"
-                android:orientation="vertical"
-                android:layout_width="46dp"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:padding="2dp">
-                
-                <TextView
-                    android:id="@+id/btn_keyboard_collapse"
-                    style="@style/KeyboardKeyRefined.Modifier"
-                    android:layout_width="42dp"
-                    android:layout_height="36dp"
-                    android:text="@string/keyboard_hide"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="4dp"/>
-                <TextView
-                    android:id="@+id/btn_keyboard_resize"
-                    style="@style/KeyboardKeyRefined.Modifier"
-                    android:layout_width="42dp"
-                    android:layout_height="36dp"
-                    android:text="@string/keyboard_size"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="4dp"/>
-                <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/keyboard_opacity" android:textColor="@color/crown_text_secondary" android:textSize="10sp" android:gravity="center" android:layout_marginBottom="8dp"/>
-                <com.limelight.utils.AppSliderView
-                    android:id="@+id/float_keyboard_seekbar"
-                    android:progressBackgroundTint="@color/crown_input_border"
-                    android:layout_width="160dp"
-                    android:layout_height="wrap_content"
-                    android:max="10"
-                    android:progress="10"
-                    android:rotation="270"
-                    android:thumbOffset="0dp"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="4dp"
-                    android:layout_marginBottom="40dp"/>
-            </LinearLayout>
-        </LinearLayout>
+                android:visibility="gone" />
+        </FrameLayout>
     </com.limelight.binding.input.advance_setting.KeyboardTouchGuardLayout>
 
-    <!-- iOS Style Key Popup Overlay -->
+    <LinearLayout
+        android:id="@+id/keyboard_modifier_chips"
+        android:layout_width="wrap_content"
+        android:layout_height="30dp"
+        android:background="@drawable/keyboard_chip_bar_bg"
+        android:elevation="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="4dp"
+        android:paddingRight="4dp"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/keyboard_key_popup"
         android:layout_width="50dp"
         android:layout_height="64dp"
         android:background="@drawable/keyboard_popup_bg"
-        android:textColor="@android:color/black"
+        android:elevation="30dp"
         android:gravity="top|center_horizontal"
         android:paddingTop="12dp"
+        android:textColor="@color/crown_keyboard_popup_text"
         android:textSize="28sp"
         android:textStyle="bold"
-        android:visibility="gone"
-        android:elevation="30dp"
-        android:translationZ="30dp" />
+        android:translationZ="30dp"
+        android:visibility="gone" />
 </FrameLayout>

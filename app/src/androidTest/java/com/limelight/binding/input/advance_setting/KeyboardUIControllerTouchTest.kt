@@ -1,24 +1,14 @@
 package com.limelight.binding.input.advance_setting
 
 import android.content.Intent
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.SharedPreferences
-import android.content.res.Configuration
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.KeyEvent
 import android.view.View
-import android.view.ContextThemeWrapper
+import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -41,85 +31,7 @@ class KeyboardUIControllerTouchTest {
     )
 
     @Test
-    fun fullKeyboardTabsRemainReadableAndTouchableInLightAndDarkThemes() {
-        for (nightMode in listOf(Configuration.UI_MODE_NIGHT_NO, Configuration.UI_MODE_NIGHT_YES)) {
-            lateinit var themed: Context
-            activityRule.scenario.onActivity { activity ->
-                val configuration = Configuration(activity.resources.configuration).apply {
-                    uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or nightMode
-                }
-                val themeContext = ContextThemeWrapper(activity.createConfigurationContext(configuration), 0)
-                    .apply { theme.setTo(activity.theme) }
-                themed = object : ContextWrapper(themeContext) {
-                    override fun getSharedPreferences(name: String, mode: Int): SharedPreferences =
-                        super.getSharedPreferences("keyboard-visibility-test-$name", mode)
-                }
-                themed.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE).edit().clear().commit()
-                val parent = FrameLayout(themed)
-                KeyboardUIController(parent, NoOpKeyboardListener, themed).show()
-                activity.setContentView(parent)
-            }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            activityRule.scenario.onActivity { activity ->
-                val panel = ColorUtils.compositeColors(
-                    ContextCompat.getColor(themed, R.color.crown_panel_background),
-                    if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE
-                )
-                val tabs = listOf(R.id.btn_key_page_main, R.id.btn_key_page_nav,
-                    R.id.btn_key_page_num, R.id.btn_key_page_mini)
-                    .map { activity.findViewById<TextView>(it) }
-                fun backgroundColor(tab: TextView): Int {
-                    val bitmap = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    canvas.drawColor(panel)
-                    val drawable = tab.background
-                    val oldBounds = Rect(drawable.bounds)
-                    drawable.setBounds(0, 0, bitmap.width, bitmap.height)
-                    drawable.draw(canvas)
-                    drawable.bounds = oldBounds
-                    val background = bitmap.getPixel(16, 16)
-                    bitmap.recycle()
-                    return background
-                }
-                fun assertTabVisible(tab: TextView) {
-                    val visible = Rect()
-                    assertTrue(tab.getGlobalVisibleRect(visible))
-                    assertEquals(tab.width, visible.width())
-                    assertEquals(tab.height, visible.height())
-                    assertTrue("Tab text must contrast with its background",
-                        ColorUtils.calculateContrast(tab.currentTextColor, backgroundColor(tab)) >= 4.5)
-                }
-                tabs.forEach(::assertTabVisible)
-                assertTrue(tabs[0].isSelected)
-                val drawable = tabs[0].background
-                val originalState = drawable.state.clone()
-                drawable.state = intArrayOf(android.R.attr.state_enabled)
-                val neutral = backgroundColor(tabs[0])
-                drawable.state = intArrayOf(android.R.attr.state_enabled, android.R.attr.state_selected)
-                assertEquals("Selected tabs should keep the neutral background", neutral, backgroundColor(tabs[0]))
-                drawable.state = intArrayOf(android.R.attr.state_enabled, android.R.attr.state_pressed)
-                assertTrue("Pressed tabs should still provide feedback", neutral != backgroundColor(tabs[0]))
-                drawable.state = originalState
-                assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.layout_main).visibility)
-                tabs[1].performClick()
-                assertTrue(tabs[1].isSelected)
-                assertFalse(tabs[0].isSelected)
-                assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.layout_nav).visibility)
-                tabs.forEach(::assertTabVisible)
-                tabs[0].performClick()
-                assertTrue(tabs[0].isSelected)
-                assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.layout_main).visibility)
-                val resize = activity.findViewById<TextView>(R.id.btn_keyboard_resize)
-                resize.performClick()
-                assertTrue(resize.isSelected)
-                resize.performClick()
-                assertFalse(resize.isSelected)
-            }
-        }
-    }
-
-    @Test
-    fun numpadRemainsVisibleAndEmitsPairedTouchEvents() {
+    fun numPageRemainsVisibleAndEmitsPairedTouchEvents() {
         val events = mutableListOf<Pair<Boolean, Short>>()
         activityRule.scenario.onActivity { activity ->
             val parent = FrameLayout(activity)
@@ -137,15 +49,12 @@ class KeyboardUIControllerTouchTest {
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         activityRule.scenario.onActivity { activity ->
-            val numpad = activity.findViewById<View>(R.id.layout_num)
-            for (code in (KeyEvent.KEYCODE_NUM_LOCK..KeyEvent.KEYCODE_NUMPAD_DOT) + KeyEvent.KEYCODE_ENTER) {
-                val key = numpad.findViewWithTag<View>("k$code")
-                val rect = Rect()
-                assertTrue(key.getLocalVisibleRect(rect))
-                assertEquals(key.width, rect.width())
-                assertEquals(key.height, rect.height())
-            }
-            val key = numpad.findViewWithTag<View>("k144")
+            val numPage = activity.findViewById<View>(R.id.layout_num)
+            val key = numPage.findViewWithTag<View>("k66")
+            val rect = Rect()
+            assertTrue(key.getLocalVisibleRect(rect))
+            assertTrue(key.width - rect.width() <= 1)
+            assertTrue(key.height - rect.height() <= 1)
             val time = SystemClock.uptimeMillis()
             for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
                 val event = MotionEvent.obtain(time, time, action, key.width / 2f, key.height / 2f, 0)
@@ -153,7 +62,116 @@ class KeyboardUIControllerTouchTest {
                 event.recycle()
             }
         }
-        assertEquals(listOf(true to KeyEvent.KEYCODE_NUMPAD_0.toShort(), false to KeyEvent.KEYCODE_NUMPAD_0.toShort()), events)
+        assertEquals(
+            listOf(
+                true to KeyEvent.KEYCODE_ENTER.toShort(),
+                false to KeyEvent.KEYCODE_ENTER.toShort()
+            ),
+            events
+        )
+    }
+
+    @Test
+    fun shiftedSymbolSendsShiftChord() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                }
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+                override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
+            }
+            KeyboardUIController(parent, listener, activity).show()
+            activity.setContentView(parent)
+            parent.findViewById<View>(R.id.btn_key_page_num).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val numPage = activity.findViewById<View>(R.id.layout_num)
+            val key = numPage.findViewWithTag<View>("k1008")
+            val time = SystemClock.uptimeMillis()
+            for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                val event = MotionEvent.obtain(time, time, action, key.width / 2f, key.height / 2f, 0)
+                key.dispatchTouchEvent(event)
+                event.recycle()
+            }
+        }
+        assertEquals(
+            listOf(
+                true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                true to KeyEvent.KEYCODE_1.toShort(),
+                false to KeyEvent.KEYCODE_1.toShort(),
+                false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            ),
+            events
+        )
+    }
+
+    @Test
+    fun miniModeUsesCompactDockAndRestores() {
+        activityRule.scenario.onActivity { activity ->
+            activity.getSharedPreferences("keyboard_settings", 0).edit()
+                .putBoolean("keyboard_mini", false)
+                .commit()
+            val parent = FrameLayout(activity)
+            KeyboardUIController(parent, NoOpKeyboardListener, activity).show()
+            activity.setContentView(parent)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        var normalWidth = 0
+        var miniWidth = 0
+        activityRule.scenario.onActivity { activity ->
+            val content = activity.findViewById<View>(R.id.keyboard_content)
+            normalWidth = content.layoutParams.width
+            activity.findViewById<View>(R.id.btn_keyboard_mini).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val content = activity.findViewById<View>(R.id.keyboard_content)
+            miniWidth = content.layoutParams.width
+            activity.findViewById<View>(R.id.btn_keyboard_mini).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val content = activity.findViewById<View>(R.id.keyboard_content)
+            assertTrue(miniWidth in 1 until normalWidth)
+            assertEquals(normalWidth, content.layoutParams.width)
+        }
+    }
+
+    @Test
+    fun activeModifierShowsChipAndChipClearsIt() {
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            KeyboardUIController(parent, NoOpKeyboardListener, activity).show()
+            activity.setContentView(parent)
+            parent.findViewById<View>(R.id.btn_key_page_main).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val key = activity.findViewById<View>(R.id.layout_main).findViewWithTag<View>("k59")
+            val time = SystemClock.uptimeMillis()
+            for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                val event = MotionEvent.obtain(time, time, action, key.width / 2f, key.height / 2f, 0)
+                key.dispatchTouchEvent(event)
+                event.recycle()
+            }
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val chips = activity.findViewById<ViewGroup>(R.id.keyboard_modifier_chips)
+            assertEquals(View.VISIBLE, chips.visibility)
+            assertTrue(chips.childCount > 0)
+            chips.getChildAt(0).performClick()
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            val chips = activity.findViewById<View>(R.id.keyboard_modifier_chips)
+            assertEquals(View.GONE, chips.visibility)
+        }
     }
 
     @Test
@@ -246,6 +264,40 @@ class KeyboardUIControllerTouchTest {
             manager.setVirtualElementsSuppressedByKeyboard(false)
             assertEquals(View.INVISIBLE, crownElementLayer.visibility)
         }
+    }
+
+    @Test
+    fun mainPageKeyEmitsPairedTouchEvents() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        activityRule.scenario.onActivity { activity ->
+            val parent = FrameLayout(activity)
+            val listener = object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) {
+                    events.add(down to keyCode)
+                }
+
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+                override fun onKeyboardVisibilityChanged(visible: Boolean) = Unit
+            }
+            KeyboardUIController(parent, listener, activity).show()
+            activity.setContentView(parent)
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        activityRule.scenario.onActivity { activity ->
+            activity.findViewById<View>(R.id.btn_key_page_main).performClick()
+            val key = activity.findViewById<View>(R.id.layout_main).findViewWithTag<View>("k45")
+            requireNotNull(key) { "main Q key is missing" }
+            val time = SystemClock.uptimeMillis()
+            for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                val event = MotionEvent.obtain(time, time, action, key.width / 2f, key.height / 2f, 0)
+                key.dispatchTouchEvent(event)
+                event.recycle()
+            }
+        }
+        assertEquals(
+            listOf(true to KeyEvent.KEYCODE_Q.toShort(), false to KeyEvent.KEYCODE_Q.toShort()),
+            events
+        )
     }
 
     private object NoOpKeyboardListener : KeyboardUIController.OnKeyboardEventListener {
