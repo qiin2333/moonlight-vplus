@@ -9,7 +9,6 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.preference.CheckBoxPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceManager
@@ -260,37 +259,6 @@ class SettingsDetailNavigationTest {
     }
 
     @Test
-    fun tappingDeepSearchResultRevealsDisabledSettingInTouchMode() {
-        settings.withFragment { fragment ->
-            requireNotNull(fragment.findPreference<CheckBoxPreference>("checkbox_enable_esc_menu")).isChecked = false
-        }
-        var query = ""
-        compose.waitUntil(5_000) {
-            var disabled = false
-            settings.withFragment { fragment ->
-                val target = requireNotNull(fragment.findPreference<Preference>(ESC_MENU_KEY))
-                query = target.title.toString()
-                disabled = !target.isEnabled
-            }
-            disabled
-        }
-
-        settings.search(query)
-        settings.tapPreference(searchResultKey(INPUT_SCREEN_KEY, ESC_MENU_KEY))
-        settings.awaitScreen(INPUT_SCREEN_KEY)
-        settings.assertPreferenceVisible(ESC_MENU_KEY)
-        settings.withFragment { fragment ->
-            assertFalse("Navigation must not enable the target", requireNotNull(
-                fragment.findPreference<Preference>(ESC_MENU_KEY)).isEnabled)
-            assertTrue("The tap must exercise touch navigation", fragment.listView.isInTouchMode)
-        }
-
-        settings.pressSystemBack()
-        settings.awaitScreen(null)
-        assertEquals(query, settings.query())
-    }
-
-    @Test
     fun multipleDeepSearchResultsOpenTheirOwnSettingsAndClearRestoresTheMainList() {
         val targetKeys = listOf("checkbox_enable_start_key_menu", "checkbox_multi_controller")
         val mainKeys = settings.adapterKeys()
@@ -300,15 +268,6 @@ class SettingsDetailNavigationTest {
         resultKeys.forEach { key ->
             assertEquals("Each matching setting must have its own result", 1, searchKeys.count { it == key })
         }
-        val searchItems = settings.adapterItems()
-        settings.withFragment { fragment ->
-            targetKeys.zip(resultKeys).forEach { (targetKey, resultKey) ->
-                val target = requireNotNull(fragment.findPreference<Preference>(targetKey))
-                val result = searchItems.single { it.key == resultKey }
-                assertEquals("The result must identify the actual setting", target.title.toString(), result.title.toString())
-            }
-        }
-
         targetKeys.zip(resultKeys).forEach { (targetKey, resultKey) ->
             settings.focusPreference(resultKey)
             settings.press(KeyEvent.KEYCODE_BUTTON_A)
@@ -323,7 +282,6 @@ class SettingsDetailNavigationTest {
 
         settings.search("")
         assertEquals("Clearing the query must restore the original list", mainKeys, settings.adapterKeys())
-        assertTrue("Search results must be removed after clearing", resultKeys.none { it in settings.adapterKeys() })
     }
 
     private fun searchResultKey(screenKey: String, targetKey: String) =

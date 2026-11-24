@@ -1822,7 +1822,7 @@ class StreamSettings : ThemedAppCompatActivity() {
                 screenProvider = { preferenceScreen },
                 onCategoryEligibilityChanged = { rebuildCategoryList() },
                 onSearchResultClick = { screen, target, resultKey ->
-                    setSearchReturnPreferenceKey(resultKey)
+                    searchReturnPreferenceKey = resultKey
                     openSettingsScreen(screen.key, target.key)
                 },
             )
@@ -1921,7 +1921,6 @@ class StreamSettings : ThemedAppCompatActivity() {
         fun applySearchFilter(query: String) {
             visibilityController.applySearch(query)
             if (query.isBlank()) refreshSettingsPresentation("list_fec_mode")
-            updateFloatBallSettingsSummary()
             preferenceScreen?.let { updateSearchCategoryActions(it) }
             refreshSearchPresentation()
         }
@@ -3059,10 +3058,6 @@ class StreamSettings : ThemedAppCompatActivity() {
 
         fun recordSettingsHardwareInput() {
             if (activeSettingsScreenKey != null) detailHardwareInput = true
-        }
-
-        fun setSearchReturnPreferenceKey(key: String?) {
-            searchReturnPreferenceKey = key
         }
 
         fun openSettingsScreen(key: String, targetKey: String? = null) {

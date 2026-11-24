@@ -52,7 +52,7 @@ internal class SettingsVisibilityController(
             if (child is PreferenceGroup) {
                 if (containsQuery(child.title, query)) firstVisibleLeaf(child)?.let { return it }
                 matchingDescendant(child, query)?.let { return it }
-            } else if (matches(child, query)) {
+            } else if (matchesDirectly(child, query)) {
                 return child
             }
         }
@@ -111,7 +111,7 @@ internal class SettingsVisibilityController(
             }
 
             val categoryEligible = isRuntimeVisible(category)
-            val categoryMatches = categoryEligible && matches(category, normalizedQuery)
+            val categoryMatches = categoryEligible && matchesDirectly(category, normalizedQuery)
             var anyChildMatches = false
             for (childIndex in 0 until category.preferenceCount) {
                 val child = category.getPreference(childIndex)
@@ -130,7 +130,7 @@ internal class SettingsVisibilityController(
                     if (result.row.summary?.toString() != summary) result.row.summary = summary
                     categoryEligible && isRuntimeVisible(result.screen) &&
                         result.ancestors.all(::isRuntimeVisible) && isRuntimeVisible(result.target) &&
-                        (matches(result.target, normalizedQuery) || result.ancestors.any {
+                        (matchesDirectly(result.target, normalizedQuery) || result.ancestors.any {
                             containsQuery(it.title, normalizedQuery)
                         })
                 } else {
@@ -159,10 +159,6 @@ internal class SettingsVisibilityController(
         }
         return null
     }
-
-    private fun matches(preference: Preference, query: String): Boolean =
-        matchesDirectly(preference, query) ||
-            (preference is PreferenceScreen && matchingDescendant(preference, query) != null)
 
     private fun matchesDirectly(preference: Preference, query: String): Boolean =
         containsQuery(preference.title, query) ||
