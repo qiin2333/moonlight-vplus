@@ -56,7 +56,7 @@ class KeyboardUIController(
 
     private val modifierStates: MutableMap<Int, Int> = HashMap()
     private val physicallyHeldModifiers: MutableSet<Int> = HashSet()
-    private val pressedSpecs: MutableMap<Int, KeySpec> = HashMap()
+    private val pressedSpecs: MutableMap<View, KeySpec> = HashMap()
     private var sentLeftShift = false
     private var sentRightShift = false
 
@@ -260,6 +260,7 @@ class KeyboardUIController(
             val detector = KeyboardGestureDetector(key, this)
             key.setOnTouchListener { view, event -> detector.onTouchEvent(view, event) }
             key.setOnClickListener {
+                if (pressedSpecs.containsKey(key)) return@setOnClickListener
                 onKeyPress(key, spec.code)
                 onKeyRelease(key, spec.code)
             }
@@ -615,12 +616,14 @@ class KeyboardUIController(
             }
         } else {
             triggerHaptic("normal")
-            val spec = (view as? KeyboardKeyView)?.keySpec
-            pressedSpecs[keyCode] = spec ?: KeySpec(label = "")
-            if (spec?.shift == true) {
+            if (pressedSpecs.containsKey(view)) return
+            val spec = (view as? KeyboardKeyView)?.keySpec ?: KeySpec(code = keyCode, label = "")
+            val alreadyPressed = pressedSpecs.values.any { it.sendCode == spec.sendCode }
+            pressedSpecs[view] = spec
+            if (spec.shift) {
                 syncShiftKeys()
             }
-            listener.sendKeyEvent(true, (spec?.sendCode ?: keyCode).toShort())
+            if (!alreadyPressed) listener.sendKeyEvent(true, spec.sendCode.toShort())
             if (view.isShown) {
                 showPopup(view)
             }
@@ -653,7 +656,7 @@ class KeyboardUIController(
 
     override fun onKeyRelease(view: View, keyCode: Int) {
         if (!modifierStates.containsKey(keyCode)) {
-            releasePressedKey(keyCode)
+            if (!releasePressedKey(view)) return
             resetSingleModifiers()
             keyPopup?.visibility = View.GONE
         } else {
@@ -661,12 +664,15 @@ class KeyboardUIController(
         }
     }
 
-    private fun releasePressedKey(keyCode: Int) {
-        val spec = pressedSpecs.remove(keyCode)
-        listener.sendKeyEvent(false, (spec?.sendCode ?: keyCode).toShort())
-        if (spec?.shift == true) {
+    private fun releasePressedKey(view: View): Boolean {
+        val spec = pressedSpecs.remove(view) ?: return false
+        if (pressedSpecs.values.none { it.sendCode == spec.sendCode }) {
+            listener.sendKeyEvent(false, spec.sendCode.toShort())
+        }
+        if (spec.shift) {
             syncShiftKeys()
         }
+        return true
     }
 
     private fun isExplicitShiftActive(keyCode: Int): Boolean =
@@ -703,7 +709,7 @@ class KeyboardUIController(
                 updateModifierUI(keyCode, MOD_NEUTRAL)
             }
         } else {
-            releasePressedKey(keyCode)
+            if (!releasePressedKey(view)) return
             resetSingleModifiers()
             keyPopup?.visibility = View.GONE
         }
@@ -810,7 +816,7 @@ class KeyboardUIController(
 
     private fun positionModifierChips() {
         if (keyboardLayout.visibility != View.VISIBLE) return
-        if (modifierChips.visibility != View.VISIBLE) return
+        if (modifierChips.visibility == View.GONE) return
         if (modifierChips.height <= 0) {
             modifierChips.post { positionModifierChips() }
             return
@@ -819,11 +825,21 @@ class KeyboardUIController(
         modifierChips.x = keyboardContent.x + (metrics?.padPx ?: 0)
         val above = keyboardContent.y - modifierChips.height - 4 * density
         val below = keyboardContent.y + keyboardContent.height + 4 * density
-        val fallback = if (above >= 0f) above else below
-        modifierChips.y = fallback.coerceIn(
+        val fallback = when {
+            above >= 0f -> above
+            keyboardContent.y >= modifierChips.height -> keyboardContent.y - modifierChips.height
+            else -> below
+        }
+        val y = fallback.coerceIn(
             0f,
             (keyboardLayout.height - modifierChips.height).toFloat().coerceAtLeast(0f)
         )
+        // In an extremely short viewport there may be no room outside the rail.
+        // Keep its controls reachable and restore the chips when space returns.
+        val railTop = keyboardContent.y + rail.y
+        val overlapsRail = y < railTop + rail.height && y + modifierChips.height > railTop
+        modifierChips.visibility = if (overlapsRail) View.INVISIBLE else View.VISIBLE
+        modifierChips.y = y
     }
 
     fun toggle() {

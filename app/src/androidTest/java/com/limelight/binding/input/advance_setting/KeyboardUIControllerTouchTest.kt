@@ -277,6 +277,77 @@ class KeyboardUIControllerTouchTest {
     }
 
     @Test
+    fun sharedKeyCodeStaysPressedUntilLastViewReleasesOrCancels() {
+        val events = mutableListOf<Pair<Boolean, Short>>()
+        activityRule.scenario.onActivity { activity ->
+            val controller = KeyboardUIController(FrameLayout(activity), object : KeyboardUIController.OnKeyboardEventListener {
+                override fun sendKeyEvent(down: Boolean, keyCode: Short) { events.add(down to keyCode) }
+                override fun rumbleSingleVibrator(lowFreq: Short, highFreq: Short, duration: Int) = Unit
+            }, isolatedKeyboardContext(activity))
+            fun key(spec: KeySpec): KeyboardKeyView = KeyboardKeyView(activity).apply {
+                bind(spec, 40f) { }
+                tag = "k${spec.code}"
+                val detector = KeyboardGestureDetector(this, controller)
+                setOnTouchListener { view, event -> detector.onTouchEvent(view, event) }
+            }
+            fun touch(view: View, action: Int) {
+                val time = SystemClock.uptimeMillis()
+                MotionEvent.obtain(time, time, action, 1f, 1f, 0).also {
+                    view.dispatchTouchEvent(it)
+                    it.recycle()
+                }
+            }
+            val minus = KeyEvent.KEYCODE_MINUS
+            val plain = key(KeySpec(code = minus, label = "-"))
+            val shifted = key(KeySpec(code = 1000 + minus, label = "_", shift = true, sendCode = minus))
+            touch(plain, MotionEvent.ACTION_DOWN)
+            touch(shifted, MotionEvent.ACTION_DOWN)
+            touch(plain, MotionEvent.ACTION_CANCEL)
+            touch(shifted, MotionEvent.ACTION_UP)
+            assertEquals(listOf(
+                true to minus.toShort(), true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                false to minus.toShort(), false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort()
+            ), events)
+
+            events.clear()
+            touch(plain, MotionEvent.ACTION_DOWN)
+            touch(shifted, MotionEvent.ACTION_DOWN)
+            touch(shifted, MotionEvent.ACTION_UP)
+            touch(plain, MotionEvent.ACTION_UP)
+            assertEquals(listOf(
+                true to minus.toShort(), true to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(),
+                false to KeyEvent.KEYCODE_SHIFT_LEFT.toShort(), false to minus.toShort()
+            ), events)
+
+            events.clear()
+            val left = KeyEvent.KEYCODE_DPAD_LEFT
+            val first = key(KeySpec(code = left, label = "←"))
+            val second = key(KeySpec(code = left, label = "←"))
+            touch(first, MotionEvent.ACTION_DOWN)
+            touch(second, MotionEvent.ACTION_DOWN)
+            touch(first, MotionEvent.ACTION_CANCEL)
+            touch(second, MotionEvent.ACTION_UP)
+            assertEquals(listOf(true to left.toShort(), false to left.toShort()), events)
+
+            events.clear()
+            controller.onKeyPress(first, left)
+            controller.onKeyPress(first, left)
+            controller.onKeyRelease(second, left)
+            controller.onKeyRelease(first, left)
+            controller.onKeyRelease(first, left)
+            assertEquals(listOf(true to left.toShort(), false to left.toShort()), events)
+
+            events.clear()
+            val shift = KeyEvent.KEYCODE_SHIFT_LEFT
+            controller.onKeyPress(first, shift)
+            controller.onKeyRelease(first, shift)
+            controller.onKeyRelease(second, left)
+            controller.onDoubleTap(first, shift)
+            assertEquals(listOf(true to shift.toShort(), false to shift.toShort()), events)
+        }
+    }
+
+    @Test
     fun miniModeUsesCompactDockAndRestores() {
         activityRule.scenario.onActivity { activity ->
             activity.getSharedPreferences("keyboard_settings", 0).edit()
