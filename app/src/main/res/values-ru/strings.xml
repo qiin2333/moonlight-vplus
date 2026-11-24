@@ -788,8 +788,6 @@
     <string name="title_crown_config_management">Управление профилями Crown</string>
     <string name="summary_crown_config_management">Создание, выбор, импорт, экспорт и слияние профилей экранного управления и касаний.</string>
     <string name="summary_crown_config_management_with_count">Доступно профилей: %1$d</string>
-    <string name="title_crown_edit_current">Изменить текущую раскладку</string>
-    <string name="summary_crown_edit_current">Открыть «Мои Crown» для управления текущей раскладкой.</string>
     <string name="summary_crown_enabled_state">%1$s · элементов: %2$d · готово для текущего стрима</string>
     <string name="summary_crown_current_profile">Профиль, используемый при включённом вводе Crown.</string>
     <string name="summary_crown_current_profile_empty">Профиль Crown ещё не выбран.</string>
@@ -2137,7 +2135,6 @@
     <string name="float_ball_summary_delay">Скрывать через %1$s с</string>
     <string name="float_ball_summary_enabled">Включена · %1$s · %2$s</string>
     <string name="float_ball_summary_no_hide">Всегда видна</string>
-    <string name="float_ball_summary_search">%1$s\nВключает: %2$s</string>
     <string name="numeric_parameter_range">Введите допустимое значение от %1$s до %2$s %3$s.</string>
     <string name="open_source_back">Назад</string>
     <string name="open_source_component_details">Сведения о компоненте</string>

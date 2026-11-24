@@ -242,9 +242,9 @@ class SettingsDetailNavigationTest {
         }
         settings.search(query)
         val searchKeys = settings.adapterKeys()
-        assertTrue("The feature entry must match its deep setting", INPUT_SCREEN_KEY in searchKeys)
-        assertFalse("Search must keep deep settings within their feature", ESC_MENU_KEY in searchKeys)
-        settings.focusPreference(INPUT_SCREEN_KEY)
+        val resultKey = searchResultKey(INPUT_SCREEN_KEY, ESC_MENU_KEY)
+        assertTrue("Search must show a result for the matching deep setting", resultKey in searchKeys)
+        settings.focusPreference(resultKey)
         settings.press(KeyEvent.KEYCODE_BUTTON_A)
 
         settings.awaitScreen(INPUT_SCREEN_KEY)
@@ -253,10 +253,39 @@ class SettingsDetailNavigationTest {
 
         // If search opened a dialog automatically, Escape would only close that dialog.
         settings.awaitScreen(null)
-        settings.assertFocusedPreference(INPUT_SCREEN_KEY)
+        settings.assertFocusedPreference(resultKey)
         assertEquals(query, settings.query())
         assertEquals(searchKeys, settings.adapterKeys())
     }
+
+    @Test
+    fun multipleDeepSearchResultsOpenTheirOwnSettingsAndClearRestoresTheMainList() {
+        val targetKeys = listOf("checkbox_enable_start_key_menu", "checkbox_multi_controller")
+        val mainKeys = settings.adapterKeys()
+        settings.search("checkbox_")
+        val searchKeys = settings.adapterKeys()
+        val resultKeys = targetKeys.map { searchResultKey(GAMEPAD_SCREEN_KEY, it) }
+        resultKeys.forEach { key ->
+            assertEquals("Each matching setting must have its own result", 1, searchKeys.count { it == key })
+        }
+        targetKeys.zip(resultKeys).forEach { (targetKey, resultKey) ->
+            settings.focusPreference(resultKey)
+            settings.press(KeyEvent.KEYCODE_BUTTON_A)
+            settings.awaitScreen(GAMEPAD_SCREEN_KEY)
+            settings.assertFocusedPreference(targetKey)
+            settings.press(KeyEvent.KEYCODE_BUTTON_B)
+            settings.awaitScreen(null)
+            settings.assertFocusedPreference(resultKey)
+            assertEquals("checkbox_", settings.query())
+            assertEquals(searchKeys, settings.adapterKeys())
+        }
+
+        settings.search("")
+        assertEquals("Clearing the query must restore the original list", mainKeys, settings.adapterKeys())
+    }
+
+    private fun searchResultKey(screenKey: String, targetKey: String) =
+        "settings.search.result.$screenKey.$targetKey"
 
     @Test
     fun rotationThemeChangeAndRecreationKeepTheActiveFeatureAndItsReturnDestination() {

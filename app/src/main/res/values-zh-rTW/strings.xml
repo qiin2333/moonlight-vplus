@@ -664,8 +664,6 @@
     <string name="title_crown_config_management">管理 Crown 設定檔</string>
     <string name="summary_crown_config_management">建立、選擇、匯入、匯出或合併螢幕控制與觸控設定檔。</string>
     <string name="summary_crown_config_management_with_count">%1$d 套設定檔可切換</string>
-    <string name="title_crown_edit_current">編輯目前版面</string>
-    <string name="summary_crown_edit_current">開啟「我的 Crown」管理目前版面。</string>
     <string name="summary_crown_enabled_state">%1$s · %2$d 個控制項 · 已符合目前串流</string>
     <string name="summary_crown_current_profile">啟用 Crown 輸入時使用的設定檔。</string>
     <string name="summary_crown_current_profile_empty">尚未選擇 Crown 設定檔。</string>
@@ -1194,7 +1192,6 @@
     <string name="float_ball_summary_delay">%1$s 秒後隱藏</string>
     <string name="float_ball_summary_no_hide">始終顯示</string>
     <string name="float_ball_summary_custom_position">已拖動定位</string>
-    <string name="float_ball_summary_search">%1$s\n包含：%2$s</string>
     <string name="display_resolution_current_not_saved">目前使用 · 未儲存在清單</string>
     <!-- Previously hard-coded strings -->
     <string name="pacing_label_precise_sync_enhanced">精確同步(增強)</string>
