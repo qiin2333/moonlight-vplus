@@ -2,13 +2,17 @@ package com.limelight.utils
 
 import android.annotation.TargetApi
 import android.app.Activity
+import android.content.ComponentName
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.Build
+import android.os.Looper
 import android.graphics.drawable.Icon
+import android.util.Log
+import com.limelight.PcView
 import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
@@ -22,13 +26,39 @@ class ShortcutHelper(private val context: Activity) {
     } else {
         null
     }
+    private val launcherComponent = ComponentName(context, PcView::class.java)
     private val tvChannelHelper = TvChannelHelper(context)
 
     init {
-        // #827 moved the MAIN/LAUNCHER intent-filter to activity-alias components.
-        // Rebind records retained by ShortcutManager so launchers that filter by the
-        // old PcView component can show them again after an app update.
-        LauncherIcon.migrateShortcutsToCurrentLauncher(context)
+        // Repair during UI initialization, serialized with delete/unpair actions.
+        // The background helper used for stream usage reporting must not migrate.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1 &&
+            Looper.myLooper() == Looper.getMainLooper()) {
+            migrateLauncherShortcuts()
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.N_MR1)
+    private fun migrateLauncherShortcuts() {
+        try {
+            val shortcuts = getAllShortcuts().distinctBy { it.id }.filter { !it.isImmutable }
+            val updates = shortcuts.filter { it.activity != launcherComponent }.map {
+                ShortcutInfo.Builder(context, it.id).setActivity(launcherComponent).build()
+            }
+            // A later UI initialization retries rate-limited or failed updates.
+            if (updates.isNotEmpty() && !sm!!.updateShortcuts(updates)) return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                // Android preserves the original reason on repeated disableShortcuts().
+                // Our explicit disables add a message; leave those records disabled.
+                val restoreIds = shortcuts.filter {
+                    it.disabledReason == ShortcutInfo.DISABLED_REASON_APP_CHANGED &&
+                        it.disabledMessage.isNullOrEmpty()
+                }.map { it.id }
+                if (restoreIds.isNotEmpty()) sm!!.enableShortcuts(restoreIds)
+            }
+        } catch (e: RuntimeException) {
+            Log.w("ShortcutHelper", "Unable to migrate launcher shortcuts", e)
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.N_MR1)
@@ -79,7 +109,7 @@ class ShortcutHelper(private val context: Activity) {
     fun createAppViewShortcut(computer: ComputerDetails, forceAdd: Boolean, newlyPaired: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             val sinfo = ShortcutInfo.Builder(context, computer.uuid!!)
-                .setActivity(LauncherIcon.currentLauncherComponent(context))
+                .setActivity(launcherComponent)
                 .setIntent(ServerHelper.createPcShortcutIntent(context, computer))
                 .setShortLabel(computer.name!!)
                 .setLongLabel(computer.name!!)
@@ -128,7 +158,7 @@ class ShortcutHelper(private val context: Activity) {
             }
 
             val sInfo = ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
-                .setActivity(LauncherIcon.currentLauncherComponent(context))
+                .setActivity(launcherComponent)
                 .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
                 .setShortLabel(app.appName + " (" + computer.name!! + ")")
                 .setIcon(appIcon)
