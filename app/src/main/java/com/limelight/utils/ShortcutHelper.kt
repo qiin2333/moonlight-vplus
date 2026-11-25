@@ -25,10 +25,9 @@ class ShortcutHelper(private val context: Activity) {
     private val tvChannelHelper = TvChannelHelper(context)
 
     init {
-        // #827 moved the MAIN/LAUNCHER intent-filter to activity-alias components.
-        // Rebind records retained by ShortcutManager so launchers that filter by the
-        // old PcView component can show them again after an app update.
-        LauncherIcon.migrateShortcutsToCurrentLauncher(context)
+        // Retry upgrade repair if the package-replaced broadcast was missed or
+        // ShortcutManager was locked/rate-limited. Never block the first UI frame.
+        LauncherEntry.migrateAsync(context)
     }
 
     @TargetApi(Build.VERSION_CODES.N_MR1)
@@ -79,7 +78,7 @@ class ShortcutHelper(private val context: Activity) {
     fun createAppViewShortcut(computer: ComputerDetails, forceAdd: Boolean, newlyPaired: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             val sinfo = ShortcutInfo.Builder(context, computer.uuid!!)
-                .setActivity(LauncherIcon.currentLauncherComponent(context))
+                .setActivity(LauncherEntry.component(context))
                 .setIntent(ServerHelper.createPcShortcutIntent(context, computer))
                 .setShortLabel(computer.name!!)
                 .setLongLabel(computer.name!!)
@@ -128,7 +127,7 @@ class ShortcutHelper(private val context: Activity) {
             }
 
             val sInfo = ShortcutInfo.Builder(context, getShortcutIdForGame(computer, app))
-                .setActivity(LauncherIcon.currentLauncherComponent(context))
+                .setActivity(LauncherEntry.component(context))
                 .setIntent(ServerHelper.createAppShortcutIntent(context, computer, app))
                 .setShortLabel(app.appName + " (" + computer.name!! + ")")
                 .setIcon(appIcon)
