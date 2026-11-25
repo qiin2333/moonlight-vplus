@@ -142,7 +142,7 @@ class ShortcutHelper(private val context: Activity) {
         tvChannelHelper.deleteChannel(computer)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             if (getInfoForId(computer.uuid!!) != null) {
-                sm!!.disableShortcuts(Collections.singletonList(computer.uuid!!), reason)
+                LauncherEntry.disableShortcuts(sm!!, Collections.singletonList(computer.uuid!!), reason)
             }
 
             val shortcuts = getAllShortcuts()
@@ -152,7 +152,7 @@ class ShortcutHelper(private val context: Activity) {
                     appShortcutIds.add(info.id)
                 }
             }
-            sm!!.disableShortcuts(appShortcutIds, reason)
+            LauncherEntry.disableShortcuts(sm!!, appShortcutIds, reason)
         }
     }
 
@@ -161,7 +161,7 @@ class ShortcutHelper(private val context: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             val id = getShortcutIdForGame(computer, app)
             if (getInfoForId(id) != null) {
-                sm!!.disableShortcuts(Collections.singletonList(id), reason)
+                LauncherEntry.disableShortcuts(sm!!, Collections.singletonList(id), reason)
             }
         }
     }

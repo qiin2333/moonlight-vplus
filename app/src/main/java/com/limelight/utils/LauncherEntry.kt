@@ -1,5 +1,6 @@
 package com.limelight.utils
 
+import android.annotation.TargetApi
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -14,6 +15,14 @@ object LauncherEntry {
     private const val TAG = "LauncherEntry"
 
     fun component(context: Context): ComponentName = ComponentName(context, PcView::class.java)
+
+    // A foreground deletion/unpair can race with background upgrade repair. Share
+    // the migration monitor so its APP_CHANGED snapshot cannot revive a BY_APP item.
+    @TargetApi(Build.VERSION_CODES.N_MR1)
+    @Synchronized
+    internal fun disableShortcuts(manager: ShortcutManager, ids: List<String>, reason: CharSequence) {
+        manager.disableShortcuts(ids, reason)
+    }
 
     fun migrateAsync(context: Context, onFinished: (() -> Unit)? = null) {
         val appContext = context.applicationContext
