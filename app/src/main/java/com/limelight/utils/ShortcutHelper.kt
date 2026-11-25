@@ -48,10 +48,11 @@ class ShortcutHelper(private val context: Activity) {
             // A later UI initialization retries rate-limited or failed updates.
             if (updates.isNotEmpty() && !sm!!.updateShortcuts(updates)) return
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                // updateShortcuts preserves enabled state. Only undo system invalidation,
-                // never a BY_APP disable caused by deletion or loss of pairing.
+                // Android preserves the original reason on repeated disableShortcuts().
+                // Our explicit disables add a message; leave those records disabled.
                 val restoreIds = shortcuts.filter {
-                    it.disabledReason == ShortcutInfo.DISABLED_REASON_APP_CHANGED
+                    it.disabledReason == ShortcutInfo.DISABLED_REASON_APP_CHANGED &&
+                        it.disabledMessage.isNullOrEmpty()
                 }.map { it.id }
                 if (restoreIds.isNotEmpty()) sm!!.enableShortcuts(restoreIds)
             }
