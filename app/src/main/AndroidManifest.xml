@@ -211,15 +211,21 @@
             之间切换（挂在本体 activity 上则无法隐藏自身入口）。切换逻辑见
             utils/LauncherIcon.kt，入口在 PcView 工具栏"主题"面板的"应用图标"组。
             LauncherSaba 始终与 LauncherSabaDark 恰好一开一关，不能同时关闭。
+
+            声明顺序是约束，不要按"默认项在前"的习惯调回去：AGP 的 manifest merger
+            会把不紧跟目标 activity 的别名前移到目标 activity 之后，所以这里把默认
+            禁用的 LauncherSabaDark 写在前面，合并后的 manifest 里才是默认启用的
+            LauncherSaba 在前。部分电视启动器按声明顺序取第一个带启动 filter 的组件
+            且不校验 enabled，禁用别名排前会让它选中一个起不来的入口（#904）。
         -->
         <activity-alias
-            android:name=".LauncherSaba"
-            android:enabled="true"
+            android:name=".LauncherSabaDark"
+            android:enabled="false"
             android:exported="true"
             android:targetActivity=".PcView"
             android:banner="@drawable/atv_banner"
-            android:icon="@mipmap/ic_launcher_saba"
-            android:roundIcon="@mipmap/ic_launcher_saba"
+            android:icon="@mipmap/ic_launcher_saba_dark"
+            android:roundIcon="@mipmap/ic_launcher_saba_dark"
             android:label="@string/app_label">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -232,13 +238,13 @@
         </activity-alias>
 
         <activity-alias
-            android:name=".LauncherSabaDark"
-            android:enabled="false"
+            android:name=".LauncherSaba"
+            android:enabled="true"
             android:exported="true"
             android:targetActivity=".PcView"
             android:banner="@drawable/atv_banner"
-            android:icon="@mipmap/ic_launcher_saba_dark"
-            android:roundIcon="@mipmap/ic_launcher_saba_dark"
+            android:icon="@mipmap/ic_launcher_saba"
+            android:roundIcon="@mipmap/ic_launcher_saba"
             android:label="@string/app_label">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
