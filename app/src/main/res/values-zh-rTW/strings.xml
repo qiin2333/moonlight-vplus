@@ -155,6 +155,8 @@
     <string name="title_audio_config_list">揚聲器配置</string>
     <string name="summary_audio_config_list">向主機請求立體聲、5.1、7.1 或 7.1.4 音訊。7.1.4 需要 Android 12 或更新版本及相容的輸出裝置。</string>
     <string name="category_input_settings">輸入</string>
+    <string name="game_menu_android_mouse_arrow">本機滑鼠指標（舊版體驗）</string>
+    <string name="game_menu_android_mouse_arrow_summary">使用平板自己的 Android 系統箭頭，不隨主機游標形狀變化。</string>
     <string name="title_checkbox_touchscreen_trackpad">將觸控式螢幕作為觸控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果啟用，則將觸控式螢幕作為觸控板使用。 如果停用，則觸控式螢幕直接控制滑鼠游標。</string>
     <string name="title_checkbox_touch_keyboard_auto_invoke">自動彈出電腦觸摸鍵盤</string>

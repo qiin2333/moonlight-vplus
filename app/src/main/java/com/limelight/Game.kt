@@ -1430,6 +1430,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         refreshDesktopMouseMode(
             latest.absoluteMouseMode,
             connectionRetained = false,
+            useAndroidMouseArrow = latest.useAndroidMouseArrow,
             externalMouseSelected = latest.enableNativeMousePointer
         )
         prefConfig.refreshControllerMotionPreferencesFrom(latest)
@@ -1438,12 +1439,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun refreshDesktopMouseMode(
         enabled: Boolean,
         connectionRetained: Boolean,
+        useAndroidMouseArrow: Boolean,
         externalMouseSelected: Boolean = prefConfig.enableNativeMousePointer
     ) {
         val previousMode = prefConfig.externalMouseMode
         prefConfig.enableNativeMousePointer = externalMouseSelected
         prefConfig.absoluteMouseMode = enabled
-        if (prefConfig.externalMouseMode == previousMode) return
+        val arrowStyleChanged = prefConfig.useAndroidMouseArrow != useAndroidMouseArrow
+        prefConfig.useAndroidMouseArrow = useAndroidMouseArrow
+        if (prefConfig.externalMouseMode == previousMode && !arrowStyleChanged) return
 
         cursorVisible = prefConfig.usesSystemMousePointer
         if (connectionRetained) {
@@ -1524,6 +1528,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             refreshDesktopMouseMode(
                 latest.absoluteMouseMode,
                 connectionRetained = true,
+                useAndroidMouseArrow = latest.useAndroidMouseArrow,
                 externalMouseSelected = latest.enableNativeMousePointer
             )
         }
@@ -2525,6 +2530,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             .putBoolean(PreferenceConfiguration.ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, true)
             .apply()
         enableNativeMousePointer(true)
+    }
+
+    internal fun setAndroidMouseArrow(enabled: Boolean) {
+        prefConfig.useAndroidMouseArrow = enabled
+        defaultPreferences().edit().putBoolean(PreferenceConfiguration.ANDROID_MOUSE_ARROW_PREF_STRING, enabled).apply()
+        cursorServiceManager.refreshCursorMode()
     }
 
     fun toggleExternalMouseDesktopMode() {

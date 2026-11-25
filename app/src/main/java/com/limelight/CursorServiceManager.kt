@@ -108,7 +108,7 @@ class CursorServiceManager(
     fun refreshCursorMode() {
         reconcileCursorMode()
         updateRelativeCursorRenderers()
-        if (localModeActive) {
+        if (localModeActive || forceAndroidMouseArrow()) {
             postApplyCurrentCursor()
         }
     }
@@ -366,8 +366,11 @@ class CursorServiceManager(
         }
     }
 
+    private fun forceAndroidMouseArrow(): Boolean =
+        prefConfig.usesSystemMousePointer && prefConfig.useAndroidMouseArrow
+
     private fun applyCurrentCursorOnUiThread() {
-        if (!localModeActive) {
+        if (forceAndroidMouseArrow() || !localModeActive) {
             restoreDefaultCursor()
             return
         }
@@ -432,6 +435,10 @@ class CursorServiceManager(
     }
 
     private fun hideLocalPresentation() {
+        if (forceAndroidMouseArrow()) {
+            restoreDefaultCursor()
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
             try {
                 streamView.pointerIcon = PointerIcon.getSystemIcon(

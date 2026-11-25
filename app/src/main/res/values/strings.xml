@@ -530,6 +530,8 @@
     <string name="suffix_seekbar_keyboard_toggle_fingers_native_touch"> </string>
 
     <string name="title_checkbox_absolute_mouse_mode">Remote desktop mouse mode</string>
+    <string name="game_menu_android_mouse_arrow">Android system pointer (legacy style)</string>
+    <string name="game_menu_android_mouse_arrow_summary">Always show the Android system arrow instead of the host cursor shape.</string>
     <string name="game_menu_external_mouse_desktop_summary">On: point to a desktop position. Off: capture the mouse for relative movement in games.</string>
     <string name="summary_checkbox_absolute_mouse_mode">This can make mouse acceleration behave more naturally for remote desktop usage, but it is incompatible with many games.</string>
     <string name="title_list_mouse_axis_correction">Mouse direction correction</string>

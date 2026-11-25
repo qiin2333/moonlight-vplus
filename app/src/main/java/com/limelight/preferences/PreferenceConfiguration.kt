@@ -226,6 +226,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
     var framePacing = 0
     var enableHostCadencePreciseSync = false // 精确同步·两步 host-cadence 呈现（仅精确同步模式生效）
     var absoluteMouseMode = false
+    var useAndroidMouseArrow = false
     internal val externalMouseMode: ExternalMouseMode
         get() = ExternalMouseMode.resolve(enableNativeMousePointer, supportsDesktopMouseMode, absoluteMouseMode)
     internal val usesSystemMousePointer: Boolean
@@ -419,6 +420,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
                 .putBoolean(TOUCH_KEYBOARD_AUTO_INVOKE_PREF_STRING, touchKeyboardAutoInvoke)
                 .putBoolean(REMOTE_IME_AUTO_SHOW_PREF_STRING, remoteImeAutoShow)
                 .putBoolean(ENABLE_NATIVE_MOUSE_POINTER_PREF_STRING, enableNativeMousePointer)
+                .putBoolean(ANDROID_MOUSE_ARROW_PREF_STRING, useAndroidMouseArrow)
                 .putString(MOUSE_AXIS_CORRECTION_PREF_STRING, mouseAxisCorrection.preferenceValue)
                 .putBoolean(SCREEN_DS5_TOUCHPAD_PREF_STRING, screenDs5Touchpad)
                 .putBoolean(SCREEN_DS5_SINGLE_TAP_TO_CLICK_PREF_STRING, screenDs5SingleTapToClick)
@@ -623,6 +625,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
         copy.enableStartKeyMenu = this.enableStartKeyMenu
         copy.enableNativeMousePointer = this.enableNativeMousePointer
         copy.absoluteMouseMode = absoluteMouseMode
+        copy.useAndroidMouseArrow = useAndroidMouseArrow
         copy.mouseAxisCorrection = this.mouseAxisCorrection
         copy.forceMtkMaxOperatingRate = this.forceMtkMaxOperatingRate
         copy.hevcLowLatencyMode = this.hevcLowLatencyMode
@@ -725,6 +728,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
         const val SCREEN_COMBINATION_MODE_PREF_STRING = "list_screen_combination_mode"
         const val FRAME_PACING_PREF_STRING = "frame_pacing"
         const val ENABLE_HOST_CADENCE_PRECISE_SYNC_STRING = "checkbox_enable_host_cadence_precise_sync"
+        internal const val ANDROID_MOUSE_ARROW_PREF_STRING = "checkbox_android_mouse_arrow"
         internal const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
         internal fun readAbsoluteMouseMode(prefs: SharedPreferences): Boolean =
             prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE)
@@ -1341,6 +1345,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
 
         /** Settings owned by this reader that have no persistent row in preferences.xml. */
         internal val nonXmlResetPreferenceKeys = setOf(
+            ANDROID_MOUSE_ARROW_PREF_STRING,
             GAMEPAD_MOTION_SENSORS_ANDROID12_MIGRATION_PREF_STRING,
             GAMEPAD_MOTION_SENSORS_ANDROID12_CONFIRMED_PREF_STRING,
             SCREEN_DS5_TOUCHPAD_ZONE_RECT_PREF_STRING,
@@ -1753,6 +1758,7 @@ class PreferenceConfiguration internal constructor(val supportsDesktopMouseMode:
             config.lockScreenAfterDisconnect = prefs.getBoolean(LOCK_SCREEN_AFTER_DISCONNECT_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.swapQuitAndDisconnect = prefs.getBoolean(SWAP_QUIT_AND_DISCONNECT_PERF_STRING, DEFAULT_LATENCY_TOAST)
             config.absoluteMouseMode = readAbsoluteMouseMode(prefs)
+            config.useAndroidMouseArrow = prefs.getBoolean(ANDROID_MOUSE_ARROW_PREF_STRING, false)
             config.mouseAxisCorrection = MouseAxisCorrection.fromPreferenceValue(
                 prefs.getString(
                     MOUSE_AXIS_CORRECTION_PREF_STRING,

@@ -743,6 +743,23 @@ class GameMenu(
             )
         }
 
+        if (game.prefConfig.usesSystemMousePointer && !game.prefConfig.screenDs5Touchpad) {
+            val toggleArrow = Runnable { game.setAndroidMouseArrow(!game.prefConfig.useAndroidMouseArrow) }
+            touchModeOptionsList.add(
+                MenuOption(
+                    label = getString(R.string.game_menu_android_mouse_arrow),
+                    isWithGameFocus = false,
+                    runnable = toggleArrow,
+                    iconKey = null,
+                    isShowIcon = false,
+                    isKeepDialog = true,
+                    subtitle = getString(R.string.game_menu_android_mouse_arrow_summary),
+                    inlineControl = InlineControl.Toggle(game.prefConfig.useAndroidMouseArrow, toggleAction = toggleArrow),
+                    presentation = GameMenuOptionPresentation.COMPATIBLE_ACTION
+                )
+            )
+        }
+
         if (game.prefConfig.screenDs5Touchpad) {
             val toggleSingleTap = Runnable {
                 game.screenDs5Touchpad.setSingleTapToClick(!game.prefConfig.screenDs5SingleTapToClick)
