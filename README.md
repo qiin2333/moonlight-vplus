@@ -69,6 +69,8 @@ Moonlight V+ 在 [moonlight-android](https://github.com/moonlight-stream/moonlig
 
 从 [Releases](https://github.com/qiin2333/moonlight-vplus/releases/latest) 下载最新 APK，安装后按应用内引导完成配对即可。
 
+也可以选择[用 Obtainium 添加本应用](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/qiin2333/moonlight-vplus)来安装和跟踪更新；应用自带的更新提示仍会保留，所以你可能会在两边都收到提醒。
+
 首次串流建议从 1080p、60 FPS、H.264 或自动编码、关闭 HDR、10–20 Mbps 开始，主机尽量使用有线网络。确认稳定后，再逐项提高分辨率、帧率、码率并启用 HEVC / AV1、HDR 等功能。
 
 ### 选择主机端

@@ -69,6 +69,8 @@ To choose a feature by what you want to do, see the [Moonlight V+ feature guide]
 
 Download the latest APK from [Releases](https://github.com/qiin2333/moonlight-vplus/releases/latest), install it, and pair it with your host.
 
+Optionally, [add the app to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/qiin2333/moonlight-vplus) to install it and track updates; the app's built-in update prompt stays on, so you may see both.
+
 For the first stream, start with a conservative profile:
 
 - 1080p, 60 FPS
