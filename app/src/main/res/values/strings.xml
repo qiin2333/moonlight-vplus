@@ -2044,6 +2044,8 @@ Tap again to replace it.</string>
     <string name="game_menu_card_list_separator">, </string>
     <string name="toast_enable_mic_redirect">Enable microphone redirection in Settings first</string>
     <string name="game_menu_enable_pan_zoom">Pan and Zoom</string>
+    <string name="game_menu_reset_viewport">Reset stream view</string>
+    <string name="game_menu_reset_viewport_summary">Pinch to zoom. Drag with two fingers when zoomed in.</string>
     <string name="toast_pan_zoom_disabled">Pan/Zoom disabled</string>
     <string name="toast_pan_zoom_enabled">Pan/Zoom enabled</string>
     <string name="toast_super_command_error">Couldn\'t send super command: %s</string>

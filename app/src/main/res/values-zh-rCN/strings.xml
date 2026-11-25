@@ -1728,6 +1728,8 @@
     <string name="game_menu_card_config_title">卡片配置</string>
     <string name="toast_enable_mic_redirect">请在设置中开启麦克风重定向</string>
     <string name="game_menu_enable_pan_zoom">平移与缩放</string>
+    <string name="game_menu_reset_viewport">还原画面</string>
+    <string name="game_menu_reset_viewport_summary">双指捏合缩放，放大后双指拖动画面。</string>
     <string name="toast_pan_zoom_disabled">已关闭平移/缩放</string>
     <string name="toast_pan_zoom_enabled">已开启平移/缩放</string>
     <string name="toast_super_command_error">发送超级命令时发生错误: %s</string>

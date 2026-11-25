@@ -2505,20 +2505,32 @@ class GameMenu(
             inlineControl = InlineControl.Segmented(buildTouchModeSegments(compactLabels = true))
         ))
 
-        normalOptions.add(MenuOption(
-            label = getString(R.string.game_menu_enable_pan_zoom).trim(),
-            isWithGameFocus = false,
-            runnable = Runnable {
-                Toast.makeText(game,
-                    if (game.getisTouchOverrideEnabled()) getString(R.string.toast_pan_zoom_disabled) else getString(R.string.toast_pan_zoom_enabled),
-                    Toast.LENGTH_SHORT).show()
-                game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled())
-            },
-            iconKey = "game_menu_pan_zoom",
-            isShowIcon = true,
-            isKeepDialog = true,
-            inlineControl = InlineControl.Toggle(game.getisTouchOverrideEnabled())
-        ))
+        if (game.supportsDirectTouchGestures() && !game.getisTouchOverrideEnabled()) {
+            normalOptions.add(MenuOption(
+                label = getString(R.string.game_menu_reset_viewport),
+                subtitle = getString(R.string.game_menu_reset_viewport_summary),
+                isWithGameFocus = false,
+                runnable = Runnable { game.resetStreamViewport() },
+                iconKey = "game_menu_pan_zoom",
+                isShowIcon = true,
+                isKeepDialog = true
+            ))
+        } else {
+            normalOptions.add(MenuOption(
+                label = getString(R.string.game_menu_enable_pan_zoom).trim(),
+                isWithGameFocus = false,
+                runnable = Runnable {
+                    Toast.makeText(game,
+                        if (game.getisTouchOverrideEnabled()) getString(R.string.toast_pan_zoom_disabled) else getString(R.string.toast_pan_zoom_enabled),
+                        Toast.LENGTH_SHORT).show()
+                    game.setisTouchOverrideEnabled(!game.getisTouchOverrideEnabled())
+                },
+                iconKey = "game_menu_pan_zoom",
+                isShowIcon = true,
+                isKeepDialog = true,
+                inlineControl = InlineControl.Toggle(game.getisTouchOverrideEnabled())
+            ))
+        }
 
         // 王冠功能
         val crownEnabled = game.isCrownFeatureEnabled

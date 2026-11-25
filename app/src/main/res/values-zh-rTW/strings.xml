@@ -1254,4 +1254,6 @@
     <string name="crown_config_segment_feedback">振動</string>
     <string name="toast_absolute_mouse_mode_enabled">絕對滑鼠模式已開啟</string>
     <string name="toast_relative_mouse_mode_enabled">相對滑鼠模式已開啟</string>
+    <string name="game_menu_reset_viewport">還原畫面</string>
+    <string name="game_menu_reset_viewport_summary">雙指捏合縮放，放大後雙指拖動畫面。</string>
 </resources>

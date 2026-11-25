@@ -361,7 +361,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun getisTouchOverrideEnabled(): Boolean = isTouchOverrideEnabled
 
+    internal fun supportsDirectTouchGestures(): Boolean =
+        !prefConfig.touchscreenTrackpad && !prefConfig.enableEnhancedTouch &&
+            !prefConfig.enableNativeMousePointer && !prefConfig.screenDs5Touchpad &&
+            externalDisplayManager?.isUsingExternalDisplay() != true
+
+    internal fun resetStreamViewport() {
+        touchInputHandler.cancelDirectTouch()
+        panZoomHandler.resetUserTransform()
+    }
+
     fun setisTouchOverrideEnabled(isTouchOverrideEnabled: Boolean) {
+        if (::touchInputHandler.isInitialized) touchInputHandler.cancelDirectTouch()
         this.isTouchOverrideEnabled = isTouchOverrideEnabled
     }
 
@@ -733,6 +744,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun createExternalDisplayCallback(): ExternalDisplayManager.ExternalDisplayCallback {
         return object : ExternalDisplayManager.ExternalDisplayCallback {
             override fun onExternalDisplayConnected(display: Display) {
+                touchInputHandler.cancelDirectTouch()
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
@@ -1849,6 +1861,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && ::touchInputHandler.isInitialized) touchInputHandler.cancelDirectTouch()
         resetVirtualKeyboardInput()
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
@@ -2015,6 +2028,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun onPause() {
+        if (::touchInputHandler.isInitialized) touchInputHandler.cancelDirectTouch()
         performanceOverlayManager?.cancelOverlayInteraction()
         if (::prefConfig.isInitialized && prefConfig.screenDs5Touchpad &&
             ::touchInputHandler.isInitialized && ::controllerHandler.isInitialized
@@ -2364,6 +2378,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun setInputGrabState(grab: Boolean) {
         if (!grab && ::touchInputHandler.isInitialized) {
+            touchInputHandler.cancelDirectTouch()
             touchInputHandler.releaseMouseNavigationButtons()
         }
         if (!grab && grabbedInput && ::keyboardInputHandler.isInitialized) {
@@ -2621,6 +2636,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      */
     private fun stopConnection(reason: StreamStopReason) {
         if (::touchInputHandler.isInitialized) {
+            touchInputHandler.cancelDirectTouch()
             touchInputHandler.releaseMouseNavigationButtons()
         }
         if (::keyboardInputHandler.isInitialized) {
@@ -3598,6 +3614,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         existingMenu?.dismiss()
         activeGameMenu = null
+        touchInputHandler.cancelDirectTouch()
         performanceOverlayManager?.cancelOverlayInteraction()
 
         val menu = GameMenu(this, app, conn!!, device) { dismissedMenu ->

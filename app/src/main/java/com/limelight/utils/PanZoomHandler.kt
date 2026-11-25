@@ -46,6 +46,32 @@ class PanZoomHandler(
         gestureDetector.onTouchEvent(motionEvent)
     }
 
+    internal val isZoomed: Boolean get() = scaleFactor > 1f
+
+    internal fun resetUserTransform() {
+        scaleFactor = 1f
+        userTransformActive = false
+        handleSurfaceChange()
+        game.updatePipAutoEnter()
+    }
+
+    internal fun transformViewport(fromX: Float, fromY: Float, toX: Float, toY: Float, ratio: Float) {
+        if (!updateDimensions()) return
+        val previousScale = scaleFactor
+        val newScale = (previousScale * ratio).coerceIn(1f, MAX_SCALE)
+        if (newScale == 1f) {
+            if (previousScale != 1f || userTransformActive) resetUserTransform()
+            return
+        }
+        val factor = newScale / previousScale
+        childX = toX + (childX - fromX) * factor
+        childY = toY + (childY + imeOffsetY - fromY) * factor - imeOffsetY
+        scaleFactor = newScale
+        userTransformActive = true
+        constrainToBounds()
+        onUserTransform?.invoke()
+    }
+
     private fun updateDimensions(): Boolean {
         if (parent == null) parent = streamView.parent as? View
         val currentParent = parent ?: return false

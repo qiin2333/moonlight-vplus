@@ -13,6 +13,7 @@ import android.view.ViewConfiguration
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.limelight.binding.input.touch.AbsoluteTouchContext
+import com.limelight.binding.input.touch.DirectTouchGesture
 import com.limelight.binding.input.touch.EnhancedTouchGestureRouteOwner
 import com.limelight.binding.input.touch.NativeTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
@@ -150,6 +151,128 @@ class TouchInputHandler(private val game: Game) {
 
     val nativeTouchPointerMap = HashMap<Int, NativeTouchContext.Pointer>()
     private val enhancedTouchRouteOwner = EnhancedTouchGestureRouteOwner()
+
+    private val directTouchHandler = Handler(Looper.getMainLooper())
+    private var directButton: Byte? = null
+    private var directConnection: NvConnection? = null
+    private var directScrollRemainder = 0f
+    private var firstDirectPointer = MotionEvent.INVALID_POINTER_ID
+    private var secondDirectPointer = MotionEvent.INVALID_POINTER_ID
+    private var thirdDirectPointer = MotionEvent.INVALID_POINTER_ID
+    private var thirdDirectX = 0f
+    private var thirdDirectY = 0f
+    private val directSlop by lazy { ViewConfiguration.get(game).scaledTouchSlop.toFloat().coerceAtLeast(1f) }
+    private val directTouch by lazy {
+        DirectTouchGesture(directSlop, object : DirectTouchGesture.Output {
+            override fun tap(x: Float, y: Float) {
+                press(x, y, secondary = false)
+                release()
+            }
+            override fun move(x: Float, y: Float) {
+                val target = game.streamView
+                if (target.width <= 0 || target.height <= 0) return
+                val videoX = ((x - target.x) / target.scaleX).coerceIn(0f, target.width.toFloat())
+                val videoY = ((y - target.y) / target.scaleY).coerceIn(0f, target.height.toFloat())
+                (directConnection ?: game.conn)?.sendMousePosition(
+                    videoX.roundToInt().toShort(), videoY.roundToInt().toShort(),
+                    target.width.toShort(), target.height.toShort()
+                )
+            }
+            override fun press(x: Float, y: Float, secondary: Boolean) {
+                move(x, y)
+                if (game.isMouseMoveOnlyEnabled) return
+                val connection = game.conn ?: return
+                val button = if (secondary) MouseButtonPacket.BUTTON_RIGHT else MouseButtonPacket.BUTTON_LEFT
+                directButton = button
+                directConnection = connection
+                connection.sendMouseButtonDown(button)
+            }
+            override fun release() {
+                directButton?.let { directConnection?.sendMouseButtonUp(it) }
+                directButton = null
+                directConnection = null
+            }
+            override fun scroll(dy: Float) {
+                val amount = directScrollRemainder + dy * 3f
+                val whole = amount.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                directScrollRemainder = amount - whole
+                if (whole != 0) game.conn?.sendMouseHighResScroll(whole.toShort())
+            }
+            override fun transform(fromX: Float, fromY: Float, toX: Float, toY: Float, ratio: Float) {
+                game.panZoomHandler.transformViewport(fromX, fromY, toX, toY, ratio)
+            }
+            override fun keyboard() = game.toggleKeyboard()
+        })
+    }
+    private val directLongPress = Runnable { directTouch.longPress() }
+
+    internal fun cancelDirectTouch(suppressRemaining: Boolean = true) {
+        directTouchHandler.removeCallbacks(directLongPress)
+        directTouch.cancel(suppressRemaining)
+        directScrollRemainder = 0f
+    }
+
+    private fun handleDirectTouch(view: View?, event: MotionEvent): Boolean {
+        val target = game.streamView
+        // A StreamView receiver gets local coordinates already inverse-transformed by Android.
+        // Its sibling background receiver is normally untransformed and shares the same parent.
+        fun x(index: Int) = if (view == target) target.x + event.getX(index) * target.scaleX
+            else (view?.x ?: 0f) + event.getX(index)
+        fun y(index: Int) = if (view == target) target.y + event.getY(index) * target.scaleY
+            else (view?.y ?: 0f) + event.getY(index)
+        val canceled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            (event.flags and MotionEvent.FLAG_CANCELED) != 0
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                cancelDirectTouch(suppressRemaining = false)
+                firstDirectPointer = event.getPointerId(0)
+                secondDirectPointer = MotionEvent.INVALID_POINTER_ID
+                thirdDirectPointer = MotionEvent.INVALID_POINTER_ID
+                directTouch.down(x(0), y(0))
+                directTouchHandler.postAtTime(directLongPress, event.eventTime + DIRECT_LONG_PRESS_MS)
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                directTouchHandler.removeCallbacks(directLongPress)
+                if (event.pointerCount == 2) {
+                    val a = event.findPointerIndex(firstDirectPointer)
+                    val b = event.actionIndex
+                    if (a < 0 || a == b) {
+                        cancelDirectTouch()
+                    } else {
+                        secondDirectPointer = event.getPointerId(b)
+                        directTouch.secondFinger(x(a), y(a), x(b), y(b), game.panZoomHandler.isZoomed)
+                    }
+                } else {
+                    val index = event.actionIndex
+                    thirdDirectPointer = event.getPointerId(index)
+                    thirdDirectX = x(index)
+                    thirdDirectY = y(index)
+                    directTouch.extraFinger(event.pointerCount, event.eventTime)
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val a = event.findPointerIndex(firstDirectPointer)
+                val b = event.findPointerIndex(secondDirectPointer)
+                val c = event.findPointerIndex(thirdDirectPointer)
+                if (c >= 0 && hypot(x(c) - thirdDirectX, y(c) - thirdDirectY) >= directSlop) {
+                    directTouch.movedThreeFingers()
+                }
+                when {
+                    event.pointerCount == 1 && a >= 0 -> directTouch.moveSingle(x(a), y(a))
+                    event.pointerCount == 2 && a >= 0 && b >= 0 -> directTouch.movePair(x(a), y(a), x(b), y(b))
+                    event.pointerCount > 3 -> directTouch.movedThreeFingers()
+                }
+            }
+            MotionEvent.ACTION_POINTER_UP -> directTouch.pointerUp(canceled)
+            MotionEvent.ACTION_UP -> {
+                directTouchHandler.removeCallbacks(directLongPress)
+                directTouch.up(event.eventTime, canceled)
+            }
+            MotionEvent.ACTION_CANCEL -> cancelDirectTouch(suppressRemaining = false)
+            else -> return false
+        }
+        return true
+    }
 
     // 华为鼠标滚轮/中键模拟
     private var fakeScrollInitialY = -1f
@@ -556,9 +679,24 @@ class TouchInputHandler(private val game: Game) {
                     Ds5Route.NONE -> {}
                 }
 
+                val editingController = game.virtualController?.controllerMode.let {
+                    it == VirtualController.ControllerMode.MoveButtons || it == VirtualController.ControllerMode.ResizeButtons
+                }
+                if (event.actionMasked != MotionEvent.ACTION_DOWN && directTouch.ownsSequence) {
+                    return handleDirectTouch(view, event)
+                }
+                if (event.actionMasked == MotionEvent.ACTION_DOWN && directTouch.ownsSequence) {
+                    cancelDirectTouch(suppressRemaining = false)
+                }
                 if (game.getisTouchOverrideEnabled()) {
                     game.panZoomHandler.handleTouchEvent(event)
                     return true
+                }
+                if (event.actionMasked == MotionEvent.ACTION_DOWN && !editingController &&
+                    game.supportsDirectTouchGestures() && event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN) &&
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+                ) {
+                    return handleDirectTouch(view, event)
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_DOWN &&
@@ -1587,6 +1725,7 @@ class TouchInputHandler(private val game: Game) {
         }
 
     fun setTouchMode(enableRelativeTouch: Boolean) {
+        cancelDirectTouch()
         if (ds5Route != Ds5Route.NONE) {
             cancelScreenDs5TouchpadGesture()
         } else {
@@ -1608,6 +1747,7 @@ class TouchInputHandler(private val game: Game) {
     }
 
     fun setEnhancedTouch(enableRelativeTouch: Boolean) {
+        cancelDirectTouch()
         game.prefConfig.enableEnhancedTouch = enableRelativeTouch
         if (game.prefConfig.enableEnhancedTouch) {
             game.prefConfig.enableNativeMousePointer = false
@@ -1659,6 +1799,7 @@ class TouchInputHandler(private val game: Game) {
     }
 
     companion object {
+        private const val DIRECT_LONG_PRESS_MS = 650L
         const val TOUCH_CONTEXT_LENGTH = 2
         private const val TWO_FINGER_TAP_THRESHOLD = 100L
         private const val TWO_FINGER_MOVE_THRESHOLD = 40f
