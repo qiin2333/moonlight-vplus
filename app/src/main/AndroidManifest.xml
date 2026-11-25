@@ -218,8 +218,7 @@
         <!--
             Compatibility targets for explicit desktop intents saved by older versions.
             These aliases have no launcher filters, so they never add another app icon.
-            LauncherEntry clears the old icon switcher's enabled-state overrides on
-            upgrade/startup. PcView remains available even before that migration runs.
+            PcView remains available regardless of the aliases' saved enabled states.
         -->
         <activity-alias
             android:name=".LauncherSaba"
@@ -417,15 +416,6 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".utils.LauncherEntryMigrationReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
