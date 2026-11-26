@@ -926,24 +926,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
         } else {
             val startPressed = simulatorPressedFlags and ControllerPacket.PLAY_FLAG != 0
             val startWasPressed = previousFlags and ControllerPacket.PLAY_FLAG != 0
-            // Mirrors ControllerHandler: B dismisses the wheel while Start is held.
-            if (startPressed && systemSimulatorGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE) {
-                val pressed = simulatorPressedFlags and previousFlags.inv()
-                val wheelButtonUpdate = if (pressed and ControllerPacket.B_FLAG != 0) {
-                    systemSimulatorGesture.onCancelPressed()
-                } else {
-                    null
-                }
-                if (wheelButtonUpdate != null &&
-                    systemSimulatorGesture.state() != StartGestureReducer.State.WHEEL_VISIBLE
-                ) {
-                    // The wheel was dismissed; this snapshot belongs to the game again.
-                    simulatorUiState = simulatorUiState.copy(pressedFlags = simulatorPressedFlags)
-                    applySystemReducerUpdate(wheelButtonUpdate)
-                    return
-                }
-                wheelButtonUpdate?.let { applySystemReducerUpdate(it) }
-            }
+            // B dismisses the wheel inside the shared state machine, in either branch below.
             val update = when {
                 startPressed && !startWasPressed ->
                     systemSimulatorGesture.onStartDown(eventTimeMs, startKeyActionEnabled)

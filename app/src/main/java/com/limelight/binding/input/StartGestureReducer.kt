@@ -1,5 +1,8 @@
 package com.limelight.binding.input
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import com.limelight.R
 import com.limelight.nvstream.input.ControllerPacket
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -21,24 +24,81 @@ enum class StartWheelAction {
     ESC
 }
 
-/** The wheel's fixed eight sectors, clockwise from up, 45 degrees each. */
+/** What has to be set up on this device before an item is shown. */
+enum class StartWheelAvailability {
+    ALWAYS,
+    GYRO,
+    MIC
+}
+
+/** One sector of the wheel: what it runs, how it is labelled and when it exists. */
+data class StartWheelItem(
+    val action: StartWheelAction,
+    @param:StringRes val titleRes: Int,
+    @param:DrawableRes val iconRes: Int,
+    val availability: StartWheelAvailability = StartWheelAvailability.ALWAYS,
+    /** True for the one item that ends the session; the overlay draws it as a warning. */
+    val danger: Boolean = false
+)
+
+/**
+ * The wheel's sectors, clockwise from up, 45 degrees each. This list is the only place that defines
+ * what the wheel holds: the reducer takes its order and the overlay its labels and icons.
+ */
 object StartWheelLayout {
-    private val SLOT_ACTIONS = arrayOf(
-        StartWheelAction.MENU,
-        StartWheelAction.GYRO,
-        StartWheelAction.MOUSE,
-        StartWheelAction.MIC,
-        StartWheelAction.KEYBOARD,
-        StartWheelAction.DISCONNECT,
-        StartWheelAction.PERFORMANCE_TOGGLE,
-        StartWheelAction.ESC
+    val items = listOf(
+        StartWheelItem(
+            StartWheelAction.MENU,
+            R.string.start_wheel_item_menu,
+            R.drawable.phc_list
+        ),
+        StartWheelItem(
+            StartWheelAction.GYRO,
+            R.string.start_wheel_item_gyro,
+            R.drawable.phc_game_controller,
+            StartWheelAvailability.GYRO
+        ),
+        StartWheelItem(
+            StartWheelAction.MOUSE,
+            R.string.start_wheel_item_mouse,
+            R.drawable.ic_start_wheel_mouse
+        ),
+        StartWheelItem(
+            StartWheelAction.MIC,
+            R.string.start_wheel_item_mic,
+            R.drawable.ic_mic_gm,
+            StartWheelAvailability.MIC
+        ),
+        StartWheelItem(
+            StartWheelAction.KEYBOARD,
+            R.string.start_wheel_item_keyboard,
+            R.drawable.phc_keyboard
+        ),
+        StartWheelItem(
+            StartWheelAction.DISCONNECT,
+            R.string.start_wheel_item_disconnect,
+            R.drawable.phc_action_disconnect,
+            danger = true
+        ),
+        StartWheelItem(
+            StartWheelAction.PERFORMANCE_TOGGLE,
+            R.string.start_wheel_item_perf_show,
+            R.drawable.phc_layers
+        ),
+        StartWheelItem(
+            StartWheelAction.ESC,
+            R.string.start_wheel_item_esc,
+            R.drawable.phc_action_exit
+        )
     )
 
     /** Item in [slot], or null when the wheel shows fewer sectors than its layout. */
-    fun action(slot: Int): StartWheelAction? = SLOT_ACTIONS.getOrNull(slot)
+    fun action(slot: Int): StartWheelAction? = items.getOrNull(slot)?.action
+
+    fun item(action: StartWheelAction): StartWheelItem? = items.firstOrNull { it.action == action }
 
     /** Number of sectors the wheel draws, which is the size of its layout. */
-    val slotCount: Int get() = SLOT_ACTIONS.size
+    val slotCount: Int get() = items.size
 }
 
 /**
@@ -73,6 +133,7 @@ internal fun hostStickYToWheelAxis(value: Short): Float = -value.toFloat() / 327
  * Start itself keeps reaching the game until the wheel is first steered: games that use a long press
  * of Start for their own menus are why the gesture exists, so the first push is what takes the input
  * away from the host. From then on input is captured locally until everything has been released.
+ * B closes the wheel without running anything.
  */
 internal class StartGestureReducer(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong(),
@@ -275,11 +336,6 @@ internal class StartGestureReducer(
         )
     }
 
-    /** B: dismisses the wheel without running anything. */
-    @Synchronized
-    fun onCancelPressed(): Update =
-        if (state == State.WHEEL_VISIBLE) dismissWheel(captureForWheelButton()) else snapshot()
-
     /** Records the latest host snapshot while menu creation is pending. */
     @Synchronized
     fun recordPendingSnapshot(
@@ -310,6 +366,20 @@ internal class StartGestureReducer(
         rightStickX: Float = 0f,
         rightStickY: Float = 0f
     ): Update {
+        if (isWheelDismissPress(buttonFlags)) {
+            // B wins over the Start release in the same report: it dismisses instead of committing.
+            updatePhysicalInput(
+                buttonFlags and ControllerPacket.PLAY_FLAG.inv(),
+                leftStickX,
+                leftStickY,
+                rightStickX,
+                rightStickY
+            )
+            return dismissWheel(
+                captureForWheelButton(),
+                listOf(EventAction.CANCEL_LONG_PRESS, EventAction.HIDE_WHEEL)
+            )
+        }
         updatePhysicalInput(
             buttonFlags and ControllerPacket.PLAY_FLAG.inv(),
             leftStickX,
@@ -395,6 +465,11 @@ internal class StartGestureReducer(
         rightStickX: Float = lastRightStickX,
         rightStickY: Float = lastRightStickY
     ): Update {
+        if (isWheelDismissPress(buttonFlags)) {
+            // B is a wheel button: the host is told to let go before it could reach it.
+            updatePhysicalInput(buttonFlags, leftStickX, leftStickY, rightStickX, rightStickY)
+            return dismissWheel(captureForWheelButton())
+        }
         updatePhysicalInput(buttonFlags, leftStickX, leftStickY, rightStickX, rightStickY)
         if (state == State.WAIT_FOR_RELEASE && !hasPressedInput()) {
             state = State.IDLE
@@ -465,11 +540,20 @@ internal class StartGestureReducer(
         return true
     }
 
+    /** True when this report is the press that dismisses the wheel: B went down while it is shown. */
+    private fun isWheelDismissPress(buttonFlags: Int): Boolean =
+        state == State.WHEEL_VISIBLE &&
+            buttonFlags and ControllerPacket.B_FLAG != 0 &&
+            lastButtonFlags and ControllerPacket.B_FLAG == 0
+
     /** Hides the wheel without running anything. Start is still down, so the capture outlives it. */
-    private fun dismissWheel(captureStarted: Boolean): Update {
+    private fun dismissWheel(
+        captureStarted: Boolean,
+        actions: List<EventAction> = listOf(EventAction.HIDE_WHEEL)
+    ): Update {
         clearStartGesture()
         state = if (hasPressedInput()) State.WAIT_FOR_RELEASE else State.IDLE
-        return snapshot(actions = listOf(EventAction.HIDE_WHEEL), sendNeutralState = captureStarted)
+        return snapshot(actions = actions, sendNeutralState = captureStarted)
     }
 
     private fun commitSelectedAction(

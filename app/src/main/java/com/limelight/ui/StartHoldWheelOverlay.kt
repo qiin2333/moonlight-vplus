@@ -82,8 +82,7 @@ internal data class StartWheelFeatureState(
     val keyboardVisible: Boolean = false,
     val micActive: Boolean = false,
     /** Items whose feature is not set up on this device are left out, as in the game menu. */
-    val gyroAvailable: Boolean = true,
-    val micAvailable: Boolean = true
+    val unavailable: Set<StartWheelAction> = emptySet()
 )
 
 /** Everything the Start hold wheel overlay draws. */
@@ -677,54 +676,39 @@ private fun KeyHint(
 private fun startWheelItemVisuals(
     features: StartWheelFeatureState
 ): Map<StartWheelAction, WheelItemVisual> {
-    val perfHidden = !features.perfOverlayVisible
     val items = LinkedHashMap<StartWheelAction, WheelItemVisual>()
-    items[StartWheelAction.MENU] = WheelItemVisual(
-        title = stringResource(R.string.start_wheel_item_menu),
-        icon = R.drawable.ic_start_wheel_menu
-    )
-    if (features.gyroAvailable) {
-        items[StartWheelAction.GYRO] = WheelItemVisual(
-            title = stringResource(R.string.start_wheel_item_gyro),
-            icon = R.drawable.ic_start_wheel_gyro,
-            state = if (features.gyroEnabled) ItemState.ON else ItemState.OFF
-        )
+    for (item in StartWheelLayout.items) {
+        if (item.action in features.unavailable) continue
+        items[item.action] = if (item.action == StartWheelAction.PERFORMANCE_TOGGLE) {
+            // The one item whose label and icon say what using it will do, not what it is.
+            val hidden = !features.perfOverlayVisible
+            WheelItemVisual(
+                title = stringResource(
+                    if (hidden) R.string.start_wheel_item_perf_show else R.string.start_wheel_item_perf_hide
+                ),
+                icon = item.iconRes,
+                state = if (hidden) ItemState.OFF else ItemState.ON
+            )
+        } else {
+            WheelItemVisual(
+                title = stringResource(item.titleRes),
+                icon = item.iconRes,
+                danger = item.danger,
+                state = itemState(item.action, features)
+            )
+        }
     }
-    items[StartWheelAction.MOUSE] = WheelItemVisual(
-        title = stringResource(R.string.start_wheel_item_mouse),
-        icon = R.drawable.ic_start_wheel_mouse,
-        state = if (features.mouseEmulationActive) ItemState.ON else ItemState.OFF
-    )
-    if (features.micAvailable) {
-        items[StartWheelAction.MIC] = WheelItemVisual(
-            title = stringResource(R.string.start_wheel_item_mic),
-            icon = R.drawable.ic_mic_gm,
-            state = if (features.micActive) ItemState.ON else ItemState.OFF
-        )
-    }
-    items[StartWheelAction.KEYBOARD] = WheelItemVisual(
-        title = stringResource(R.string.start_wheel_item_keyboard),
-        icon = R.drawable.ic_start_wheel_keyboard,
-        state = if (features.keyboardVisible) ItemState.ON else ItemState.OFF
-    )
-    items[StartWheelAction.DISCONNECT] = WheelItemVisual(
-        title = stringResource(R.string.start_wheel_item_disconnect),
-        icon = R.drawable.ic_start_wheel_disconnect,
-        danger = true
-    )
-    items[StartWheelAction.PERFORMANCE_TOGGLE] = WheelItemVisual(
-        title = stringResource(
-            if (perfHidden) R.string.start_wheel_item_perf_show else R.string.start_wheel_item_perf_hide
-        ),
-        icon = if (perfHidden) R.drawable.ic_start_wheel_overlay_show else R.drawable.ic_start_wheel_overlay_hide,
-        state = if (perfHidden) ItemState.OFF else ItemState.ON
-    )
-    items[StartWheelAction.ESC] = WheelItemVisual(
-        title = stringResource(R.string.start_wheel_item_esc),
-        icon = R.drawable.ic_btn_esc
-    )
     return items
 }
+
+private fun itemState(action: StartWheelAction, features: StartWheelFeatureState): ItemState =
+    when (action) {
+        StartWheelAction.GYRO -> if (features.gyroEnabled) ItemState.ON else ItemState.OFF
+        StartWheelAction.MOUSE -> if (features.mouseEmulationActive) ItemState.ON else ItemState.OFF
+        StartWheelAction.MIC -> if (features.micActive) ItemState.ON else ItemState.OFF
+        StartWheelAction.KEYBOARD -> if (features.keyboardVisible) ItemState.ON else ItemState.OFF
+        else -> ItemState.NONE
+    }
 
 /**
  * Largest size at which [text] stays on one line within [maxWidth]. A label that would otherwise run

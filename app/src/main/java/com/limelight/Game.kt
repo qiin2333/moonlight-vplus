@@ -18,7 +18,6 @@ import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
 import com.limelight.binding.input.GyroAssistantMode
-import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.binding.input.StartWheelAction
 import com.limelight.binding.input.StartWheelSnapshot
 import com.limelight.binding.input.advance_setting.ControllerManager
@@ -271,9 +270,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     // Gyro mode to bring back when the wheel switches the assistant on again this session.
     private var startWheelLastGyroMode: GyroAssistantMode? = null
     private var startWheelConfirmSheet: android.app.Dialog? = null
-    private val startWheelConfirmAxisStates = mutableMapOf<Int, MenuAxisNavigationState>()
-    private val startWheelConfirmHeldKeys = mutableMapOf<Int, Int>()
-    private val startWheelConfirmAwaitingNeutral = mutableSetOf<Int>()
+    private val startWheelConfirmSteering = StartWheelConfirmSteering()
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
     /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
     private var virtualControllerVisibleBeforeStop: Boolean? = null
@@ -3681,7 +3678,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return true
         }
         startWheelConfirmSheet?.takeIf { it.isShowing }?.let { sheet ->
-            dispatchStartWheelConfirmAxes(
+            startWheelConfirmSteering.steer(
                 sourceKey = controllerId,
                 axisPairs = listOf(leftStickX to leftStickY, rightStickX to rightStickY),
                 sheet = sheet
@@ -3835,8 +3832,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             keyboardVisible = isLocalKeyboardVisible(),
             micActive = microphoneManager?.isMicrophoneActive() == true,
             // One rule for which items exist, shared with the reducer.
-            gyroAvailable = controllerHandler?.isStartWheelItemAvailable(StartWheelAction.GYRO) == true,
-            micAvailable = controllerHandler?.isStartWheelItemAvailable(StartWheelAction.MIC) == true
+            unavailable = controllerHandler?.let { handler ->
+                StartWheelAction.entries.filterNot(handler::isStartWheelItemAvailable).toSet()
+            } ?: emptySet()
         )
     }
 
@@ -3948,9 +3946,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             return
         }
         startWheelConfirmSheet = sheet
-        startWheelConfirmAxisStates.clear()
-        startWheelConfirmHeldKeys.clear()
-        startWheelConfirmAwaitingNeutral.clear()
+        startWheelConfirmSteering.reset()
         // From here on the sheet owns the window, so neither keys nor sticks reach the game.
         if (::controllerHandler.isInitialized) {
             // Reuse the game-menu capture so held buttons steer the sheet instead of the game; it
@@ -3971,57 +3967,17 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         }
         val axisPairs = controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = true)
             ?: return false
-        dispatchStartWheelConfirmAxes(event.deviceId, axisPairs, sheet)
+        startWheelConfirmSteering.steer(event.deviceId, axisPairs, sheet)
         return true
     }
 
     private fun onStartWheelConfirmSheetDismissed() {
         startWheelConfirmSheet = null
-        startWheelConfirmAxisStates.clear()
-        startWheelConfirmHeldKeys.clear()
-        startWheelConfirmAwaitingNeutral.clear()
+        startWheelConfirmSteering.reset()
         if (::controllerHandler.isInitialized) {
             controllerHandler.onExternalGameMenuDismissed()
         }
         updateKeyboardInterception()
-    }
-
-    /**
-     * Turns stick deflection into up and down steps for the two-row sheet. A stick is left alone
-     * until it has rested once, because it usually still points the way the player picked the item.
-     */
-    private fun dispatchStartWheelConfirmAxes(
-        sourceKey: Int,
-        axisPairs: List<Pair<Float, Float>>,
-        sheet: android.app.Dialog
-    ) {
-        val knownSource = startWheelConfirmAxisStates.containsKey(sourceKey)
-        val state = startWheelConfirmAxisStates.getOrPut(sourceKey) { MenuAxisNavigationState() }
-        if (sourceKey in startWheelConfirmAwaitingNeutral) {
-            state.reset()
-            if (state.isNeutral(axisPairs)) startWheelConfirmAwaitingNeutral.remove(sourceKey)
-            return
-        }
-        if (!knownSource && !state.isNeutral(axisPairs)) {
-            startWheelConfirmAwaitingNeutral += sourceKey
-            return
-        }
-        val transition = state.update(axisPairs)
-        if (!transition.changed) return
-        val targetKey = when (transition.pressedKeyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> KeyEvent.KEYCODE_DPAD_UP
-            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> KeyEvent.KEYCODE_DPAD_DOWN
-            else -> null
-        }
-        val heldKey = startWheelConfirmHeldKeys[sourceKey]
-        if (heldKey != null && heldKey != targetKey) {
-            sheet.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, heldKey))
-            startWheelConfirmHeldKeys.remove(sourceKey)
-        }
-        if (targetKey != null && heldKey != targetKey) {
-            sheet.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, targetKey))
-            startWheelConfirmHeldKeys[sourceKey] = targetKey
-        }
     }
 
     override fun onKey(view: View, keyCode: Int, keyEvent: KeyEvent): Boolean {

@@ -83,8 +83,7 @@ internal class DriverControllerShortcutStateMachine(
         val startPressed = buttonFlags and ControllerPacket.PLAY_FLAG != 0
         val startWasPressed = previousButtonFlags and ControllerPacket.PLAY_FLAG != 0
         if (reducerState == StartGestureReducer.State.WHEEL_VISIBLE) {
-            // Read B even in a report that also releases Start: the dismiss wins over the commit.
-            val wheelButtonUpdate = feedWheelButton(previousButtonFlags, buttonFlags)
+            // B dismisses the wheel inside the reducer, even in a report that also releases Start.
             val reducerUpdate = if (!startPressed && startWasPressed) {
                 reducer.onStartUp(
                     eventTimeMs,
@@ -105,18 +104,7 @@ internal class DriverControllerShortcutStateMachine(
                     lastRightStickY
                 )
             }
-            val driverUpdate = reducerUpdate.toDriverUpdate()
-            val buttonUpdate = wheelButtonUpdate
-            return if (buttonUpdate == null) {
-                driverUpdate
-            } else {
-                // The button's own neutral state, if it captured the input, rides with this snapshot.
-                driverUpdate.copy(
-                    actions = buttonUpdate.actions + driverUpdate.actions,
-                    sendNeutralState = buttonUpdate.sendNeutralState || driverUpdate.sendNeutralState,
-                    consumeAllInput = buttonUpdate.consumeAllInput || driverUpdate.consumeAllInput
-                )
-            }
+            return reducerUpdate.toDriverUpdate()
         }
         if (reducerState == StartGestureReducer.State.MENU_PENDING ||
             reducerState == StartGestureReducer.State.MENU_ACTIVE ||
@@ -273,16 +261,6 @@ internal class DriverControllerShortcutStateMachine(
         lastRightStickX = 0f
         lastRightStickY = 0f
         return update.toDriverUpdate()
-    }
-
-    /**
-     * Forwards a newly pressed B to the reducer while the wheel is up: it dismisses the wheel.
-     * Returns null when B did not go down in this snapshot.
-     */
-    private fun feedWheelButton(previousButtonFlags: Int, buttonFlags: Int): Update? {
-        val pressed = buttonFlags and previousButtonFlags.inv()
-        if (pressed and ControllerPacket.B_FLAG == 0) return null
-        return reducer.onCancelPressed().toDriverUpdate()
     }
 
     private fun markHostNeutralStateRequired(): Boolean {

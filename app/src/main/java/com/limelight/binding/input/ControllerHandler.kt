@@ -1103,10 +1103,13 @@ class ControllerHandler(
     }
 
     /** Whether the wheel offers an item whose feature is set up on this device. */
-    internal fun isStartWheelItemAvailable(action: StartWheelAction): Boolean = when (action) {
-        StartWheelAction.GYRO -> hasAnyController()
-        StartWheelAction.MIC -> prefConfig.enableMic
-        else -> true
+    internal fun isStartWheelItemAvailable(action: StartWheelAction): Boolean {
+        val item = StartWheelLayout.item(action) ?: return false
+        return when (item.availability) {
+            StartWheelAvailability.ALWAYS -> true
+            StartWheelAvailability.GYRO -> hasAnyController()
+            StartWheelAvailability.MIC -> prefConfig.enableMic
+        }
     }
 
     /** Runs an item committed from the Start wheel. Mouse mode belongs to the controller that drove it. */
@@ -1119,21 +1122,12 @@ class ControllerHandler(
     }
 
     /**
-     * B dismisses the wheel while it is up. It acts once however long it is held, like Start itself;
-     * any other button is left to the game.
+     * Lets the wheel see a B press that came without any axis movement. The reducer dismisses the
+     * wheel for it, so the button never reaches the game.
      */
-    private fun handleSystemStartWheelCancel(context: InputDeviceContext, event: KeyEvent, keyCode: Int) {
-        if (event.repeatCount != 0 || keyCode != KeyEvent.KEYCODE_BUTTON_B) return
-        if (context.startGesture.state() != StartGestureReducer.State.WHEEL_VISIBLE) return
-        // The button is already in inputMap, so the reducer sees it as held.
-        recordSystemStartWheelInput(context)
-        handleSystemStartGestureUpdate(context, context.startGesture.onCancelPressed())
-    }
-
-    /** Lets the wheel see buttons that changed without any axis movement. */
-    private fun recordSystemStartWheelInput(context: InputDeviceContext) {
+    private fun recordSystemStartWheelInput(context: InputDeviceContext): StartGestureReducer.Update {
         val axes = wheelStickAxes(context)
-        context.startGesture.onInputSnapshot(
+        return context.startGesture.onInputSnapshot(
             context.inputMap or if (context.startGesture.isStartPressed()) {
                 ControllerPacket.PLAY_FLAG
             } else {
@@ -3337,7 +3331,9 @@ class ControllerHandler(
             if (isWheelDpadKey(keyCode)) {
                 handleSystemStartWheelAxes(context)
             }
-            handleSystemStartWheelCancel(context, event, keyCode)
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+                handleSystemStartGestureUpdate(context, recordSystemStartWheelInput(context))
+            }
             // Start+Back+LB+RB still quits: completing it over the wheel must not be swallowed by it.
             if (context.inputMap == DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS) {
                 handleSystemStartGestureUpdate(context, context.startGesture.reset())

@@ -225,7 +225,7 @@ class StartGestureReducerTest {
     @Test
     fun cancelAndResetDismissWithoutRunning() {
         val cancelled = wheel().also { it.pull(0f, 0.9f) }
-        val cancel = cancelled.onCancelPressed()
+        val cancel = cancelled.onInputSnapshot(ControllerPacket.B_FLAG)
         assertTrue(cancel.actions.contains(StartGestureReducer.EventAction.HIDE_WHEEL))
         assertFalse(cancel.actions.contains(StartGestureReducer.EventAction.COMMIT_ACTION))
         assertEquals(StartGestureReducer.State.WAIT_FOR_RELEASE, cancelled.state())
