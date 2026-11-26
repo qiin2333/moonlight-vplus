@@ -331,7 +331,7 @@
     <string name="controller_diag_path_usb_takeover">V+ USB 接管</string>
     <string name="controller_diag_path_unavailable">当前不可用</string>
     <string name="usb_shortcut_hold_hint">摇杆或十字键指向八个入口之一；松开摇杆或 Start 即执行</string>
-    <!-- Start hold wheel: only item names live on the wheel; the three keys below it are its whole legend -->
+    <!-- Start hold wheel: only item names live on the wheel; the hint below it is its whole legend -->
     <string name="start_wheel_item_menu">串流菜单</string>
     <string name="start_wheel_item_mouse">鼠标模拟</string>
     <string name="start_wheel_item_keyboard">屏幕键盘</string>
@@ -339,12 +339,11 @@
     <string name="start_wheel_item_perf_hide">隐藏图层</string>
     <string name="start_wheel_item_disconnect">断开串流</string>
     <string name="start_wheel_undo_disconnecting">正在断开串流</string>
-    <string name="start_wheel_undo_cancel">取消</string>
+    <string name="start_wheel_control_cancel">取消</string>
     <string name="start_wheel_item_gyro">体感助手</string>
     <string name="start_wheel_item_mic">麦克风</string>
     <string name="start_wheel_item_esc">Esc</string>
-    <string name="start_wheel_control_run">执行</string>
-    <string name="start_wheel_hint_stick_release">松开摇杆同样执行</string>
+    <string name="start_wheel_hint_release_runs">松开即执行</string>
     <string name="start_wheel_toast_perf_floating">性能图层：悬浮</string>
     <string name="start_wheel_toast_perf_locked">性能图层：固定</string>
     <string name="start_wheel_toast_perf_hidden">性能图层：隐藏</string>

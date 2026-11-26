@@ -213,7 +213,7 @@
     <string name="controller_diag_path_usb_takeover">V+ USB 接管</string>
     <string name="controller_diag_path_unavailable">目前無法使用</string>
     <string name="usb_shortcut_hold_hint">搖桿或十字鍵指向八個入口之一；放開搖桿或 Start 即執行</string>
-    <!-- Start hold wheel: only item names live on the wheel; the three keys below it are its whole legend -->
+    <!-- Start hold wheel: only item names live on the wheel; the hint below it is its whole legend -->
     <string name="start_wheel_item_menu">串流選單</string>
     <string name="start_wheel_item_mouse">滑鼠模擬</string>
     <string name="start_wheel_item_keyboard">螢幕鍵盤</string>
@@ -221,12 +221,11 @@
     <string name="start_wheel_item_perf_hide">隱藏圖層</string>
     <string name="start_wheel_item_disconnect">中斷串流</string>
     <string name="start_wheel_undo_disconnecting">正在中斷串流</string>
-    <string name="start_wheel_undo_cancel">取消</string>
+    <string name="start_wheel_control_cancel">取消</string>
     <string name="start_wheel_item_gyro">體感助手</string>
     <string name="start_wheel_item_mic">麥克風</string>
     <string name="start_wheel_item_esc">Esc</string>
-    <string name="start_wheel_control_run">執行</string>
-    <string name="start_wheel_hint_stick_release">放開搖桿同樣執行</string>
+    <string name="start_wheel_hint_release_runs">放開即執行</string>
     <string name="start_wheel_toast_perf_floating">效能圖層：懸浮</string>
     <string name="start_wheel_toast_perf_locked">效能圖層：固定</string>
     <string name="start_wheel_toast_perf_hidden">效能圖層：隱藏</string>

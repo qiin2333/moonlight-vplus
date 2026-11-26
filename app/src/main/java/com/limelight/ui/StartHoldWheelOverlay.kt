@@ -343,7 +343,7 @@ private fun StartWheelUndoPrompt(modifier: Modifier = Modifier) {
                 maxLines = 1
             )
             Spacer(Modifier.height(8.dp))
-            KeyHint("B", stringResource(R.string.start_wheel_undo_cancel), emphasized = true, typography)
+            KeyHint("B", stringResource(R.string.start_wheel_control_cancel), emphasized = true, typography)
             Spacer(Modifier.height(12.dp))
             Box(
                 modifier = Modifier
@@ -685,22 +685,22 @@ private fun MoonWheelMark(accent: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** The one key that drives the wheel, and the release the players found first. */
+/** The rule that runs an item, and the key that calls the wheel off. */
 @Composable
 private fun WheelLegend(typography: WheelTypography) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(typography.legendGap)
     ) {
-        KeyHint("START", stringResource(R.string.start_wheel_control_run), emphasized = true, typography)
         Text(
-            text = stringResource(R.string.start_wheel_hint_stick_release),
-            color = WheelText.copy(alpha = 0.55f),
+            text = stringResource(R.string.start_wheel_hint_release_runs),
+            color = WheelText.copy(alpha = 0.9f),
             fontSize = typography.keyLabel,
             lineHeight = typography.itemTitleLine,
             fontWeight = FontWeight.Medium,
             maxLines = 1
         )
+        KeyHint("B", stringResource(R.string.start_wheel_control_cancel), emphasized = false, typography)
     }
 }
 

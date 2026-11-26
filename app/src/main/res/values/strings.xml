@@ -423,7 +423,7 @@
     <string name="controller_diag_path_usb_takeover">V+ USB takeover</string>
     <string name="controller_diag_path_unavailable">Unavailable</string>
     <string name="usb_shortcut_hold_hint">Point the stick or D-pad at one of eight items; letting go of it, or of Start, runs that item</string>
-    <!-- Start hold wheel: only item names live on the wheel; the three keys below it are its whole legend -->
+    <!-- Start hold wheel: only item names live on the wheel; the hint below it is its whole legend -->
     <string name="start_wheel_item_menu">Stream menu</string>
     <string name="start_wheel_item_mouse">Mouse</string>
     <string name="start_wheel_item_keyboard">Local keyboard</string>
@@ -431,12 +431,11 @@
     <string name="start_wheel_item_perf_hide">Hide stats</string>
     <string name="start_wheel_item_disconnect">Disconnect</string>
     <string name="start_wheel_undo_disconnecting">Disconnecting from the stream</string>
-    <string name="start_wheel_undo_cancel">Cancel</string>
+    <string name="start_wheel_control_cancel">Cancel</string>
     <string name="start_wheel_item_gyro">Gyro</string>
     <string name="start_wheel_item_mic">Microphone</string>
     <string name="start_wheel_item_esc">Esc</string>
-    <string name="start_wheel_control_run">Run</string>
-    <string name="start_wheel_hint_stick_release">Releasing the stick runs it too</string>
+    <string name="start_wheel_hint_release_runs">Release to run</string>
     <string name="start_wheel_toast_perf_floating">Stats overlay: floating</string>
     <string name="start_wheel_toast_perf_locked">Stats overlay: pinned</string>
     <string name="start_wheel_toast_perf_hidden">Stats overlay: hidden</string>
