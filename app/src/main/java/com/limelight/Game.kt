@@ -73,6 +73,7 @@ import com.limelight.ui.GameGestures
 import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
+import com.limelight.ui.START_WHEEL_UNDO_MS
 import com.limelight.ui.StartWheelFeatureState
 import com.limelight.ui.StartWheelUiState
 import com.limelight.utils.AppActionSheet
@@ -108,6 +109,8 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.preference.PreferenceManager
 import android.util.Rational
@@ -269,8 +272,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val startWheelStreamActions by lazy { StreamActionExecutor(game = this, connProvider = { conn }) }
     // Gyro mode to bring back when the wheel switches the assistant on again this session.
     private var startWheelLastGyroMode: GyroAssistantMode? = null
-    private var startWheelConfirmSheet: android.app.Dialog? = null
-    private val startWheelConfirmSteering = StartWheelConfirmSteering()
+    // A disconnect waits out a short window in which B still calls it off.
+    private var startWheelUndoPending = false
+    private val startWheelUndoHandler = Handler(Looper.getMainLooper())
+    private val startWheelUndoFinish = Runnable { finishStartWheelDisconnectUndo() }
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
     /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
     private var virtualControllerVisibleBeforeStop: Boolean? = null
@@ -1956,8 +1961,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         destroying = true
-        startWheelConfirmSheet?.dismiss()
-        startWheelConfirmSheet = null
+        abandonStartWheelDisconnectUndo()
         resolutionSwitchController.cancel()
         if (conn != null) stopConnection(StreamStopReason.ACTIVITY_DESTROYED)
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
@@ -2065,7 +2069,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     private fun updateKeyboardInterception() {
         val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog() ||
-            startWheelConfirmSheet?.isShowing == true || hostUnlockController?.isOverlayVisible == true
+            hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible
         if (!intercepting && ::keyboardInputHandler.isInitialized) {
             resetVirtualKeyboardInput()
@@ -2217,6 +2221,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onStop() {
         super.onStop()
+        // Leaving the foreground cancels a disconnect that has not run yet, so it can never end the
+        // session from the background.
+        cancelStartWheelDisconnectUndo()
         resolutionSwitchController.onStop(isChangingResolution)
         usbForeground = false
         usbForwarding?.stopForeground()
@@ -2248,8 +2255,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         Dialog.closeDialogs()
         activeGameMenu?.dismiss()
         activeGameMenu = null
-        startWheelConfirmSheet?.dismiss()
-        startWheelConfirmSheet = null
 
         if (!isFinishing) {
             virtualControllerVisibleBeforeStop =
@@ -3647,12 +3652,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
-        if (virtualController?.dispatchMenuKey(event) == true) return true
-        crownConfigPicker?.takeIf { it.isShowing }?.let {
-            it.dispatchKeyEvent(event)
+        if (startWheelUndoPending) {
+            // The prompt holds the input: B calls the disconnect off, everything else is swallowed.
+            if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_BACK) {
+                cancelStartWheelDisconnectUndo()
+            }
             return true
         }
-        startWheelConfirmSheet?.takeIf { it.isShowing }?.let {
+        if (virtualController?.dispatchMenuKey(event) == true) return true
+        crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchKeyEvent(event)
             return true
         }
@@ -3668,20 +3676,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         rightStickX: Float,
         rightStickY: Float
     ): Boolean {
+        if (startWheelUndoPending) return true
         if (virtualController?.dispatchMenuAxes(ControllerHandler.usbGameMenuAxisSourceId(controllerId),
                 leftStickX, leftStickY, rightStickY) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
             it.dispatchAxes(
                 ControllerHandler.usbGameMenuAxisSourceId(controllerId),
                 listOf(leftStickX to leftStickY), rightStickY
-            )
-            return true
-        }
-        startWheelConfirmSheet?.takeIf { it.isShowing }?.let { sheet ->
-            startWheelConfirmSteering.steer(
-                sourceKey = controllerId,
-                axisPairs = listOf(leftStickX to leftStickY, rightStickX to rightStickY),
-                sheet = sheet
             )
             return true
         }
@@ -3854,11 +3855,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             StartWheelAction.GYRO -> toggleGyroAssistant()
             StartWheelAction.MIC -> toggleStartWheelMicrophone()
             StartWheelAction.ESC -> startWheelStreamActions.execute("send_esc")
-            StartWheelAction.DISCONNECT -> confirmStartWheelSessionEnd(
-                R.string.start_wheel_disconnect_title,
-                R.string.start_wheel_disconnect_message,
-                R.string.start_wheel_item_disconnect
-            ) { disconnect() }
+            StartWheelAction.DISCONNECT -> startStartWheelDisconnectUndo()
             // The menu opens through the reducer's own request protocol; mouse mode belongs to its controller.
             StartWheelAction.MENU, StartWheelAction.MOUSE -> Unit
         }
@@ -3909,75 +3906,80 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     /**
-     * Asks before ending the session in any of its ways (disconnect, quit and stop the game, sleep the
-     * host), since the wheel can reach them with one flick of the stick.
+     * Disconnects after a short window in which B still calls it off. The prompt owns the input for
+     * those two seconds, so nothing pressed meanwhile reaches the game.
      */
-    private fun confirmStartWheelSessionEnd(
-        titleRes: Int,
-        messageRes: Int,
-        confirmLabelRes: Int,
-        onConfirm: () -> Unit
-    ) {
-        if (isFinishing || isDestroyed || startWheelConfirmSheet?.isShowing == true) return
-        // Show first: if the window is already gone, nothing has been captured and nothing needs undoing.
-        val sheet = try {
-            AppActionSheet.show(
-                context = this,
-                title = getString(titleRes),
-                supportingText = getString(messageRes),
-                actions = listOf(
-                    AppActionSheet.Action(
-                        id = START_WHEEL_CONFIRM_CANCEL,
-                        title = getString(R.string.start_wheel_control_cancel)
-                    ),
-                    AppActionSheet.Action(
-                        id = START_WHEEL_CONFIRM_ACCEPT,
-                        title = getString(confirmLabelRes),
-                        destructive = true
-                    )
-                ),
-                initialActionId = START_WHEEL_CONFIRM_CANCEL,
-                onAction = { action ->
-                    if (action.id == START_WHEEL_CONFIRM_ACCEPT) onConfirm()
-                },
-                onDismiss = { onStartWheelConfirmSheetDismissed() }
-            )
-        } catch (exception: WindowManager.BadTokenException) {
-            return
-        }
-        startWheelConfirmSheet = sheet
-        startWheelConfirmSteering.reset()
-        // From here on the sheet owns the window, so neither keys nor sticks reach the game.
-        if (::controllerHandler.isInitialized) {
-            // Reuse the game-menu capture so held buttons steer the sheet instead of the game; it
-            // also forgets what is held, since key-ups no longer reach the handler.
-            controllerHandler.onExternalGameMenuOpened()
-        }
-        updateKeyboardInterception()
-        // Sticks of Android-system pads arrive at the sheet as motion events it does not read itself.
-        sheet.window?.decorView?.setOnGenericMotionListener { _, event ->
-            handleStartWheelConfirmMotion(event)
+    private fun startStartWheelDisconnectUndo() {
+        runOnUiThread {
+            if (startWheelUndoPending || isFinishing) return@runOnUiThread
+            startWheelUndoPending = true
+            val view = startHoldWheelView
+            // The wheel is still fading out; the prompt takes its place instead.
+            view?.animate()?.cancel()
+            view?.alpha = 1f
+            view?.scaleX = 1f
+            view?.scaleY = 1f
+            view?.visibility = View.VISIBLE
+            view?.bringToFront()
+            startHoldWheelState.value = StartWheelUiState(undoVisible = true)
+            if (::controllerHandler.isInitialized) {
+                controllerHandler.onLocalCancelRequested = { cancelStartWheelDisconnectUndo() }
+                controllerHandler.onExternalGameMenuOpened()
+            }
+            startWheelUndoHandler.postDelayed(startWheelUndoFinish, START_WHEEL_UNDO_MS)
         }
     }
 
-    private fun handleStartWheelConfirmMotion(event: MotionEvent): Boolean {
-        val sheet = startWheelConfirmSheet?.takeIf { it.isShowing } ?: return false
-        if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0 || !::controllerHandler.isInitialized) {
-            return false
+    private fun cancelStartWheelDisconnectUndo() {
+        runOnUiThread {
+            if (!startWheelUndoPending) return@runOnUiThread
+            endStartWheelDisconnectUndo()
         }
-        val axisPairs = controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = true)
-            ?: return false
-        startWheelConfirmSteering.steer(event.deviceId, axisPairs, sheet)
-        return true
     }
 
-    private fun onStartWheelConfirmSheetDismissed() {
-        startWheelConfirmSheet = null
-        startWheelConfirmSteering.reset()
+    /** Takes the prompt away and gives the input back without ending the session. */
+    private fun endStartWheelDisconnectUndo() {
+        startWheelUndoPending = false
+        startWheelUndoHandler.removeCallbacks(startWheelUndoFinish)
         if (::controllerHandler.isInitialized) {
+            controllerHandler.onLocalCancelRequested = null
             controllerHandler.onExternalGameMenuDismissed()
         }
-        updateKeyboardInterception()
+        val view = startHoldWheelView
+        if (view == null) {
+            startHoldWheelState.value = StartWheelUiState()
+            return
+        }
+        view.animate()
+            .alpha(0f)
+            .setDuration(WHEEL_CLOSE_ANIMATION_MS)
+            .withEndAction {
+                startHoldWheelState.value = StartWheelUiState()
+                view.visibility = View.GONE
+            }
+            .start()
+    }
+
+    /** The window ran out: the session ends. */
+    private fun finishStartWheelDisconnectUndo() {
+        if (!startWheelUndoPending) return
+        startWheelUndoPending = false
+        if (::controllerHandler.isInitialized) controllerHandler.onLocalCancelRequested = null
+        if (isFinishing || isDestroyed) return
+        if (::controllerHandler.isInitialized) controllerHandler.onExternalGameMenuDismissed()
+        startHoldWheelState.value = StartWheelUiState()
+        startHoldWheelView?.visibility = View.GONE
+        disconnect()
+    }
+
+    /** Teardown while the activity is going away: forget the timer without touching the handler. */
+    private fun abandonStartWheelDisconnectUndo() {
+        if (!startWheelUndoPending) return
+        startWheelUndoPending = false
+        startWheelUndoHandler.removeCallbacks(startWheelUndoFinish)
+        if (::controllerHandler.isInitialized) controllerHandler.onLocalCancelRequested = null
+        startHoldWheelState.value = StartWheelUiState()
+        startHoldWheelView?.visibility = View.GONE
     }
 
     override fun onKey(view: View, keyCode: Int, keyEvent: KeyEvent): Boolean {
@@ -4239,8 +4241,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
 
-        private const val START_WHEEL_CONFIRM_CANCEL = 0
-        private const val START_WHEEL_CONFIRM_ACCEPT = 1
 
         private const val WHEEL_CLOSE_ANIMATION_MS = 140L
     }

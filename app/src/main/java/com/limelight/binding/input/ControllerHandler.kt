@@ -68,6 +68,12 @@ class ControllerHandler(
     private val onStartWheelAction: (StartWheelAction) -> Unit = {}
 ) : InputManager.InputDeviceListener, UsbDriverListener {
 
+    /**
+     * Set while a local prompt outside a dialog owns the input: B calls it off. Dialogs take their
+     * own keys, so this only exists for prompts drawn over the stream.
+     */
+    internal var onLocalCancelRequested: (() -> Unit)? = null
+
     companion object {
         private const val MAXIMUM_BUMPER_UP_DELAY_MS = 100
         private const val USB_HANDOFF_WITHDRAW_MAX_RETRIES = 5
@@ -3342,6 +3348,9 @@ class ControllerHandler(
         }
 
         if (captureAtEntry || context.isLocalInputCaptureActive()) {
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_B && event.repeatCount == 0) {
+                onLocalCancelRequested?.let { mainThreadHandler.post(it) }
+            }
             noteSystemQuitComboWhileWheelCaptured(context)
             updateSystemStartReleaseState(context)
             return true

@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -85,14 +88,19 @@ internal data class StartWheelFeatureState(
     val unavailable: Set<StartWheelAction> = emptySet()
 )
 
-/** Everything the Start hold wheel overlay draws. */
+/** Everything the Start hold wheel overlay draws: the wheel itself, or the disconnect it can call off. */
 @Immutable
 internal data class StartWheelUiState(
     val wheel: StartWheelSnapshot = StartWheelSnapshot(),
-    val features: StartWheelFeatureState = StartWheelFeatureState()
+    val features: StartWheelFeatureState = StartWheelFeatureState(),
+    /** True while a chosen disconnect waits out its cancel window. */
+    val undoVisible: Boolean = false
 ) {
     val visible: Boolean get() = wheel.visible
 }
+
+/** How long a chosen disconnect waits before it runs, leaving time to call it off with B. */
+internal const val START_WHEEL_UNDO_MS = 2000L
 
 @Immutable
 private data class WheelItemVisual(
@@ -165,12 +173,21 @@ private class WheelTypography(compact: Boolean) {
  * in-game wheels are, one dark disc with thin cuts, icons and names always visible, and it borrows
  * its lines from the app's own moon-wheel icon: the rim is a ring with one opening and a needle that
  * turns towards whatever is highlighted, and the hub shows the icon itself while nothing would run.
+ *
+ * A disconnect runs through a short cancel window instead of a confirmation: the same overlay draws
+ * a small prompt while B can still call it off.
  */
 @Composable
 internal fun StartHoldWheelOverlay(state: StartWheelUiState, modifier: Modifier = Modifier) {
-    val wheel = state.wheel
-    if (!wheel.visible) return
+    when {
+        state.wheel.visible -> StartWheelDisc(state, modifier)
+        state.undoVisible -> StartWheelUndoPrompt(modifier)
+    }
+}
 
+@Composable
+private fun StartWheelDisc(state: StartWheelUiState, modifier: Modifier = Modifier) {
+    val wheel = state.wheel
     val accent = appAccentColor()
     val inkOnAccent = remember(accent) { accent.contentInk() }
     val itemVisuals = startWheelItemVisuals(state.features)
@@ -290,6 +307,59 @@ private fun Wheel(
                 typography = typography,
                 modifier = Modifier.align(Alignment.Center)
             )
+        }
+    }
+}
+
+/**
+ * The cancel window after choosing to disconnect. The game keeps the whole screen; only a small pill
+ * appears over the bottom edge, counting down the time B still has to call the disconnect off.
+ */
+@Composable
+private fun StartWheelUndoPrompt(modifier: Modifier = Modifier) {
+    val remaining = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        remaining.animateTo(0f, tween(START_WHEEL_UNDO_MS.toInt(), easing = LinearEasing))
+    }
+    BoxWithConstraints(modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        val compact = minOf(maxHeight * 0.84f, maxWidth * 0.86f, WheelMaxSize) < WheelCompactBelow
+        val typography = remember(compact) { WheelTypography(compact) }
+        val shape = RoundedCornerShape(18.dp)
+        Column(
+            modifier = Modifier
+                .padding(bottom = FOOTER_SAFETY + 16.dp)
+                .clip(shape)
+                .background(HubFill)
+                .border(1.dp, Mint.copy(alpha = 0.18f), shape)
+                .padding(horizontal = 22.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(R.string.start_wheel_undo_disconnecting),
+                color = WheelText,
+                fontSize = typography.itemTitle,
+                lineHeight = typography.itemTitleLine,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(8.dp))
+            KeyHint("B", stringResource(R.string.start_wheel_undo_cancel), emphasized = true, typography)
+            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(Mint.copy(alpha = 0.16f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(remaining.value)
+                        .fillMaxHeight()
+                        .align(Alignment.CenterStart)
+                        .background(Mint)
+                )
+            }
         }
     }
 }
