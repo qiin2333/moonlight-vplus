@@ -146,6 +146,9 @@ private const val OPEN_ANIMATION_MS = 300
 /** Fitted labels never shrink below this share of their normal size. */
 private const val MIN_TEXT_SCALE = 0.62f
 
+/** The disc never takes more than this share of the screen height, so the game stays in view. */
+private const val WHEEL_MAX_HEIGHT_SHARE = 0.68f
+
 /** Share of the available width a fitted label may claim. */
 private const val FIT_SLACK = 0.94f
 
@@ -200,10 +203,15 @@ private fun StartWheelDisc(state: StartWheelUiState, modifier: Modifier = Modifi
     ) {
         val compact = minOf(maxHeight * 0.84f, maxWidth * 0.86f, WheelMaxSize) < WheelCompactBelow
         val typography = remember(compact) { WheelTypography(compact) }
-        // The disc gets what the legend below it leaves, plus a margin over the system navigation bar.
+        // The disc gets what the legend below it leaves, plus a margin over the system navigation bar,
+        // and never more than its share of the height.
         val footer = typography.legendGap + typography.legendRow + FOOTER_SAFETY
-        val wheelSize = minOf(maxHeight - footer, maxWidth * 0.86f, WheelMaxSize)
-            .coerceAtLeast(WheelMinSize)
+        val wheelSize = minOf(
+            maxHeight * WHEEL_MAX_HEIGHT_SHARE,
+            maxHeight - footer,
+            maxWidth * 0.86f,
+            WheelMaxSize
+        ).coerceAtLeast(WheelMinSize)
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
