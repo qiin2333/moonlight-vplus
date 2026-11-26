@@ -1173,7 +1173,7 @@ class ControllerHandler(
      * controller would stay captured after the dialog is gone. Sticks are kept: their motion
      * resumes as soon as the game has focus again.
      */
-    internal fun forgetHeldSystemButtons() {
+    private fun forgetHeldSystemButtons() {
         // Device 0 (and -1 before Android 12) has a context of its own, outside the map.
         forgetHeldSystemButtons(defaultContext)
         for (i in 0 until inputDeviceContexts.size()) {
@@ -3610,6 +3610,9 @@ class ControllerHandler(
                 context.startGesture.onGameMenuOpenedExternally()
             )
         }
+        // A local dialog owns the window from here, so no key-up will reach us; every caller needs
+        // this, and forgetting it inside the one call they all make is how it cannot be missed.
+        forgetHeldSystemButtons()
     }
 
     fun onExternalGameMenuDismissed() {

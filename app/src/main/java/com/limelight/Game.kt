@@ -3640,7 +3640,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             afterShow?.invoke(menu)
             if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                 controllerHandler.onExternalGameMenuOpened()
-                controllerHandler.forgetHeldSystemButtons()
             }
         }
         return opened
@@ -3954,11 +3953,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         startWheelConfirmAwaitingNeutral.clear()
         // From here on the sheet owns the window, so neither keys nor sticks reach the game.
         if (::controllerHandler.isInitialized) {
-            // Reuse the game-menu capture so held buttons steer the sheet instead of the game.
+            // Reuse the game-menu capture so held buttons steer the sheet instead of the game; it
+            // also forgets what is held, since key-ups no longer reach the handler.
             controllerHandler.onExternalGameMenuOpened()
-            // Key-ups no longer reach the handler either, and Start is usually still down on the
-            // D-pad path: waiting for them would leave the controller captured after the sheet.
-            controllerHandler.forgetHeldSystemButtons()
         }
         updateKeyboardInterception()
         // Sticks of Android-system pads arrive at the sheet as motion events it does not read itself.
