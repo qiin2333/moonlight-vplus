@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -74,12 +73,10 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-internal enum class StartWheelPerfMode { HIDDEN, FLOATING, LOCKED }
-
 /** Live state of the features the Start wheel switches; each one is marked on its item. */
 @Immutable
 internal data class StartWheelFeatureState(
-    val perfOverlayMode: StartWheelPerfMode = StartWheelPerfMode.HIDDEN,
+    val perfOverlayVisible: Boolean = false,
     val gyroEnabled: Boolean = false,
     val mouseEmulationActive: Boolean = false,
     val keyboardVisible: Boolean = false,
@@ -126,8 +123,8 @@ private val WheelCompactBelow = 340.dp
 /** Room kept under the legend for the system navigation bar, so the key hints stay readable. */
 private val FOOTER_SAFETY = 28.dp
 
-private const val SECTOR_DEGREES = 45f
-private const val SECTOR_COUNT = 8
+private val SECTOR_COUNT = StartWheelLayout.slotCount
+private val SECTOR_DEGREES = 360f / SECTOR_COUNT
 
 /** The rim is a ring with one opening, as in the Settings icon; it is the wheel's cursor. */
 private const val OPENING_DEGREES = 34f
@@ -273,7 +270,6 @@ private fun Wheel(
             for (sector in 0 until SECTOR_COUNT) {
                 val action = StartWheelLayout.action(sector) ?: continue
                 val visual = itemVisuals[action] ?: continue
-                val labelAlpha = ((open.value - sector * 0.04f) / 0.7f).coerceIn(0f, 1f)
                 SectorLabel(
                     geometry = geometry,
                     sector = sector,
@@ -281,12 +277,12 @@ private fun Wheel(
                     icon = visual.icon,
                     title = visual.title,
                     state = visual.state,
-                    alpha = labelAlpha,
+                    alpha = { ((open.value - sector * 0.04f) / 0.7f).coerceIn(0f, 1f) },
                     compact = compact,
                     typography = typography
                 )
             }
-            WheelLines(geometry, wheel, accent, inkOnAccent, pointer.value)
+            WheelLines(geometry, wheel, accent, inkOnAccent) { pointer.value }
             WheelHub(
                 geometry = geometry,
                 wheel = wheel,
@@ -318,11 +314,12 @@ private fun WheelSlices(
             end = Offset(radius, radius * 2f)
         )
     }
-    val fills = ArrayList<Color>(SECTOR_COUNT)
-    for (sector in 0 until SECTOR_COUNT) {
-        val selected = wheel.slot == sector
-        val (fill, _) = sliceColors(if (selected) accent else SliceFill, inkOnAccent)
-        fills += fill
+    val fills = List(SECTOR_COUNT) { sector ->
+        animateColorAsState(
+            targetValue = if (wheel.slot == sector) accent else SliceFill,
+            animationSpec = tween(SELECTION_ANIMATION_MS),
+            label = "startWheelFill"
+        )
     }
     Canvas(
         modifier = Modifier
@@ -331,7 +328,7 @@ private fun WheelSlices(
     ) {
         for (sector in 0 until SECTOR_COUNT) {
             val path = geometry.sectorPath(sector)
-            drawPath(path, fills[sector])
+            drawPath(path, fills[sector].value)
             drawPath(path, sheen)
         }
         // A cut may run a little past the rim: what lies beyond is transparent anyway.
@@ -353,14 +350,6 @@ private fun WheelSlices(
     }
 }
 
-/** Animated fill of one slice, tinted by whether it is the one the wheel points at. */
-@Composable
-private fun sliceColors(fill: Color, ink: Color): Pair<Color, Color> {
-    val animatedFill by animateColorAsState(fill, tween(SELECTION_ANIMATION_MS), label = "startWheelFill")
-    val animatedInk by animateColorAsState(ink, tween(SELECTION_ANIMATION_MS), label = "startWheelInk")
-    return animatedFill to animatedInk
-}
-
 /**
  * Everything drawn as a line: the cuts, the rim and the needle.
  *
@@ -373,9 +362,10 @@ private fun WheelLines(
     wheel: StartWheelSnapshot,
     accent: Color,
     inkOnAccent: Color,
-    pointerDegrees: Float
+    pointerDegrees: () -> Float
 ) {
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val degrees = pointerDegrees()
         val centre = Offset(size.width / 2f, size.height / 2f)
         drawCircle(Mint.copy(alpha = 0.50f), radius = geometry.hubRadius, style = Stroke(geometry.hairPx * 1.3f))
 
@@ -388,13 +378,13 @@ private fun WheelLines(
 
         drawOpenRing(
             geometry.wheelEdge, geometry.rimPx, Mint.copy(alpha = 0.62f),
-            OPENING_DEGREES, pointerDegrees, centre
+            OPENING_DEGREES, degrees, centre
         )
         // The needle is the accent tick of the icon. Beside the accent-filled slice it turns to ink.
         drawNeedle(
             geometry.wheelEdge, geometry.rimPx,
             if (wheel.slot >= 0 && !wheel.emptySlot) inkOnAccent else accent,
-            pointerDegrees, centre, geometry
+            degrees, centre, geometry
         )
     }
 }
@@ -454,7 +444,7 @@ private fun SectorLabel(
     @DrawableRes icon: Int,
     title: String,
     state: ItemState,
-    alpha: Float,
+    alpha: () -> Float,
     compact: Boolean,
     typography: WheelTypography
 ) {
@@ -509,7 +499,7 @@ private fun SectorLabel(
         },
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer { this.alpha = alpha }
+            .graphicsLayer { this.alpha = alpha() }
     ) { measurables, constraints ->
         // Placed in the canvas coordinates of the disc, which layout direction never mirrors.
         val label = measurables.first().measure(
@@ -555,7 +545,7 @@ private fun WheelHub(
             .background(HubFill),
         contentAlignment = Alignment.Center
     ) {
-        if (markAlpha > 0.01f) {
+        run {
             MoonWheelMark(
                 accent = accent,
                 modifier = Modifier
@@ -687,7 +677,7 @@ private fun KeyHint(
 private fun startWheelItemVisuals(
     features: StartWheelFeatureState
 ): Map<StartWheelAction, WheelItemVisual> {
-    val perfHidden = features.perfOverlayMode == StartWheelPerfMode.HIDDEN
+    val perfHidden = !features.perfOverlayVisible
     val items = LinkedHashMap<StartWheelAction, WheelItemVisual>()
     items[StartWheelAction.MENU] = WheelItemVisual(
         title = stringResource(R.string.start_wheel_item_menu),

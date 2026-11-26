@@ -38,22 +38,24 @@ class StartGestureReducerTest {
 
     @Test
     fun everySectorPointsAtItsItem() {
-        val vectors = mapOf(
-            0 to (0f to -0.9f),
-            1 to (0.7f to -0.7f),
-            2 to (0.9f to 0f),
-            3 to (0.7f to 0.7f),
-            4 to (0f to 0.9f),
-            5 to (-0.7f to 0.7f),
-            6 to (-0.9f to 0f),
-            7 to (-0.7f to -0.7f)
+        // The documented contract, spelled out rather than read back from the table under test.
+        val vectors = listOf(
+            Triple(0, 0f to -0.9f, StartWheelAction.MENU),
+            Triple(1, 0.7f to -0.7f, StartWheelAction.GYRO),
+            Triple(2, 0.9f to 0f, StartWheelAction.MOUSE),
+            Triple(3, 0.7f to 0.7f, StartWheelAction.MIC),
+            Triple(4, 0f to 0.9f, StartWheelAction.KEYBOARD),
+            Triple(5, -0.7f to 0.7f, StartWheelAction.DISCONNECT),
+            Triple(6, -0.9f to 0f, StartWheelAction.PERFORMANCE_TOGGLE),
+            Triple(7, -0.7f to -0.7f, StartWheelAction.ESC)
         )
-        vectors.forEach { (slot, vector) ->
+        vectors.forEach { (slot, vector, action) ->
             val reducer = visibleWheel()
             reducer.onSelection(vector.first, vector.second, 0f, 0f, 0)
             val selected = reducer.onSelection(vector.first, vector.second, 0f, 0f, 0)
             assertEquals("slot $slot", slot, selected.wheel.slot)
-            assertEquals("slot $slot", StartWheelLayout.action(slot), selected.wheel.highlighted)
+            assertEquals("slot $slot", action, selected.wheel.highlighted)
+            assertTrue("slot $slot", selected.actions.contains(StartGestureReducer.EventAction.SELECTION_CHANGED))
         }
     }
 
@@ -116,8 +118,9 @@ class StartGestureReducerTest {
     @Test
     fun aDriftBelowTheActivationThresholdSelectsNothing() {
         val reducer = visibleWheel()
-        repeat(4) { reducer.onSelection(0.5f, 0f, 0f, 0f, 0) }
-        assertNull(reducer.selectedAction())
+        val drifting = (1..4).map { reducer.onSelection(0.5f, 0f, 0f, 0f, 0) }.last()
+        assertNull(drifting.wheel.highlighted)
+        assertFalse(drifting.consumeAllInput)
 
         val release = reducer.onSelection(0f, 0f, 0f, 0f, 0)
         assertNull(release.committedAction)
@@ -137,6 +140,9 @@ class StartGestureReducerTest {
             val held = reducer.onSelection(0.9f, 0f, 0f, 0f, 0)
             assertEquals(-1, held.wheel.slot)
             assertNull(held.wheel.highlighted)
+            // The direction is the player moving, so the game keeps it until the wheel uses it.
+            assertFalse(held.consumeAllInput)
+            assertFalse(held.sendNeutralState)
         }
 
         val letGo = reducer.onSelection(0f, 0f, 0f, 0f, 0)
@@ -186,6 +192,39 @@ class StartGestureReducerTest {
 
         val released = reducer.onSelection(0f, 0f, 0f, 0f, 0)
         assertEquals(StartWheelAction.MOUSE, released.committedAction)
+    }
+
+    @Test
+    fun releasingTheStickThatChoseRunsItsItemWhileTheOtherStickIsHeld() {
+        val reducer = visibleWheel()
+
+        // The right stick chooses; the left stick keeps walking.
+        reducer.onSelection(0.5f, -0.9f, 0.9f, 0f, 0)
+        reducer.onSelection(0.5f, -0.9f, 0.9f, 0f, 0)
+        assertEquals(StartWheelAction.MOUSE, reducer.selectedAction())
+
+        val released = reducer.onSelection(0.5f, -0.9f, 0f, 0f, 0)
+
+        assertEquals(StartWheelAction.MOUSE, released.committedAction)
+        assertTrue(released.actions.contains(StartGestureReducer.EventAction.COMMIT_ACTION))
+    }
+
+    @Test
+    fun releasingTheDpadRunsItsItemBeforeAPushedStickTakesOver() {
+        val reducer = visibleWheel()
+
+        // The right stick is already pushed (the player was looking around); the D-pad chooses.
+        reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+        reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+        reducer.onSelection(0f, 0f, 0.9f, 0f, ControllerPacket.UP_FLAG)
+        reducer.onSelection(0f, 0f, 0.9f, 0f, ControllerPacket.UP_FLAG)
+        assertEquals(StartWheelAction.MENU, reducer.selectedAction())
+
+        val released = reducer.onSelection(0f, 0f, 0.9f, 0f, 0)
+
+        assertEquals(StartWheelAction.MENU, released.committedAction)
+        assertTrue(released.actions.contains(StartGestureReducer.EventAction.OPEN_GAME_MENU))
+        assertEquals(StartGestureReducer.State.MENU_PENDING, reducer.state())
     }
 
     @Test
@@ -250,7 +289,8 @@ class StartGestureReducerTest {
         assertTrue(failed.consumeAllInput)
         val stale = reducer.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
         assertEquals(StartGestureReducer.State.WAIT_FOR_RELEASE, reducer.state())
-        assertFalse(stale.sendNeutralState)
+        // A stale result leaves the capture winding down exactly as it was.
+        assertTrue(stale.consumeAllInput)
     }
 
     @Test
@@ -331,20 +371,28 @@ class StartGestureReducerTest {
     fun theStrongerStickWinsWhenNeitherHasOwnershipYet() {
         val reducer = visibleWheel()
 
-        repeat(2) { reducer.onSelection(0.4f, 0f, 0.9f, 0f, 0) }
+        reducer.onSelection(0.4f, 0f, 0.9f, 0f, 0)
+        val selected = reducer.onSelection(0.4f, 0f, 0.9f, 0f, 0)
 
-        assertEquals(StartWheelAction.MOUSE, reducer.selectedAction())
+        assertEquals(StartWheelAction.MOUSE, selected.wheel.highlighted)
+        assertTrue(selected.actions.contains(StartGestureReducer.EventAction.SELECTION_CHANGED))
     }
 
     @Test
     fun hostStickYConversionPreservesUpAndDown() {
         val up = visibleWheel()
-        repeat(2) { up.onSelection(0f, hostStickYToWheelAxis(32766), 0f, 0f, 0) }
-        assertEquals(StartWheelAction.MENU, up.selectedAction())
+        up.onSelection(0f, hostStickYToWheelAxis(32766), 0f, 0f, 0)
+        assertEquals(
+            StartWheelAction.MENU,
+            up.onSelection(0f, hostStickYToWheelAxis(32766), 0f, 0f, 0).wheel.highlighted
+        )
 
         val down = visibleWheel()
-        repeat(2) { down.onSelection(0f, hostStickYToWheelAxis(-32766), 0f, 0f, 0) }
-        assertEquals(StartWheelAction.KEYBOARD, down.selectedAction())
+        down.onSelection(0f, hostStickYToWheelAxis(-32766), 0f, 0f, 0)
+        assertEquals(
+            StartWheelAction.KEYBOARD,
+            down.onSelection(0f, hostStickYToWheelAxis(-32766), 0f, 0f, 0).wheel.highlighted
+        )
     }
 
     private fun visibleWheel(): StartGestureReducer = StartGestureReducer(750).also { reducer ->

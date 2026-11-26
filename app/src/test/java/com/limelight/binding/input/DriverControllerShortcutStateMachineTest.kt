@@ -121,9 +121,12 @@ class DriverControllerShortcutStateMachineTest {
         assertTrue(opened.consumeAllInput)
         assertTrue(machine.isMenuActive())
 
+        // The player lets go of everything while the menu is open, then closes it.
+        machine.onButtonSnapshot(0, 900, true)
         val dismissed = machine.onGameMenuUnavailable()
         assertFalse(machine.isMenuActive())
-        assertTrue(dismissed.consumeAllInput || !machine.isLocalInputCaptureActive())
+        assertFalse(dismissed.consumeAllInput)
+        assertFalse(machine.isLocalInputCaptureActive())
     }
 
     @Test
@@ -145,6 +148,10 @@ class DriverControllerShortcutStateMachineTest {
     fun theQuitComboStillQuitsWhileTheWheelIsShown() {
         val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
         showWheel(machine)
+        // The wheel has already taken the stick, so it also holds the capture the combo must win over.
+        machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
+        machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
+        assertTrue(machine.isLocalInputCaptureActive())
 
         val combo = machine.onButtonSnapshot(
             DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS,

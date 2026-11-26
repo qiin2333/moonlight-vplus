@@ -83,10 +83,8 @@ internal class DriverControllerShortcutStateMachine(
         val startPressed = buttonFlags and ControllerPacket.PLAY_FLAG != 0
         val startWasPressed = previousButtonFlags and ControllerPacket.PLAY_FLAG != 0
         if (reducerState == StartGestureReducer.State.WHEEL_VISIBLE) {
-            var wheelButtonUpdate: Update? = null
-            if (startPressed) {
-                wheelButtonUpdate = feedWheelButton(previousButtonFlags, buttonFlags)
-            }
+            // Read B even in a report that also releases Start: the dismiss wins over the commit.
+            val wheelButtonUpdate = feedWheelButton(previousButtonFlags, buttonFlags)
             val reducerUpdate = if (!startPressed && startWasPressed) {
                 reducer.onStartUp(
                     eventTimeMs,
@@ -257,7 +255,8 @@ internal class DriverControllerShortcutStateMachine(
 
     @Synchronized
     fun needsAxisUpdates(): Boolean =
-        reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE || isLocalInputCaptureActive()
+        reducer.state() == StartGestureReducer.State.START_HELD ||
+            reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE || isLocalInputCaptureActive()
 
     @Synchronized
     fun isStartPressed(): Boolean = lastButtonFlags and ControllerPacket.PLAY_FLAG != 0

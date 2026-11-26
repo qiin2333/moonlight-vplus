@@ -75,7 +75,6 @@ import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
 import com.limelight.ui.StartWheelFeatureState
-import com.limelight.ui.StartWheelPerfMode
 import com.limelight.ui.StartWheelUiState
 import com.limelight.utils.AppActionSheet
 import com.limelight.utils.Dialog
@@ -266,6 +265,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val startHoldWheelState = mutableStateOf(StartWheelUiState())
     // The controller that opened the wheel; its mouse mode is what the wheel reports.
     private var startHoldWheelDevice: GameInputDevice? = null
+    /** The features the wheel marks, read once when it opens; they only change through its items. */
+    private var startHoldWheelFeatures = StartWheelFeatureState()
     private val startWheelStreamActions by lazy { StreamActionExecutor(game = this, connProvider = { conn }) }
     // Gyro mode to bring back when the wheel switches the assistant on again this session.
     private var startWheelLastGyroMode: GyroAssistantMode? = null
@@ -3786,6 +3787,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             startHoldWheelView?.scaleY = 1f
             startHoldWheelView?.visibility = View.VISIBLE
             startHoldWheelView?.bringToFront()
+            startHoldWheelFeatures = startWheelFeatureState()
             startHoldWheelState.value = startWheelUiState(StartWheelSnapshot(visible = true))
         }
     }
@@ -3793,45 +3795,51 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun updateStartHoldWheel(wheel: StartWheelSnapshot) {
         runOnUiThread {
             // A snapshot queued behind a hide must not bring the wheel back.
-            if (!startHoldWheelState.value.visible) return@runOnUiThread
+            val current = startHoldWheelState.value
+            if (!current.visible || current.wheel == wheel) return@runOnUiThread
             startHoldWheelState.value = startWheelUiState(wheel)
         }
     }
 
     override fun hideStartHoldWheel() {
         runOnUiThread {
-            startHoldWheelState.value = StartWheelUiState()
             startHoldWheelDevice = null
-            val view = startHoldWheelView ?: return@runOnUiThread
-            // The disc shrinks away instead of blinking out; its content is already empty.
+            val view = startHoldWheelView
+            if (view == null) {
+                startHoldWheelState.value = StartWheelUiState()
+                return@runOnUiThread
+            }
+            // The disc keeps its last frame while the view shrinks away; the state is cleared after.
             view.animate()
                 .alpha(0f)
                 .scaleX(0.94f)
                 .scaleY(0.94f)
                 .setDuration(WHEEL_CLOSE_ANIMATION_MS)
-                .withEndAction { view.visibility = View.GONE }
+                .withEndAction {
+                    startHoldWheelState.value = StartWheelUiState()
+                    view.visibility = View.GONE
+                }
                 .start()
         }
     }
 
-    /** Joins the wheel's selection with the live state of the features its items switch. */
-    private fun startWheelUiState(wheel: StartWheelSnapshot): StartWheelUiState = StartWheelUiState(
-        wheel = wheel,
-        features = StartWheelFeatureState(
-            perfOverlayMode = when (performanceOverlayMode) {
-                PerformanceOverlayMode.HIDDEN -> StartWheelPerfMode.HIDDEN
-                PerformanceOverlayMode.FLOATING -> StartWheelPerfMode.FLOATING
-                PerformanceOverlayMode.LOCKED -> StartWheelPerfMode.LOCKED
-            },
+    /** Joins the wheel's selection with the feature state read when it opened. */
+    private fun startWheelUiState(wheel: StartWheelSnapshot): StartWheelUiState =
+        StartWheelUiState(wheel = wheel, features = startHoldWheelFeatures)
+
+    private fun startWheelFeatureState(): StartWheelFeatureState {
+        val controllerHandler = if (::controllerHandler.isInitialized) controllerHandler else null
+        return StartWheelFeatureState(
+            perfOverlayVisible = performanceOverlayMode != PerformanceOverlayMode.HIDDEN,
             gyroEnabled = GyroAssistantMode.from(prefConfig) != GyroAssistantMode.OFF,
             mouseEmulationActive = startHoldWheelDevice?.mouseEmulationActive == true,
             keyboardVisible = isLocalKeyboardVisible(),
             micActive = microphoneManager?.isMicrophoneActive() == true,
-            // Items whose feature is not set up are left out of the wheel, as in the game menu.
-            gyroAvailable = ::controllerHandler.isInitialized && controllerHandler.hasAnyController(),
-            micAvailable = prefConfig.enableMic
+            // One rule for which items exist, shared with the reducer.
+            gyroAvailable = controllerHandler?.isStartWheelItemAvailable(StartWheelAction.GYRO) == true,
+            micAvailable = controllerHandler?.isStartWheelItemAvailable(StartWheelAction.MIC) == true
         )
-    )
+    }
 
     private fun isLocalKeyboardVisible(): Boolean =
         ViewCompat.getRootWindowInsets(streamView)?.isVisible(WindowInsetsCompat.Type.ime()) == true
@@ -4055,10 +4063,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
      * require a trip through "floating" first.
      */
     fun togglePerformanceOverlayVisibility() {
-        val resume = if (performanceOverlayManager?.lastPerfOverlayModeWasLocked == true) {
-            PerformanceOverlayMode.LOCKED
-        } else {
-            PerformanceOverlayMode.FLOATING
+        // While it is shown, how it is shown is the answer; the remembered mode only fills in when hidden.
+        val resume = when (performanceOverlayMode) {
+            PerformanceOverlayMode.LOCKED -> PerformanceOverlayMode.LOCKED
+            PerformanceOverlayMode.FLOATING -> PerformanceOverlayMode.FLOATING
+            PerformanceOverlayMode.HIDDEN -> if (performanceOverlayManager?.lastPerfOverlayModeWasLocked == true) {
+                PerformanceOverlayMode.LOCKED
+            } else {
+                PerformanceOverlayMode.FLOATING
+            }
         }
         setPerformanceOverlayModeWithFeedback(
             if (performanceOverlayMode == PerformanceOverlayMode.HIDDEN) resume else PerformanceOverlayMode.HIDDEN
@@ -4099,12 +4112,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     fun setPerformanceOverlayMode(mode: PerformanceOverlayMode) {
         if (performanceOverlayManager == null) return
+        val previous = performanceOverlayMode
         prefConfig.enablePerfOverlay = mode != PerformanceOverlayMode.HIDDEN
         prefConfig.perfOverlayLocked = mode == PerformanceOverlayMode.LOCKED
-        if (mode != PerformanceOverlayMode.HIDDEN) {
-            // Hiding keeps no mode of its own; the overlay remembers how it was last shown.
-            performanceOverlayManager?.rememberPerfOverlayMode(mode == PerformanceOverlayMode.LOCKED)
-        }
+        // Hiding keeps no mode of its own; the overlay remembers how it was last shown. The previous
+        // mode can come from anywhere (stream settings, an older version), so it is read here too.
+        performanceOverlayManager?.rememberPerfOverlayMode(
+            if (mode == PerformanceOverlayMode.HIDDEN) {
+                previous == PerformanceOverlayMode.LOCKED
+            } else {
+                mode == PerformanceOverlayMode.LOCKED
+            }
+        )
         performanceOverlayManager?.applyOverlayState()
         prefConfig.writePreferences(this)
     }

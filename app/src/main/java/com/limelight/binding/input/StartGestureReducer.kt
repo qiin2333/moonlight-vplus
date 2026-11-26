@@ -34,10 +34,11 @@ object StartWheelLayout {
         StartWheelAction.ESC
     )
 
-    val slotCount: Int get() = SLOT_ACTIONS.size
-
     /** Item in [slot], or null when the wheel shows fewer sectors than its layout. */
     fun action(slot: Int): StartWheelAction? = SLOT_ACTIONS.getOrNull(slot)
+
+    /** Number of sectors the wheel draws, which is the size of its layout. */
+    val slotCount: Int get() = SLOT_ACTIONS.size
 }
 
 /**
@@ -199,15 +200,7 @@ internal class StartGestureReducer(
     ): Update {
         if (state != State.WHEEL_VISIBLE) return snapshot()
         val dpadAxis = dpadToAxis(dpadFlags)
-        val captureStarted = !wheelInputCaptured && (
-            dpadAxis.first != 0f || dpadAxis.second != 0f ||
-                axisActive(leftStickX, leftStickY, enterThreshold) ||
-                axisActive(rightStickX, rightStickY, enterThreshold)
-            )
-        if (captureStarted) {
-            wheelInputCaptured = true
-            neutralStateSent = true
-        }
+        val previousSource = inputSource
         updatePhysicalInput(
             dpadFlags or (lastButtonFlags and ControllerPacket.PLAY_FLAG),
             leftStickX,
@@ -215,6 +208,14 @@ internal class StartGestureReducer(
             rightStickX,
             rightStickY
         )
+        if (previousSource != null && selectedSlot >= 0 && highlightedItem() != null &&
+            !isSourceActive(previousSource, leftStickX, leftStickY, rightStickX, rightStickY, dpadAxis)
+        ) {
+            // The control that chose was let go first: its item runs now, even if another stick is
+            // still pushed.
+            forgetDirectionCandidate()
+            return commitSelectedAction()
+        }
         inputSource = resolveInputSource(
             leftStickX,
             leftStickY,
@@ -235,17 +236,29 @@ internal class StartGestureReducer(
                 forgetDirectionCandidate()
                 return commitSelectedAction()
             }
+            val hadSlot = selectedSlot >= 0
             val wasBlocked = !armed
             releaseBlock()
             forgetDirectionCandidate()
             selectedSlot = -1
             return snapshot(
-                actions = if (wasBlocked) listOf(EventAction.SELECTION_CHANGED) else emptyList(),
-                sendNeutralState = captureStarted
+                actions = if (hadSlot || wasBlocked) listOf(EventAction.SELECTION_CHANGED) else emptyList()
             )
         }
         if (!armed && !releaseBlock(x, y)) {
-            return snapshot(sendNeutralState = captureStarted)
+            // Held before the wheel appeared: the player is moving, not choosing. The direction keeps
+            // reaching the game and nothing is captured until it is let go or clearly turned.
+            return snapshot()
+        }
+        if (inputSource != InputSource.DPAD && !axisActive(x, y, enterThreshold)) {
+            // Inside the dead band the wheel does not act on the direction, so the game keeps it.
+            return snapshot()
+        }
+        // From here the direction belongs to the wheel: the host is told to let go before it is used.
+        val captureStarted = !wheelInputCaptured
+        if (captureStarted) {
+            wheelInputCaptured = true
+            neutralStateSent = true
         }
         val candidate = sectorForAxis(x, y)
         if (candidate < 0) {
@@ -617,6 +630,19 @@ internal class StartGestureReducer(
     private fun axisActive(x: Float, y: Float, threshold: Float): Boolean =
         axisMagnitude(x, y) >= threshold
 
+    private fun isSourceActive(
+        source: InputSource,
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float,
+        dpadAxis: Pair<Float, Float>
+    ): Boolean = when (source) {
+        InputSource.RIGHT_STICK -> axisActive(rightStickX, rightStickY, exitThreshold)
+        InputSource.LEFT_STICK -> axisActive(leftStickX, leftStickY, exitThreshold)
+        InputSource.DPAD -> dpadAxis.first != 0f || dpadAxis.second != 0f
+    }
+
     /** Chebyshev length of a stick vector, so every direction shares one activation line. */
     private fun axisMagnitude(x: Float, y: Float): Float = maxOf(abs(x), abs(y))
 
@@ -699,7 +725,7 @@ internal class StartGestureReducer(
     }
 
     private companion object {
-        const val SECTOR_DEGREES = 45f
+        val SECTOR_DEGREES = 360f / StartWheelLayout.slotCount
 
         /** A turn this far past a blocked sector's centre counts as a deliberate move, not wobble. */
         const val BLOCK_RELEASE_DEGREES = 30f

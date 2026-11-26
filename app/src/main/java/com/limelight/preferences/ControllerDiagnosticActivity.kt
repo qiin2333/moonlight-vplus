@@ -3462,39 +3462,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawControllerLabel
     drawContext.canvas.nativeCanvas.drawText(label, center.x, baseline, paint)
 }
 
-@Composable
-private fun ControllerKeyIndicator(label: String, pressed: Boolean) {
-    val accent = appAccentColor()
-    Surface(
-        color = accent.copy(alpha = if (pressed) 0.16f else 0.03f),
-        shape = CircleShape,
-        border = BorderStroke(
-            GameMenuDimens.surfaceStroke,
-            accent.copy(alpha = if (pressed) 0.55f else 0.12f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .background(
-                        if (pressed) accent else appAccentSoftColor(),
-                        CircleShape
-                    )
-            )
-            Text(
-                text = label,
-                color = if (pressed) accent else colorResource(R.color.game_menu_text_secondary),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
 
 @Composable
 private fun simulatorResultLabel(result: ShortcutSimulatorResult): String {

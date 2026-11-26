@@ -1022,14 +1022,15 @@ class ControllerHandler(
 
     internal fun onSystemStartLongPress(context: InputDeviceContext) {
         if (!isContextUsable(context) || !startWheelOwnerGate.tryClaim(context)) return
+        val axes = wheelStickAxes(context)
         val update = context.startGesture.onLongPressTimeout(
             SystemClock.uptimeMillis(),
             prefConfig.enableStartKeyMenu,
             // A direction already held is the player moving, and must not choose by itself.
-            leftStickX = context.leftStickX.toFloat() / 32766f,
-            leftStickY = hostStickYToWheelAxis(context.leftStickY),
-            rightStickX = context.rightStickX.toFloat() / 32766f,
-            rightStickY = hostStickYToWheelAxis(context.rightStickY),
+            leftStickX = axes.leftX,
+            leftStickY = axes.leftY,
+            rightStickX = axes.rightX,
+            rightStickY = axes.rightY,
             dpadFlags = context.inputMap
         )
         if (!update.actions.contains(StartGestureReducer.EventAction.SHOW_WHEEL)) {
@@ -1096,9 +1097,6 @@ class ControllerHandler(
                 StartGestureReducer.EventAction.EXIT_STREAM -> onExitStream()
             }
         }
-        if (update.wheelVisible && startWheelOwnerGate.isOwner(context)) {
-            gestures.updateStartHoldWheel(update.wheel)
-        }
         if (update.sendNeutralState) {
             sendNeutralControllerState(context)
         }
@@ -1134,18 +1132,29 @@ class ControllerHandler(
 
     /** Lets the wheel see buttons that changed without any axis movement. */
     private fun recordSystemStartWheelInput(context: InputDeviceContext) {
+        val axes = wheelStickAxes(context)
         context.startGesture.onInputSnapshot(
             context.inputMap or if (context.startGesture.isStartPressed()) {
                 ControllerPacket.PLAY_FLAG
             } else {
                 0
             },
-            leftStickX = context.leftStickX.toFloat() / 32766f,
-            leftStickY = hostStickYToWheelAxis(context.leftStickY),
-            rightStickX = context.rightStickX.toFloat() / 32766f,
-            rightStickY = hostStickYToWheelAxis(context.rightStickY)
+            leftStickX = axes.leftX,
+            leftStickY = axes.leftY,
+            rightStickX = axes.rightX,
+            rightStickY = axes.rightY
         )
     }
+
+    /** The wheel reads sticks in its own axes; one place keeps the sign and the scale. */
+    private data class WheelStickAxes(val leftX: Float, val leftY: Float, val rightX: Float, val rightY: Float)
+
+    private fun wheelStickAxes(context: GenericControllerContext): WheelStickAxes = WheelStickAxes(
+        leftX = context.leftStickX.toFloat() / 32766f,
+        leftY = hostStickYToWheelAxis(context.leftStickY),
+        rightX = context.rightStickX.toFloat() / 32766f,
+        rightY = hostStickYToWheelAxis(context.rightStickY)
+    )
 
     /**
      * LB and RB steer the Start wheel, so the quit combo is often completed only after the wheel has
@@ -1153,9 +1162,7 @@ class ControllerHandler(
      */
     private fun noteSystemQuitComboWhileWheelCaptured(context: InputDeviceContext) {
         if (context.startGesture.state() != StartGestureReducer.State.WAIT_FOR_RELEASE) return
-        if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
-                ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
-        ) {
+        if (context.inputMap == DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS) {
             context.pendingExit = true
         }
     }
@@ -1167,22 +1174,28 @@ class ControllerHandler(
      * resumes as soon as the game has focus again.
      */
     internal fun forgetHeldSystemButtons() {
+        // Device 0 (and -1 before Android 12) has a context of its own, outside the map.
+        forgetHeldSystemButtons(defaultContext)
         for (i in 0 until inputDeviceContexts.size()) {
-            val context = inputDeviceContexts.valueAt(i)
-            context.inputMap = 0
-            context.leftTrigger = 0
-            context.rightTrigger = 0
-            context.emulatingButtonFlags = 0
-            context.pendingExit = false
-            context.performanceOverlayShortcutState.reset()
-            context.startGesture.onInputSnapshot(
-                0,
-                leftStickX = context.leftStickX.toFloat() / 32766f,
-                leftStickY = hostStickYToWheelAxis(context.leftStickY),
-                rightStickX = context.rightStickX.toFloat() / 32766f,
-                rightStickY = hostStickYToWheelAxis(context.rightStickY)
-            )
+            forgetHeldSystemButtons(inputDeviceContexts.valueAt(i))
         }
+    }
+
+    private fun forgetHeldSystemButtons(context: InputDeviceContext) {
+        context.inputMap = 0
+        context.leftTrigger = 0
+        context.rightTrigger = 0
+        context.emulatingButtonFlags = 0
+        context.pendingExit = false
+        context.performanceOverlayShortcutState.reset()
+        val axes = wheelStickAxes(context)
+        context.startGesture.onInputSnapshot(
+            0,
+            leftStickX = axes.leftX,
+            leftStickY = axes.leftY,
+            rightStickX = axes.rightX,
+            rightStickY = axes.rightY
+        )
     }
 
     private fun updateSystemStartReleaseState(context: InputDeviceContext) {
@@ -1192,14 +1205,15 @@ class ControllerHandler(
             } else {
                 0
             }
+            val axes = wheelStickAxes(context)
             handleSystemStartGestureUpdate(
                 context,
                 context.startGesture.onInputSnapshot(
                     buttonFlags,
-                    leftStickX = context.leftStickX.toFloat() / 32766f,
-                    leftStickY = hostStickYToWheelAxis(context.leftStickY),
-                    rightStickX = context.rightStickX.toFloat() / 32766f,
-                    rightStickY = hostStickYToWheelAxis(context.rightStickY)
+                    leftStickX = axes.leftX,
+                    leftStickY = axes.leftY,
+                    rightStickX = axes.rightX,
+                    rightStickY = axes.rightY
                 )
             )
         }
@@ -2650,13 +2664,14 @@ class ControllerHandler(
     }
 
     private fun handleSystemStartWheelAxes(context: InputDeviceContext) {
+        val axes = wheelStickAxes(context)
         handleSystemStartGestureUpdate(
             context,
             context.startGesture.onSelection(
-                leftStickX = context.leftStickX.toFloat() / 32766f,
-                leftStickY = hostStickYToWheelAxis(context.leftStickY),
-                rightStickX = context.rightStickX.toFloat() / 32766f,
-                rightStickY = hostStickYToWheelAxis(context.rightStickY),
+                leftStickX = axes.leftX,
+                leftStickY = axes.leftY,
+                rightStickX = axes.rightX,
+                rightStickY = axes.rightY,
                 dpadFlags = context.inputMap
             )
         )
@@ -3136,15 +3151,16 @@ class ControllerHandler(
         }
 
         if (isStartKey && !cancelled) {
+            val axes = wheelStickAxes(context)
             handleSystemStartGestureUpdate(
                 context,
                 context.startGesture.onStartUp(
                     event.eventTime,
                     buttonFlags = context.inputMap,
-                    rightStickX = context.rightStickX.toFloat() / 32766f,
-                    rightStickY = hostStickYToWheelAxis(context.rightStickY),
-                    leftStickX = context.leftStickX.toFloat() / 32766f,
-                    leftStickY = hostStickYToWheelAxis(context.leftStickY)
+                    rightStickX = axes.rightX,
+                    rightStickY = axes.rightY,
+                    leftStickX = axes.leftX,
+                    leftStickY = axes.leftY
                 )
             )
         }
@@ -3323,9 +3339,7 @@ class ControllerHandler(
             }
             handleSystemStartWheelCancel(context, event, keyCode)
             // Start+Back+LB+RB still quits: completing it over the wheel must not be swallowed by it.
-            if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
-                        ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
-            ) {
+            if (context.inputMap == DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS) {
                 handleSystemStartGestureUpdate(context, context.startGesture.reset())
                 context.pendingExit = true
             }
@@ -3584,6 +3598,11 @@ class ControllerHandler(
 
     fun onExternalGameMenuOpened() {
         activateDriverMenuCapture()
+        // Device 0 (and -1 before Android 12) has a context of its own, outside the map.
+        handleSystemStartGestureUpdate(
+            defaultContext,
+            defaultContext.startGesture.onGameMenuOpenedExternally()
+        )
         for (i in 0 until inputDeviceContexts.size()) {
             val context = inputDeviceContexts.valueAt(i)
             handleSystemStartGestureUpdate(
@@ -3598,6 +3617,8 @@ class ControllerHandler(
             if (stopped) return
             driverControllerContexts.values.forEach(DriverControllerContext::onGameMenuDismissed)
         }
+        // Device 0 (and -1 before Android 12) has a context of its own, outside the map.
+        defaultContext.startGesture.onGameMenuUnavailable()
         for (i in 0 until inputDeviceContexts.size()) {
             inputDeviceContexts.valueAt(i).startGesture.onGameMenuUnavailable()
         }
