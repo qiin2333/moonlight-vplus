@@ -68,7 +68,7 @@ open class GenericControllerContext(
 
     var startDownTime: Long = 0
 
-    @Volatile var mouseEmulationActive: Boolean = false
+    @Volatile override var mouseEmulationActive: Boolean = false
     var mouseEmulationLastInputMap: Int = 0
     var mouseEmulationRemainderX: Double = 0.0
     var mouseEmulationRemainderY: Double = 0.0
@@ -168,7 +168,7 @@ class InputDeviceContext internal constructor(
         handler.joyConSupport.peer(this)?.setMouseEmulation(mouseEmulationActive)
     }
 
-    internal val startGesture = StartGestureReducer()
+    internal val startGesture = StartGestureReducer(isItemAvailable = { handler.isStartWheelItemAvailable(it) })
     internal val startLongPressRunnable = Runnable {
         handler.onSystemStartLongPress(this)
     }
@@ -572,7 +572,9 @@ class DriverControllerContext(handler: ControllerHandler) : GenericControllerCon
     internal val forwardedTouchPointerIds = ConcurrentHashMap<Int, Boolean>()
     internal var touchCaptureActive: Boolean = false
     internal val menuAxisSnapshotState = MenuAxisSnapshotState()
-    internal val shortcutState = DriverControllerShortcutStateMachine()
+    internal val shortcutState = DriverControllerShortcutStateMachine(
+        isItemAvailable = { handler.isStartWheelItemAvailable(it) }
+    )
     internal val shortcutLongPressRunnable = Runnable {
         handler.onDriverShortcutLongPress(this)
     }

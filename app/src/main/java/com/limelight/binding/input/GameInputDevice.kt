@@ -13,4 +13,7 @@ interface GameInputDevice {
 
     /** Called after a game menu opened for this input device is dismissed. */
     fun onGameMenuDismissed() {}
+
+    /** Whether this device currently drives the pointer instead of sending gamepad input. */
+    val mouseEmulationActive: Boolean get() = false
 }

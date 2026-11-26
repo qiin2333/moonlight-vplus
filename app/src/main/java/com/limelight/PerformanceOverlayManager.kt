@@ -225,6 +225,17 @@ class PerformanceOverlayManager(
     val hasCustomPerfOverlayPosition: Boolean
         get() = overlayPrefs.getBoolean("has_custom_position", false)
 
+    /**
+     * The display mode the overlay was last shown in. The Start wheel hides and shows the overlay
+     * without stepping through the modes, and brings it back the way the player left it.
+     */
+    fun rememberPerfOverlayMode(locked: Boolean) {
+        overlayPrefs.edit { putBoolean(KEY_LAST_MODE_LOCKED, locked) }
+    }
+
+    val lastPerfOverlayModeWasLocked: Boolean
+        get() = overlayPrefs.getBoolean(KEY_LAST_MODE_LOCKED, false)
+
     fun setPerfOverlayDisplayItems(items: Set<String>) {
         PerfOverlayDisplayItemsPreference.setDisplayItems(activity, items.toSet())
         refreshPerformanceOverlayConfig()
@@ -2288,6 +2299,7 @@ class PerformanceOverlayManager(
         private const val KEY_GUIDE_Y = "guide_y"
         private const val FULL_MOON_TOLERANCE = 1.0 / 29.53
         private const val KEY_HUD_HINT_SHOWN = "hud_hint_shown"
+        private const val KEY_LAST_MODE_LOCKED = "last_mode_locked"
         private const val KEY_HUD_LONG_PRESS_USED = "hud_long_press_used"
         private const val KEY_LEGACY_ORIENTATION = "layout_orientation"
         private const val KEY_DEFAULT_ORIENTATION = "list_perf_overlay_orientation"

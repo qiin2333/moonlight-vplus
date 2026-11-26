@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <!-- Original geometry on the 256-unit grid the Phosphor glyphs in this folder use: an open eye. -->
+    <path
+        android:fillColor="?attr/appAccent"
+        android:pathData="M16,128C48,64,208,64,240,128C208,192,48,192,16,128ZM48,128C72,168,184,168,208,128C184,88,72,88,48,128ZM128,112A16,16,0,1,0,128,144A16,16,0,1,0,128,112Z" />
+</vector>

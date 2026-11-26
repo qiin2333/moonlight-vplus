@@ -64,7 +64,8 @@ class ControllerHandler(
     private val gestures: GameGestures,
     internal val prefConfig: PreferenceConfiguration,
     private val onTogglePerformanceOverlay: () -> Unit = {},
-    private val onExitStream: () -> Unit = { activityContext.finish() }
+    private val onExitStream: () -> Unit = { activityContext.finish() },
+    private val onStartWheelAction: (StartWheelAction) -> Unit = {}
 ) : InputManager.InputDeviceListener, UsbDriverListener {
 
     companion object {
@@ -1023,7 +1024,13 @@ class ControllerHandler(
         if (!isContextUsable(context) || !startWheelOwnerGate.tryClaim(context)) return
         val update = context.startGesture.onLongPressTimeout(
             SystemClock.uptimeMillis(),
-            prefConfig.enableStartKeyMenu
+            prefConfig.enableStartKeyMenu,
+            // A direction already held is the player moving, and must not choose by itself.
+            leftStickX = context.leftStickX.toFloat() / 32766f,
+            leftStickY = hostStickYToWheelAxis(context.leftStickY),
+            rightStickX = context.rightStickX.toFloat() / 32766f,
+            rightStickY = hostStickYToWheelAxis(context.rightStickY),
+            dpadFlags = context.inputMap
         )
         if (!update.actions.contains(StartGestureReducer.EventAction.SHOW_WHEEL)) {
             startWheelOwnerGate.release(context)
@@ -1056,7 +1063,7 @@ class ControllerHandler(
                     mainThreadHandler.removeCallbacks(context.startLongPressRunnable)
                 StartGestureReducer.EventAction.SHOW_WHEEL -> {
                     if (startWheelOwnerGate.isOwner(context)) {
-                        gestures.showStartHoldWheel()
+                        gestures.showStartHoldWheel(context)
                         performStartWheelHaptic()
                     }
                 }
@@ -1065,20 +1072,19 @@ class ControllerHandler(
                         gestures.hideStartHoldWheel()
                     }
                 }
-                StartGestureReducer.EventAction.SELECTION_CHANGED ->
-                    run {
-                        if (startWheelOwnerGate.isOwner(context)) {
-                            gestures.updateStartHoldWheelSelection(update.selectedAction)
-                            performStartWheelHaptic()
-                        }
+                StartGestureReducer.EventAction.SELECTION_CHANGED,
+                StartGestureReducer.EventAction.RING_CHANGED -> {
+                    if (startWheelOwnerGate.isOwner(context)) {
+                        gestures.updateStartHoldWheel(update.wheel)
+                        performStartWheelHaptic()
                     }
-                StartGestureReducer.EventAction.COMMIT_ACTION -> when (update.committedAction) {
-                    StartWheelAction.MOUSE -> context.toggleMouseEmulation()
-                    StartWheelAction.KEYBOARD -> gestures.toggleKeyboard()
-                    StartWheelAction.PERFORMANCE -> onTogglePerformanceOverlay()
-                    StartWheelAction.MENU -> Unit
-                    StartWheelAction.CONTINUE, null -> Unit
-                }.also { performStartWheelHaptic() }
+                }
+                StartGestureReducer.EventAction.COMMIT_ACTION -> {
+                    update.committedAction?.let { action ->
+                        runStartWheelAction(context, action)
+                        performStartWheelHaptic()
+                    }
+                }
                 StartGestureReducer.EventAction.OPEN_GAME_MENU -> {
                     val opened = gestures.showGameMenu(context)
                     update.menuOpenRequestId?.let { requestId ->
@@ -1092,10 +1098,101 @@ class ControllerHandler(
             }
         }
         if (update.wheelVisible && startWheelOwnerGate.isOwner(context)) {
-            gestures.updateStartHoldWheelSelection(update.selectedAction)
+            gestures.updateStartHoldWheel(update.wheel)
         }
         if (update.sendNeutralState) {
             sendNeutralControllerState(context)
+        }
+    }
+
+    /** Whether the wheel offers an item whose feature is set up on this device. */
+    internal fun isStartWheelItemAvailable(action: StartWheelAction): Boolean = when (action) {
+        StartWheelAction.VIRTUAL_CONTROLLER -> prefConfig.onscreenController
+        StartWheelAction.GYRO -> hasAnyController()
+        StartWheelAction.MIC -> prefConfig.enableMic
+        else -> true
+    }
+
+    /** Runs an item committed from the Start wheel. Mouse mode belongs to the controller that drove it. */
+    private fun runStartWheelAction(context: GenericControllerContext, action: StartWheelAction) {
+        if (action == StartWheelAction.MOUSE) {
+            context.toggleMouseEmulation()
+        } else {
+            onStartWheelAction(action)
+        }
+    }
+
+    /**
+     * Feeds a wheel navigation button (RB deeper, LB back, B cancel) pressed while the wheel is up.
+     * A held button acts once, like Start does, and anything else is left to the game.
+     */
+    private fun handleSystemStartWheelButton(context: InputDeviceContext, event: KeyEvent, keyCode: Int) {
+        // A held bumper must act once, exactly like Start itself.
+        if (event.repeatCount != 0) return
+        val isWheelButton = keyCode == KeyEvent.KEYCODE_BUTTON_R1 ||
+            keyCode == KeyEvent.KEYCODE_BUTTON_L1 ||
+            keyCode == KeyEvent.KEYCODE_BUTTON_B
+        if (!isWheelButton || context.startGesture.state() != StartGestureReducer.State.WHEEL_VISIBLE) return
+        // The button is already in inputMap, so the reducer sees it as held.
+        recordSystemStartWheelInput(context)
+        val update = when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_R1 -> context.startGesture.onRingDeeper()
+            KeyEvent.KEYCODE_BUTTON_L1 -> context.startGesture.onRingBack()
+            else -> context.startGesture.onCancelPressed()
+        }
+        handleSystemStartGestureUpdate(context, update)
+    }
+
+    /** Lets the wheel see buttons that changed without any axis movement. */
+    private fun recordSystemStartWheelInput(context: InputDeviceContext) {
+        context.startGesture.onInputSnapshot(
+            context.inputMap or if (context.startGesture.isStartPressed()) {
+                ControllerPacket.PLAY_FLAG
+            } else {
+                0
+            },
+            leftStickX = context.leftStickX.toFloat() / 32766f,
+            leftStickY = hostStickYToWheelAxis(context.leftStickY),
+            rightStickX = context.rightStickX.toFloat() / 32766f,
+            rightStickY = hostStickYToWheelAxis(context.rightStickY)
+        )
+    }
+
+    /**
+     * LB and RB steer the Start wheel, so the quit combo is often completed only after the wheel has
+     * taken the input. Keep honouring it while the wheel's capture is winding down.
+     */
+    private fun noteSystemQuitComboWhileWheelCaptured(context: InputDeviceContext) {
+        if (context.startGesture.state() != StartGestureReducer.State.WAIT_FOR_RELEASE) return
+        if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
+                ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
+        ) {
+            context.pendingExit = true
+        }
+    }
+
+    /**
+     * A local dialog has taken window focus, so no key-up can reach us before it closes. Forget
+     * every button that is down now instead of waiting for releases that will never arrive, or the
+     * controller would stay captured after the dialog is gone. Sticks are kept: their motion
+     * resumes as soon as the game has focus again.
+     */
+    internal fun forgetHeldSystemButtons() {
+        for (i in 0 until inputDeviceContexts.size()) {
+            val context = inputDeviceContexts.valueAt(i)
+            context.inputMap = 0
+            context.leftTrigger = 0
+            context.rightTrigger = 0
+            context.emulatingButtonFlags = 0
+            context.pendingExit = false
+            context.performanceOverlayShortcutState.reset()
+            context.startGesture.onInputSnapshot(
+                0,
+                leftStickX = context.leftStickX.toFloat() / 32766f,
+                leftStickY = hostStickYToWheelAxis(context.leftStickY),
+                rightStickX = context.rightStickX.toFloat() / 32766f,
+                rightStickY = hostStickYToWheelAxis(context.rightStickY)
+            )
         }
     }
 
@@ -3065,6 +3162,10 @@ class ControllerHandler(
 
         if (!cancelled && (captureAtEntry || context.isLocalInputCaptureActive())) {
             updateSystemStartReleaseState(context)
+            if (context.pendingExit && context.inputMap == 0) {
+                // All buttons from the quit combo are lifted. Finish the activity now.
+                activityContext.finish()
+            }
             return true
         }
 
@@ -3227,13 +3328,22 @@ class ControllerHandler(
             else -> return false
         }
 
-        if (!isStartKey && isWheelDpadKey(keyCode) &&
-            context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE
-        ) {
-            handleSystemStartWheelAxes(context)
+        if (!isStartKey && context.startGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE) {
+            if (isWheelDpadKey(keyCode)) {
+                handleSystemStartWheelAxes(context)
+            }
+            handleSystemStartWheelButton(context, event, keyCode)
+            // Start+Back+LB+RB still quits: completing it over the wheel must not be swallowed by it.
+            if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
+                        ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
+            ) {
+                handleSystemStartGestureUpdate(context, context.startGesture.reset())
+                context.pendingExit = true
+            }
         }
 
         if (captureAtEntry || context.isLocalInputCaptureActive()) {
+            noteSystemQuitComboWhileWheelCaptured(context)
             updateSystemStartReleaseState(context)
             return true
         }
@@ -3283,7 +3393,7 @@ class ControllerHandler(
             } else {
                 if (context.inputMap == (ControllerPacket.PLAY_FLAG or ControllerPacket.RB_FLAG) ||
                     (context.inputMap == ControllerPacket.PLAY_FLAG &&
-                            event.eventTime - context.lastRbUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
+                        event.eventTime - context.lastRbUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
                 ) {
                     context.inputMap = context.inputMap and (ControllerPacket.PLAY_FLAG or ControllerPacket.RB_FLAG).inv()
                     context.inputMap = context.inputMap or ControllerPacket.SPECIAL_BUTTON_FLAG
@@ -3373,7 +3483,7 @@ class ControllerHandler(
                 DriverControllerShortcutStateMachine.Action.SHOW_WHEEL -> {
                     mainThreadHandler.post {
                         if (isContextUsable(context) && startWheelOwnerGate.isOwner(context)) {
-                            gestures.showStartHoldWheel()
+                            gestures.showStartHoldWheel(context)
                             performStartWheelHaptic()
                         }
                     }
@@ -3383,34 +3493,27 @@ class ControllerHandler(
                         mainThreadHandler.post { gestures.hideStartHoldWheel() }
                     }
                 }
-                DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
-                    mainThreadHandler.post {
-                        if (isContextUsable(context)) {
-                            context.toggleMouseEmulation()
-                            performStartWheelHaptic()
+                DriverControllerShortcutStateMachine.Action.COMMIT_ACTION -> {
+                    val action = update.committedAction
+                    if (action != null) {
+                        mainThreadHandler.post {
+                            if (isContextUsable(context)) {
+                                runStartWheelAction(context, action)
+                                performStartWheelHaptic()
+                            }
                         }
                     }
-                DriverControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
-                    mainThreadHandler.post {
-                        if (isContextUsable(context)) {
-                            gestures.toggleKeyboard()
-                            performStartWheelHaptic()
-                        }
-                    }
-                DriverControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
-                    mainThreadHandler.post {
-                        if (isContextUsable(context)) {
-                            onTogglePerformanceOverlay()
-                            performStartWheelHaptic()
-                        }
-                    }
-                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION ->
+                }
+                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION,
+                DriverControllerShortcutStateMachine.Action.RING_CHANGED -> {
+                    val wheel = update.wheel
                     mainThreadHandler.post {
                         if (isContextUsable(context) && startWheelOwnerGate.isOwner(context)) {
-                            gestures.updateStartHoldWheelSelection(update.selectedAction)
+                            gestures.updateStartHoldWheel(wheel)
                             performStartWheelHaptic()
                         }
                     }
+                }
                 DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU ->
                     mainThreadHandler.post openMenu@{
                         val requestId = update.menuOpenRequestId ?: return@openMenu
@@ -4247,6 +4350,8 @@ class ControllerHandler(
 
     fun setGyroAssistantMode(mode: GyroAssistantMode) =
         gyroManager.setAssistantMode(mode)
+
+    fun getGyroAssistantMode(): GyroAssistantMode = gyroManager.assistantMode
 
     fun onSensorsReenabled() =
         gyroManager.onSensorsReenabled()

@@ -17,7 +17,10 @@ import com.limelight.binding.audio.MicrophoneManager
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.GameInputDevice
 import com.limelight.binding.input.KeyboardTranslator
+import com.limelight.binding.input.GyroAssistantMode
+import com.limelight.binding.input.MenuAxisNavigationState
 import com.limelight.binding.input.StartWheelAction
+import com.limelight.binding.input.StartWheelSnapshot
 import com.limelight.binding.input.advance_setting.ControllerManager
 import com.limelight.binding.input.advance_setting.CrownConfigChoice
 import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog
@@ -71,6 +74,11 @@ import com.limelight.ui.GameGestures
 import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
+import com.limelight.ui.StartWheelFeatureState
+import com.limelight.ui.StartWheelKeyItem
+import com.limelight.ui.StartWheelPerfMode
+import com.limelight.ui.StartWheelUiState
+import com.limelight.utils.AppActionSheet
 import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
 import com.limelight.utils.RemoteImeController
@@ -256,8 +264,18 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private var crownConfigPicker: CrownConfigPickerDialog? = null
     private var controllerShortcutHintView: View? = null
     private var startHoldWheelView: ComposeView? = null
-    private val startHoldWheelVisible = mutableStateOf(false)
-    private val startHoldWheelSelection = mutableStateOf(StartWheelAction.CONTINUE)
+    private val startHoldWheelState = mutableStateOf(StartWheelUiState())
+    // The controller that opened the wheel; its mouse mode is what the wheel reports.
+    private var startHoldWheelDevice: GameInputDevice? = null
+    private val startWheelStreamActions by lazy { StreamActionExecutor(game = this, connProvider = { conn }) }
+    // Gyro mode to bring back when the wheel switches the assistant on again this session.
+    private var startWheelLastGyroMode: GyroAssistantMode? = null
+    /** Quick-action ids behind the keyboard ring, resolved once per wheel gesture. */
+    private var startWheelKeySlotIds: List<String> = emptyList()
+    private var startWheelConfirmSheet: android.app.Dialog? = null
+    private val startWheelConfirmAxisStates = mutableMapOf<Int, MenuAxisNavigationState>()
+    private val startWheelConfirmHeldKeys = mutableMapOf<Int, Int>()
+    private val startWheelConfirmAwaitingNeutral = mutableSetOf<Int>()
     private val pipInteractiveOverlayState = PipInteractiveOverlayState()
     /** Preserve virtual-controller visibility across OEM-specific stop/PiP callback ordering. */
     private var virtualControllerVisibleBeforeStop: Boolean? = null
@@ -896,7 +914,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             this,
             prefConfig,
             onTogglePerformanceOverlay = ::togglePerformanceOverlay,
-            onExitStream = ::exitStreamFromDriverShortcut
+            onExitStream = ::exitStreamFromDriverShortcut,
+            onStartWheelAction = ::runStartWheelAction
         )
         virtualController?.rebindControllerHandler(controllerHandler)
         // Re-arm the persisted gyro assistant; a physical gamepad that shows up later
@@ -1942,6 +1961,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     override fun onDestroy() {
         destroying = true
+        startWheelConfirmSheet?.dismiss()
+        startWheelConfirmSheet = null
         resolutionSwitchController.cancel()
         if (conn != null) stopConnection(StreamStopReason.ACTIVITY_DESTROYED)
         // 会话真正结束(finish)时丢弃未消费的暂存画面;recreate() 重建不在此列
@@ -2049,7 +2070,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
 
     private fun updateKeyboardInterception() {
         val overlayVisible = activeGameMenu?.isShowing() == true || Dialog.hasVisibleDialog() ||
-            hostUnlockController?.isOverlayVisible == true
+            startWheelConfirmSheet?.isShowing == true || hostUnlockController?.isOverlayVisible == true
         val intercepting = streamInForeground && !overlayVisible
         if (!intercepting && ::keyboardInputHandler.isInitialized) {
             resetVirtualKeyboardInput()
@@ -2232,6 +2253,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         Dialog.closeDialogs()
         activeGameMenu?.dismiss()
         activeGameMenu = null
+        startWheelConfirmSheet?.dismiss()
+        startWheelConfirmSheet = null
 
         if (!isFinishing) {
             virtualControllerVisibleBeforeStop =
@@ -3619,6 +3642,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             afterShow?.invoke(menu)
             if (!openedFromUsbShortcut && ::controllerHandler.isInitialized) {
                 controllerHandler.onExternalGameMenuOpened()
+                controllerHandler.forgetHeldSystemButtons()
             }
         }
         return opened
@@ -3631,6 +3655,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun dispatchUsbControllerMenuKey(event: KeyEvent): Boolean {
         if (virtualController?.dispatchMenuKey(event) == true) return true
         crownConfigPicker?.takeIf { it.isShowing }?.let {
+            it.dispatchKeyEvent(event)
+            return true
+        }
+        startWheelConfirmSheet?.takeIf { it.isShowing }?.let {
             it.dispatchKeyEvent(event)
             return true
         }
@@ -3652,6 +3680,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             it.dispatchAxes(
                 ControllerHandler.usbGameMenuAxisSourceId(controllerId),
                 listOf(leftStickX to leftStickY), rightStickY
+            )
+            return true
+        }
+        startWheelConfirmSheet?.takeIf { it.isShowing }?.let { sheet ->
+            dispatchStartWheelConfirmAxes(
+                sourceKey = controllerId,
+                axisPairs = listOf(leftStickX to leftStickY, rightStickX to rightStickY),
+                sheet = sheet
             )
             return true
         }
@@ -3729,8 +3765,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             setOnTouchListener { _, _ -> false }
             setContent {
                 StartHoldWheelOverlay(
-                    visible = startHoldWheelVisible.value,
-                    selectedAction = startHoldWheelSelection.value,
+                    state = startHoldWheelState.value,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -3744,25 +3779,288 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         )
     }
 
-    override fun showStartHoldWheel() {
+    override fun showStartHoldWheel(device: GameInputDevice?) {
         runOnUiThread {
-            startHoldWheelVisible.value = true
+            startHoldWheelDevice = device
+            startWheelKeySlotIds = resolveStartWheelKeyIds()
             startHoldWheelView?.visibility = View.VISIBLE
             startHoldWheelView?.bringToFront()
+            startHoldWheelState.value = startWheelUiState(StartWheelSnapshot(visible = true))
         }
     }
 
-    override fun updateStartHoldWheelSelection(action: StartWheelAction) {
+    override fun updateStartHoldWheel(wheel: StartWheelSnapshot) {
         runOnUiThread {
-            startHoldWheelSelection.value = action
+            // A snapshot queued behind a hide must not bring the wheel back.
+            if (!startHoldWheelState.value.visible) return@runOnUiThread
+            startHoldWheelState.value = startWheelUiState(wheel)
         }
     }
 
     override fun hideStartHoldWheel() {
         runOnUiThread {
-            startHoldWheelVisible.value = false
-            startHoldWheelSelection.value = StartWheelAction.CONTINUE
+            startHoldWheelState.value = StartWheelUiState()
+            startHoldWheelDevice = null
             startHoldWheelView?.visibility = View.GONE
+        }
+    }
+
+    /** Joins the wheel's selection with the live state of the features its items switch. */
+    private fun startWheelUiState(wheel: StartWheelSnapshot): StartWheelUiState = StartWheelUiState(
+        wheel = wheel,
+        features = StartWheelFeatureState(
+            perfOverlayMode = when (performanceOverlayMode) {
+                PerformanceOverlayMode.HIDDEN -> StartWheelPerfMode.HIDDEN
+                PerformanceOverlayMode.FLOATING -> StartWheelPerfMode.FLOATING
+                PerformanceOverlayMode.LOCKED -> StartWheelPerfMode.LOCKED
+            },
+            virtualControllerVisible = isVirtualControllerVisible(),
+            gyroEnabled = GyroAssistantMode.from(prefConfig) != GyroAssistantMode.OFF,
+            mouseEmulationActive = startHoldWheelDevice?.mouseEmulationActive == true,
+            keyboardVisible = isLocalKeyboardVisible(),
+            // Items whose feature is not set up are left out of the wheel, as in the game menu.
+            virtualControllerAvailable = prefConfig.onscreenController,
+            gyroAvailable = ::controllerHandler.isInitialized && controllerHandler.hasAnyController(),
+            micAvailable = prefConfig.enableMic,
+            keyRing = startWheelKeyItems()
+        )
+    )
+
+    private fun isLocalKeyboardVisible(): Boolean =
+        ViewCompat.getRootWindowInsets(streamView)?.isVisible(WindowInsetsCompat.Type.ime()) == true
+
+    /** Runs an item committed from the Start hold wheel. Always called on the main thread. */
+    private fun runStartWheelAction(action: StartWheelAction) {
+        // Which item was used, never what it was used on.
+        analyticsManager?.logCustomEvent(
+            "start_wheel_action",
+            Bundle().apply { putString("action", action.name) }
+        )
+        when (action) {
+            StartWheelAction.KEYBOARD -> toggleKeyboard()
+            StartWheelAction.PERFORMANCE_TOGGLE -> togglePerformanceOverlayVisibility()
+            StartWheelAction.VIRTUAL_CONTROLLER -> toggleVirtualController()
+            StartWheelAction.GYRO -> toggleGyroAssistant()
+            StartWheelAction.MIC -> toggleStartWheelMicrophone()
+            StartWheelAction.DISCONNECT -> confirmStartWheelSessionEnd(
+                R.string.start_wheel_disconnect_title,
+                R.string.start_wheel_disconnect_message,
+                R.string.start_wheel_item_disconnect
+            ) { disconnect() }
+            StartWheelAction.QUIT_AND_STOP -> confirmStartWheelSessionEnd(
+                R.string.start_wheel_quit_title,
+                R.string.start_wheel_quit_message,
+                R.string.start_wheel_item_quit
+            ) { startWheelStreamActions.execute("quit") }
+            StartWheelAction.HOST_SLEEP -> confirmStartWheelSessionEnd(
+                R.string.start_wheel_sleep_title,
+                R.string.start_wheel_sleep_message,
+                R.string.start_wheel_item_host_sleep
+            ) { startWheelStreamActions.execute("send_sleep") }
+            StartWheelAction.KEY_1, StartWheelAction.KEY_2, StartWheelAction.KEY_3 ->
+                runStartWheelKey(action)
+            // The menu opens through the reducer's own request protocol; mouse mode belongs to its controller.
+            StartWheelAction.MENU, StartWheelAction.MOUSE -> Unit
+        }
+    }
+
+    private fun toggleStartWheelMicrophone() {
+        val manager = microphoneManager
+        if (manager == null) {
+            Toast.makeText(this, getString(R.string.start_wheel_toast_mic_unavailable), Toast.LENGTH_SHORT).show()
+            return
+        }
+        manager.toggleMicrophone()
+        Toast.makeText(
+            this,
+            getString(
+                if (manager.isMicrophoneActive()) {
+                    R.string.start_wheel_toast_mic_on
+                } else {
+                    R.string.start_wheel_toast_mic_off
+                }
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    /**
+     * The keyboard ring shows the user's own quick actions in their order: the ones that send a key to
+     * the host, built-in and custom. Esc, Win and Alt+Tab fill any gap, so the ring always has three.
+     */
+    private fun resolveStartWheelKeyIds(): List<String> {
+        val configured = try {
+            QuickActionRegistry.loadConfig(this)
+        } catch (exception: Exception) {
+            emptyList()
+        }
+        val sending = configured
+            .filter { it.startsWith("send_") || it.startsWith("custom_") }
+            // Sleeping the host is an item of its own on the System ring.
+            .filter { it != "send_sleep" }
+            .distinct()
+        return (sending + START_WHEEL_FALLBACK_KEY_IDS).distinct().take(START_WHEEL_KEY_SLOTS)
+    }
+
+    private fun runStartWheelKey(action: StartWheelAction) {
+        val index = when (action) {
+            StartWheelAction.KEY_1 -> 0
+            StartWheelAction.KEY_2 -> 1
+            else -> 2
+        }
+        startWheelKeySlotIds.getOrNull(index)?.let(startWheelStreamActions::execute)
+    }
+
+    private fun startWheelKeyItems(): List<StartWheelKeyItem> = startWheelKeySlotIds.map { id ->
+        val builtin = QuickActionRegistry.getBuiltin(id)
+        val labelRes = builtin?.labelRes ?: 0
+        StartWheelKeyItem(
+            title = when {
+                labelRes != 0 -> getString(labelRes)
+                id.startsWith(CUSTOM_KEY_PREFIX) -> id.removePrefix(CUSTOM_KEY_PREFIX)
+                else -> builtin?.label ?: id
+            },
+            icon = builtin?.iconRes?.takeIf { it != 0 } ?: R.drawable.ic_start_wheel_key
+        )
+    }
+
+    private fun toggleGyroAssistant() {
+        if (!::controllerHandler.isInitialized) return
+        val current = controllerHandler.getGyroAssistantMode()
+        val next = if (current == GyroAssistantMode.OFF) {
+            startWheelLastGyroMode ?: GyroAssistantMode.RIGHT_STICK
+        } else {
+            startWheelLastGyroMode = current
+            GyroAssistantMode.OFF
+        }
+        controllerHandler.setGyroAssistantMode(next)
+        prefConfig.writePreferences(this)
+        Toast.makeText(
+            this,
+            getString(
+                if (next == GyroAssistantMode.OFF) {
+                    R.string.start_wheel_toast_gyro_off
+                } else {
+                    R.string.start_wheel_toast_gyro_on
+                }
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    /**
+     * Asks before ending the session in any of its ways (disconnect, quit and stop the game, sleep the
+     * host), since the wheel can reach them with one flick of the stick.
+     */
+    private fun confirmStartWheelSessionEnd(
+        titleRes: Int,
+        messageRes: Int,
+        confirmLabelRes: Int,
+        onConfirm: () -> Unit
+    ) {
+        if (isFinishing || isDestroyed || startWheelConfirmSheet?.isShowing == true) return
+        // Show first: if the window is already gone, nothing has been captured and nothing needs undoing.
+        val sheet = try {
+            AppActionSheet.show(
+                context = this,
+                title = getString(titleRes),
+                supportingText = getString(messageRes),
+                actions = listOf(
+                    AppActionSheet.Action(
+                        id = START_WHEEL_CONFIRM_CANCEL,
+                        title = getString(R.string.start_wheel_control_cancel)
+                    ),
+                    AppActionSheet.Action(
+                        id = START_WHEEL_CONFIRM_ACCEPT,
+                        title = getString(confirmLabelRes),
+                        destructive = true
+                    )
+                ),
+                initialActionId = START_WHEEL_CONFIRM_CANCEL,
+                onAction = { action ->
+                    if (action.id == START_WHEEL_CONFIRM_ACCEPT) onConfirm()
+                },
+                onDismiss = { onStartWheelConfirmSheetDismissed() }
+            )
+        } catch (exception: WindowManager.BadTokenException) {
+            return
+        }
+        startWheelConfirmSheet = sheet
+        startWheelConfirmAxisStates.clear()
+        startWheelConfirmHeldKeys.clear()
+        startWheelConfirmAwaitingNeutral.clear()
+        // From here on the sheet owns the window, so neither keys nor sticks reach the game.
+        if (::controllerHandler.isInitialized) {
+            // Reuse the game-menu capture so held buttons steer the sheet instead of the game.
+            controllerHandler.onExternalGameMenuOpened()
+            // Key-ups no longer reach the handler either, and Start is usually still down on the
+            // D-pad path: waiting for them would leave the controller captured after the sheet.
+            controllerHandler.forgetHeldSystemButtons()
+        }
+        updateKeyboardInterception()
+        // Sticks of Android-system pads arrive at the sheet as motion events it does not read itself.
+        sheet.window?.decorView?.setOnGenericMotionListener { _, event ->
+            handleStartWheelConfirmMotion(event)
+        }
+    }
+
+    private fun handleStartWheelConfirmMotion(event: MotionEvent): Boolean {
+        val sheet = startWheelConfirmSheet?.takeIf { it.isShowing } ?: return false
+        if (event.source and InputDevice.SOURCE_CLASS_JOYSTICK == 0 || !::controllerHandler.isInitialized) {
+            return false
+        }
+        val axisPairs = controllerHandler.getGameMenuNavigationAxisPairs(event, includeRightStick = true)
+            ?: return false
+        dispatchStartWheelConfirmAxes(event.deviceId, axisPairs, sheet)
+        return true
+    }
+
+    private fun onStartWheelConfirmSheetDismissed() {
+        startWheelConfirmSheet = null
+        startWheelConfirmAxisStates.clear()
+        startWheelConfirmHeldKeys.clear()
+        startWheelConfirmAwaitingNeutral.clear()
+        if (::controllerHandler.isInitialized) {
+            controllerHandler.onExternalGameMenuDismissed()
+        }
+        updateKeyboardInterception()
+    }
+
+    /**
+     * Turns stick deflection into up and down steps for the two-row sheet. A stick is left alone
+     * until it has rested once, because it usually still points the way the player picked the item.
+     */
+    private fun dispatchStartWheelConfirmAxes(
+        sourceKey: Int,
+        axisPairs: List<Pair<Float, Float>>,
+        sheet: android.app.Dialog
+    ) {
+        val knownSource = startWheelConfirmAxisStates.containsKey(sourceKey)
+        val state = startWheelConfirmAxisStates.getOrPut(sourceKey) { MenuAxisNavigationState() }
+        if (sourceKey in startWheelConfirmAwaitingNeutral) {
+            state.reset()
+            if (state.isNeutral(axisPairs)) startWheelConfirmAwaitingNeutral.remove(sourceKey)
+            return
+        }
+        if (!knownSource && !state.isNeutral(axisPairs)) {
+            startWheelConfirmAwaitingNeutral += sourceKey
+            return
+        }
+        val transition = state.update(axisPairs)
+        if (!transition.changed) return
+        val targetKey = when (transition.pressedKeyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> KeyEvent.KEYCODE_DPAD_UP
+            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> KeyEvent.KEYCODE_DPAD_DOWN
+            else -> null
+        }
+        val heldKey = startWheelConfirmHeldKeys[sourceKey]
+        if (heldKey != null && heldKey != targetKey) {
+            sheet.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, heldKey))
+            startWheelConfirmHeldKeys.remove(sourceKey)
+        }
+        if (targetKey != null && heldKey != targetKey) {
+            sheet.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, targetKey))
+            startWheelConfirmHeldKeys[sourceKey] = targetKey
         }
     }
 
@@ -3796,6 +4094,37 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         setPerformanceOverlayMode(nextMode)
     }
 
+    /**
+     * Shows or hides the overlay without cycling through its display modes, and brings it back the
+     * way it was last shown. The Start wheel's category shortcut: hiding from "pinned" must not
+     * require a trip through "floating" first.
+     */
+    fun togglePerformanceOverlayVisibility() {
+        val resume = if (performanceOverlayManager?.lastPerfOverlayModeWasLocked == true) {
+            PerformanceOverlayMode.LOCKED
+        } else {
+            PerformanceOverlayMode.FLOATING
+        }
+        setPerformanceOverlayModeWithFeedback(
+            if (performanceOverlayMode == PerformanceOverlayMode.HIDDEN) resume else PerformanceOverlayMode.HIDDEN
+        )
+    }
+
+    private fun setPerformanceOverlayModeWithFeedback(mode: PerformanceOverlayMode) {
+        setPerformanceOverlayMode(mode)
+        Toast.makeText(
+            this,
+            getString(
+                when (mode) {
+                    PerformanceOverlayMode.HIDDEN -> R.string.start_wheel_toast_perf_hidden
+                    PerformanceOverlayMode.FLOATING -> R.string.start_wheel_toast_perf_floating
+                    PerformanceOverlayMode.LOCKED -> R.string.start_wheel_toast_perf_locked
+                }
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
     fun showPerformanceOverlayDelayed() {
         performanceOverlayManager?.showPerformanceOverlayDelayed()
     }
@@ -3817,6 +4146,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         if (performanceOverlayManager == null) return
         prefConfig.enablePerfOverlay = mode != PerformanceOverlayMode.HIDDEN
         prefConfig.perfOverlayLocked = mode == PerformanceOverlayMode.LOCKED
+        if (mode != PerformanceOverlayMode.HIDDEN) {
+            // Hiding keeps no mode of its own; the overlay remembers how it was last shown.
+            performanceOverlayManager?.rememberPerfOverlayMode(mode == PerformanceOverlayMode.LOCKED)
+        }
         performanceOverlayManager?.applyOverlayState()
         prefConfig.writePreferences(this)
     }
@@ -3978,5 +4311,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         val EXTRA_FORCE_RESUME_CURRENT_SESSION = "ForceResumeCurrentSession"
 
         private const val KEEP_ALIVE_NOTIFICATION_ID = 1001
+
+        private const val START_WHEEL_CONFIRM_CANCEL = 0
+        private const val START_WHEEL_CONFIRM_ACCEPT = 1
+
+        private const val START_WHEEL_KEY_SLOTS = 3
+        private const val CUSTOM_KEY_PREFIX = "custom_"
+        private val START_WHEEL_FALLBACK_KEY_IDS = listOf("send_esc", "send_win", "send_alt_tab")
     }
 }
