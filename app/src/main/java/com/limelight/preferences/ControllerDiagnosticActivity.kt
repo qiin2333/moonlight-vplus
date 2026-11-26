@@ -926,14 +926,13 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
         } else {
             val startPressed = simulatorPressedFlags and ControllerPacket.PLAY_FLAG != 0
             val startWasPressed = previousFlags and ControllerPacket.PLAY_FLAG != 0
-            // Mirrors ControllerHandler: RB, LB and B steer the wheel while Start is held.
+            // Mirrors ControllerHandler: B dismisses the wheel while Start is held.
             if (startPressed && systemSimulatorGesture.state() == StartGestureReducer.State.WHEEL_VISIBLE) {
                 val pressed = simulatorPressedFlags and previousFlags.inv()
-                val wheelButtonUpdate = when {
-                    pressed and ControllerPacket.B_FLAG != 0 -> systemSimulatorGesture.onCancelPressed()
-                    pressed and ControllerPacket.LB_FLAG != 0 -> systemSimulatorGesture.onRingBack()
-                    pressed and ControllerPacket.RB_FLAG != 0 -> systemSimulatorGesture.onRingDeeper()
-                    else -> null
+                val wheelButtonUpdate = if (pressed and ControllerPacket.B_FLAG != 0) {
+                    systemSimulatorGesture.onCancelPressed()
+                } else {
+                    null
                 }
                 if (wheelButtonUpdate != null &&
                     systemSimulatorGesture.state() != StartGestureReducer.State.WHEEL_VISIBLE
@@ -1012,8 +1011,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
                         wheelVisible = false
                         if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
                     }
-                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION,
-                DriverControllerShortcutStateMachine.Action.RING_CHANGED -> Unit
+                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION -> Unit
                 DriverControllerShortcutStateMachine.Action.COMMIT_ACTION ->
                     result = simulatorResultFor(update.committedAction, result)
                 DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU -> {
@@ -1056,8 +1054,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
                     wheelVisible = false
                     if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
                 }
-                StartGestureReducer.EventAction.SELECTION_CHANGED,
-                StartGestureReducer.EventAction.RING_CHANGED -> Unit
+                StartGestureReducer.EventAction.SELECTION_CHANGED -> Unit
                 StartGestureReducer.EventAction.COMMIT_ACTION -> {
                     result = simulatorResultFor(update.committedAction, result)
                 }

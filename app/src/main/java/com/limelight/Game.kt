@@ -75,7 +75,6 @@ import com.limelight.ui.GameMenuAxisSourceLifecycle
 import com.limelight.ui.StreamView
 import com.limelight.ui.StartHoldWheelOverlay
 import com.limelight.ui.StartWheelFeatureState
-import com.limelight.ui.StartWheelKeyItem
 import com.limelight.ui.StartWheelPerfMode
 import com.limelight.ui.StartWheelUiState
 import com.limelight.utils.AppActionSheet
@@ -270,8 +269,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private val startWheelStreamActions by lazy { StreamActionExecutor(game = this, connProvider = { conn }) }
     // Gyro mode to bring back when the wheel switches the assistant on again this session.
     private var startWheelLastGyroMode: GyroAssistantMode? = null
-    /** Quick-action ids behind the keyboard ring, resolved once per wheel gesture. */
-    private var startWheelKeySlotIds: List<String> = emptyList()
     private var startWheelConfirmSheet: android.app.Dialog? = null
     private val startWheelConfirmAxisStates = mutableMapOf<Int, MenuAxisNavigationState>()
     private val startWheelConfirmHeldKeys = mutableMapOf<Int, Int>()
@@ -3782,7 +3779,11 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     override fun showStartHoldWheel(device: GameInputDevice?) {
         runOnUiThread {
             startHoldWheelDevice = device
-            startWheelKeySlotIds = resolveStartWheelKeyIds()
+            // The view may still hold the fade of the last close.
+            startHoldWheelView?.animate()?.cancel()
+            startHoldWheelView?.alpha = 1f
+            startHoldWheelView?.scaleX = 1f
+            startHoldWheelView?.scaleY = 1f
             startHoldWheelView?.visibility = View.VISIBLE
             startHoldWheelView?.bringToFront()
             startHoldWheelState.value = startWheelUiState(StartWheelSnapshot(visible = true))
@@ -3801,7 +3802,15 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         runOnUiThread {
             startHoldWheelState.value = StartWheelUiState()
             startHoldWheelDevice = null
-            startHoldWheelView?.visibility = View.GONE
+            val view = startHoldWheelView ?: return@runOnUiThread
+            // The disc shrinks away instead of blinking out; its content is already empty.
+            view.animate()
+                .alpha(0f)
+                .scaleX(0.94f)
+                .scaleY(0.94f)
+                .setDuration(WHEEL_CLOSE_ANIMATION_MS)
+                .withEndAction { view.visibility = View.GONE }
+                .start()
         }
     }
 
@@ -3814,15 +3823,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 PerformanceOverlayMode.FLOATING -> StartWheelPerfMode.FLOATING
                 PerformanceOverlayMode.LOCKED -> StartWheelPerfMode.LOCKED
             },
-            virtualControllerVisible = isVirtualControllerVisible(),
             gyroEnabled = GyroAssistantMode.from(prefConfig) != GyroAssistantMode.OFF,
             mouseEmulationActive = startHoldWheelDevice?.mouseEmulationActive == true,
             keyboardVisible = isLocalKeyboardVisible(),
+            micActive = microphoneManager?.isMicrophoneActive() == true,
             // Items whose feature is not set up are left out of the wheel, as in the game menu.
-            virtualControllerAvailable = prefConfig.onscreenController,
             gyroAvailable = ::controllerHandler.isInitialized && controllerHandler.hasAnyController(),
-            micAvailable = prefConfig.enableMic,
-            keyRing = startWheelKeyItems()
+            micAvailable = prefConfig.enableMic
         )
     )
 
@@ -3839,26 +3846,14 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         when (action) {
             StartWheelAction.KEYBOARD -> toggleKeyboard()
             StartWheelAction.PERFORMANCE_TOGGLE -> togglePerformanceOverlayVisibility()
-            StartWheelAction.VIRTUAL_CONTROLLER -> toggleVirtualController()
             StartWheelAction.GYRO -> toggleGyroAssistant()
             StartWheelAction.MIC -> toggleStartWheelMicrophone()
+            StartWheelAction.ESC -> startWheelStreamActions.execute("send_esc")
             StartWheelAction.DISCONNECT -> confirmStartWheelSessionEnd(
                 R.string.start_wheel_disconnect_title,
                 R.string.start_wheel_disconnect_message,
                 R.string.start_wheel_item_disconnect
             ) { disconnect() }
-            StartWheelAction.QUIT_AND_STOP -> confirmStartWheelSessionEnd(
-                R.string.start_wheel_quit_title,
-                R.string.start_wheel_quit_message,
-                R.string.start_wheel_item_quit
-            ) { startWheelStreamActions.execute("quit") }
-            StartWheelAction.HOST_SLEEP -> confirmStartWheelSessionEnd(
-                R.string.start_wheel_sleep_title,
-                R.string.start_wheel_sleep_message,
-                R.string.start_wheel_item_host_sleep
-            ) { startWheelStreamActions.execute("send_sleep") }
-            StartWheelAction.KEY_1, StartWheelAction.KEY_2, StartWheelAction.KEY_3 ->
-                runStartWheelKey(action)
             // The menu opens through the reducer's own request protocol; mouse mode belongs to its controller.
             StartWheelAction.MENU, StartWheelAction.MOUSE -> Unit
         }
@@ -3882,46 +3877,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             ),
             Toast.LENGTH_SHORT
         ).show()
-    }
-
-    /**
-     * The keyboard ring shows the user's own quick actions in their order: the ones that send a key to
-     * the host, built-in and custom. Esc, Win and Alt+Tab fill any gap, so the ring always has three.
-     */
-    private fun resolveStartWheelKeyIds(): List<String> {
-        val configured = try {
-            QuickActionRegistry.loadConfig(this)
-        } catch (exception: Exception) {
-            emptyList()
-        }
-        val sending = configured
-            .filter { it.startsWith("send_") || it.startsWith("custom_") }
-            // Sleeping the host is an item of its own on the System ring.
-            .filter { it != "send_sleep" }
-            .distinct()
-        return (sending + START_WHEEL_FALLBACK_KEY_IDS).distinct().take(START_WHEEL_KEY_SLOTS)
-    }
-
-    private fun runStartWheelKey(action: StartWheelAction) {
-        val index = when (action) {
-            StartWheelAction.KEY_1 -> 0
-            StartWheelAction.KEY_2 -> 1
-            else -> 2
-        }
-        startWheelKeySlotIds.getOrNull(index)?.let(startWheelStreamActions::execute)
-    }
-
-    private fun startWheelKeyItems(): List<StartWheelKeyItem> = startWheelKeySlotIds.map { id ->
-        val builtin = QuickActionRegistry.getBuiltin(id)
-        val labelRes = builtin?.labelRes ?: 0
-        StartWheelKeyItem(
-            title = when {
-                labelRes != 0 -> getString(labelRes)
-                id.startsWith(CUSTOM_KEY_PREFIX) -> id.removePrefix(CUSTOM_KEY_PREFIX)
-                else -> builtin?.label ?: id
-            },
-            icon = builtin?.iconRes?.takeIf { it != 0 } ?: R.drawable.ic_start_wheel_key
-        )
     }
 
     private fun toggleGyroAssistant() {
@@ -4315,8 +4270,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         private const val START_WHEEL_CONFIRM_CANCEL = 0
         private const val START_WHEEL_CONFIRM_ACCEPT = 1
 
-        private const val START_WHEEL_KEY_SLOTS = 3
-        private const val CUSTOM_KEY_PREFIX = "custom_"
-        private val START_WHEEL_FALLBACK_KEY_IDS = listOf("send_esc", "send_win", "send_alt_tab")
+        private const val WHEEL_CLOSE_ANIMATION_MS = 140L
     }
 }

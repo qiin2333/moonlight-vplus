@@ -19,7 +19,6 @@ internal class DriverControllerShortcutStateMachine(
         SHOW_WHEEL,
         HIDE_WHEEL,
         UPDATE_SELECTION,
-        RING_CHANGED,
         COMMIT_ACTION,
         OPEN_GAME_MENU,
         EXIT_STREAM
@@ -278,18 +277,13 @@ internal class DriverControllerShortcutStateMachine(
     }
 
     /**
-     * Forwards a newly pressed wheel button (B, LB or RB) to the reducer while the wheel is up.
-     * Returns null when no wheel button went down in this snapshot.
+     * Forwards a newly pressed B to the reducer while the wheel is up: it dismisses the wheel.
+     * Returns null when B did not go down in this snapshot.
      */
     private fun feedWheelButton(previousButtonFlags: Int, buttonFlags: Int): Update? {
         val pressed = buttonFlags and previousButtonFlags.inv()
-        val reducerUpdate = when {
-            pressed and ControllerPacket.B_FLAG != 0 -> reducer.onCancelPressed()
-            pressed and ControllerPacket.LB_FLAG != 0 -> reducer.onRingBack()
-            pressed and ControllerPacket.RB_FLAG != 0 -> reducer.onRingDeeper()
-            else -> return null
-        }
-        return reducerUpdate.toDriverUpdate()
+        if (pressed and ControllerPacket.B_FLAG == 0) return null
+        return reducer.onCancelPressed().toDriverUpdate()
     }
 
     private fun markHostNeutralStateRequired(): Boolean {
@@ -340,7 +334,6 @@ internal class DriverControllerShortcutStateMachine(
                 StartGestureReducer.EventAction.COMMIT_ACTION ->
                     if (committedAction != null) Action.COMMIT_ACTION else null
                 StartGestureReducer.EventAction.SELECTION_CHANGED -> Action.UPDATE_SELECTION
-                StartGestureReducer.EventAction.RING_CHANGED -> Action.RING_CHANGED
                 StartGestureReducer.EventAction.EXIT_STREAM -> Action.EXIT_STREAM
             }
         }

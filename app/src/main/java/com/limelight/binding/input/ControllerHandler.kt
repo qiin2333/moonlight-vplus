@@ -1072,8 +1072,7 @@ class ControllerHandler(
                         gestures.hideStartHoldWheel()
                     }
                 }
-                StartGestureReducer.EventAction.SELECTION_CHANGED,
-                StartGestureReducer.EventAction.RING_CHANGED -> {
+                StartGestureReducer.EventAction.SELECTION_CHANGED -> {
                     if (startWheelOwnerGate.isOwner(context)) {
                         gestures.updateStartHoldWheel(update.wheel)
                         performStartWheelHaptic()
@@ -1107,7 +1106,6 @@ class ControllerHandler(
 
     /** Whether the wheel offers an item whose feature is set up on this device. */
     internal fun isStartWheelItemAvailable(action: StartWheelAction): Boolean = when (action) {
-        StartWheelAction.VIRTUAL_CONTROLLER -> prefConfig.onscreenController
         StartWheelAction.GYRO -> hasAnyController()
         StartWheelAction.MIC -> prefConfig.enableMic
         else -> true
@@ -1123,24 +1121,15 @@ class ControllerHandler(
     }
 
     /**
-     * Feeds a wheel navigation button (RB deeper, LB back, B cancel) pressed while the wheel is up.
-     * A held button acts once, like Start does, and anything else is left to the game.
+     * B dismisses the wheel while it is up. It acts once however long it is held, like Start itself;
+     * any other button is left to the game.
      */
-    private fun handleSystemStartWheelButton(context: InputDeviceContext, event: KeyEvent, keyCode: Int) {
-        // A held bumper must act once, exactly like Start itself.
-        if (event.repeatCount != 0) return
-        val isWheelButton = keyCode == KeyEvent.KEYCODE_BUTTON_R1 ||
-            keyCode == KeyEvent.KEYCODE_BUTTON_L1 ||
-            keyCode == KeyEvent.KEYCODE_BUTTON_B
-        if (!isWheelButton || context.startGesture.state() != StartGestureReducer.State.WHEEL_VISIBLE) return
+    private fun handleSystemStartWheelCancel(context: InputDeviceContext, event: KeyEvent, keyCode: Int) {
+        if (event.repeatCount != 0 || keyCode != KeyEvent.KEYCODE_BUTTON_B) return
+        if (context.startGesture.state() != StartGestureReducer.State.WHEEL_VISIBLE) return
         // The button is already in inputMap, so the reducer sees it as held.
         recordSystemStartWheelInput(context)
-        val update = when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_R1 -> context.startGesture.onRingDeeper()
-            KeyEvent.KEYCODE_BUTTON_L1 -> context.startGesture.onRingBack()
-            else -> context.startGesture.onCancelPressed()
-        }
-        handleSystemStartGestureUpdate(context, update)
+        handleSystemStartGestureUpdate(context, context.startGesture.onCancelPressed())
     }
 
     /** Lets the wheel see buttons that changed without any axis movement. */
@@ -3332,7 +3321,7 @@ class ControllerHandler(
             if (isWheelDpadKey(keyCode)) {
                 handleSystemStartWheelAxes(context)
             }
-            handleSystemStartWheelButton(context, event, keyCode)
+            handleSystemStartWheelCancel(context, event, keyCode)
             // Start+Back+LB+RB still quits: completing it over the wheel must not be swallowed by it.
             if (context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.PLAY_FLAG or
                         ControllerPacket.LB_FLAG or ControllerPacket.RB_FLAG)
@@ -3504,8 +3493,7 @@ class ControllerHandler(
                         }
                     }
                 }
-                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION,
-                DriverControllerShortcutStateMachine.Action.RING_CHANGED -> {
+                DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION -> {
                     val wheel = update.wheel
                     mainThreadHandler.post {
                         if (isContextUsable(context) && startWheelOwnerGate.isOwner(context)) {

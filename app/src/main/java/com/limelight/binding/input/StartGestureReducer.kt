@@ -4,78 +4,40 @@ import com.limelight.nvstream.input.ControllerPacket
 import kotlin.math.abs
 import kotlin.math.atan2
 
-/** Categories of the Start hold wheel. The ordinal doubles as the sector index: 0 up, 1 right, 2 down, 3 left. */
-enum class StartWheelCategory {
-    SYSTEM,
-    INPUT,
-    KEYBOARD,
-    PERFORMANCE;
-
-    companion object {
-        fun at(index: Int): StartWheelCategory? = entries.getOrNull(index)
-    }
-}
-
-/** Everything the Start hold wheel can run. */
-enum class StartWheelAction {
-    // Category-ring defaults: releasing Start on a highlighted category runs these.
-    MENU,
-    MOUSE,
-    KEYBOARD,
-    PERFORMANCE_TOGGLE,
-
-    // System ring
-    HOST_SLEEP,
-    DISCONNECT,
-    QUIT_AND_STOP,
-
-    // Input ring
-    VIRTUAL_CONTROLLER,
-    GYRO,
-    MIC,
-
-    // Keyboard ring: the user's own quick actions, in their order; the app resolves each id.
-    KEY_1,
-    KEY_2,
-    KEY_3
-}
-
 /**
- * Fixed layout of the Start hold wheel.
+ * Everything the Start hold wheel can run, in the clockwise order of its eight sectors from up.
  *
- * The wheel is two concentric rings around a core. The inner ring holds the four categories; the outer
- * ring holds up to four items of the category that was highlighted when the user went a ring deeper.
- * Releasing Start runs the highlighted item. Sector indices follow [StartWheelCategory] order, and each
- * ring keeps the category's shortcut on its own direction so the same action is never in two places.
+ * The four directions the single-level wheel has always used keep their actions: menu up, mouse
+ * right, keyboard down, performance left. The diagonals add gyro, microphone, disconnect and Esc.
  */
+enum class StartWheelAction {
+    MENU,
+    GYRO,
+    MOUSE,
+    MIC,
+    KEYBOARD,
+    DISCONNECT,
+    PERFORMANCE_TOGGLE,
+    ESC
+}
+
+/** The wheel's fixed eight sectors, clockwise from up, 45 degrees each. */
 object StartWheelLayout {
-    private val CATEGORY_DEFAULTS = arrayOf(
+    private val SLOT_ACTIONS = arrayOf(
         StartWheelAction.MENU,
+        StartWheelAction.GYRO,
         StartWheelAction.MOUSE,
+        StartWheelAction.MIC,
         StartWheelAction.KEYBOARD,
-        StartWheelAction.PERFORMANCE_TOGGLE
+        StartWheelAction.DISCONNECT,
+        StartWheelAction.PERFORMANCE_TOGGLE,
+        StartWheelAction.ESC
     )
 
-    private val CATEGORY_RINGS = arrayOf(
-        // Disconnect sits opposite the menu, furthest from the way in; sleep and quit-and-stop flank it.
-        arrayOf(
-            StartWheelAction.MENU,
-            StartWheelAction.HOST_SLEEP,
-            StartWheelAction.DISCONNECT,
-            StartWheelAction.QUIT_AND_STOP
-        ),
-        arrayOf(StartWheelAction.VIRTUAL_CONTROLLER, StartWheelAction.MOUSE, StartWheelAction.GYRO, StartWheelAction.MIC),
-        arrayOf(StartWheelAction.KEY_1, StartWheelAction.KEY_2, StartWheelAction.KEYBOARD, StartWheelAction.KEY_3),
-        // Performance's shortcut is a toggle, so it is the only item, on the category's own direction.
-        arrayOf(null, null, null, StartWheelAction.PERFORMANCE_TOGGLE)
-    )
+    val slotCount: Int get() = SLOT_ACTIONS.size
 
-    /** Item that releasing Start runs while [category] is highlighted on the category ring. */
-    fun categoryDefault(category: StartWheelCategory): StartWheelAction = CATEGORY_DEFAULTS[category.ordinal]
-
-    /** Item in the outer ring of [category] at [slot], or null when that sector is empty. */
-    fun ringAction(category: StartWheelCategory, slot: Int): StartWheelAction? =
-        CATEGORY_RINGS[category.ordinal].getOrNull(slot)
+    /** Item in [slot], or null when the wheel shows fewer sectors than its layout. */
+    fun action(slot: Int): StartWheelAction? = SLOT_ACTIONS.getOrNull(slot)
 }
 
 /**
@@ -83,30 +45,18 @@ object StartWheelLayout {
  */
 data class StartWheelSnapshot(
     val visible: Boolean = false,
-    /** [LEVEL_CATEGORIES] while picking a category, [LEVEL_ACTIONS] while its outer ring is expanded. */
-    val level: Int = LEVEL_CATEGORIES,
-    /** The highlighted category, or the parent category while the outer ring is expanded. */
-    val category: StartWheelCategory? = null,
-    /** Highlighted sector of the active ring, or -1 when nothing is highlighted. */
+    /** Highlighted sector (0 up, clockwise), or -1 when nothing is highlighted. */
     val slot: Int = -1,
     /**
-     * False while the stick cannot choose: after the ring folds back, and when the wheel appears over
-     * a stick that was already pushed. In both cases the stick still points somewhere that must not
-     * turn into a choice by itself; it may once it recenters or clearly turns to another sector.
+     * False while a direction that was already held when the wheel appeared keeps pointing somewhere;
+     * that direction is the player moving, not choosing, until it is let go or clearly turns.
      */
     val armed: Boolean = true,
-    /** Item that releasing Start would run; null when nothing, or an empty sector, is highlighted. */
+    /** Item that releasing would run; null when nothing, or a sector without an available item, is highlighted. */
     val highlighted: StartWheelAction? = null,
-    /** True while the highlight sits on a sector that has no item. */
+    /** True while the highlight sits on a sector with no item, or one whose feature is off. */
     val emptySlot: Boolean = false
-) {
-    val outerRingActive: Boolean get() = level == LEVEL_ACTIONS
-
-    companion object {
-        const val LEVEL_CATEGORIES = 1
-        const val LEVEL_ACTIONS = 2
-    }
-}
+)
 
 // Moonlight host stick coordinates are positive-up; wheel selection follows Android's positive-down axes.
 internal fun hostStickYToWheelAxis(value: Short): Float = -value.toFloat() / 32766f
@@ -114,25 +64,22 @@ internal fun hostStickYToWheelAxis(value: Short): Float = -value.toFloat() / 327
 /**
  * Pure Start gesture state machine shared by Android and USB controller adapters.
  *
- * Holding Start shows the wheel. A stick or the D-pad highlights a sector of the active ring, and the
- * highlight stays where the last push left it when the stick springs back: a push is enough, and
- * releasing Start runs whatever is highlighted. RB expands the highlighted category into the outer
- * ring, where the category's own item sits on the category's direction, so expanding leaves what
- * releasing Start would run unchanged until the stick picks another item. LB folds the outer ring back
- * (or dismisses the wheel from the category ring), B dismisses it.
+ * Holding Start shows a single ring of eight sectors. A stick or the D-pad highlights the sector it
+ * points at, and the highlight follows it: back in the middle there is no highlight, and releasing
+ * there runs nothing. Whichever control is let go first runs what is highlighted, so a player can
+ * push towards an item and simply let the stick spring back, or keep holding it and release Start.
  *
- * Input is observed only until the wheel is first used, by a selection or by one of its buttons. From
- * then on it is captured locally and the host gets a neutral state, so nothing that steers the wheel,
- * stick deflections and LB, RB or B alike, ever reaches the game. Captured input is swallowed until
- * everything has been released.
+ * Start itself keeps reaching the game until the wheel is first steered: games that use a long press
+ * of Start for their own menus are why the gesture exists, so the first push is what takes the input
+ * away from the host. From then on input is captured locally until everything has been released.
  */
 internal class StartGestureReducer(
     private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong(),
     private val enterThreshold: Float = 0.65f,
     private val exitThreshold: Float = 0.35f,
     /**
-     * Items whose feature is not set up on this device (no on-screen controller, no controller for the
-     * gyro, the microphone switched off) are left out of the wheel and behave like empty slots.
+     * Items whose feature is not set up on this device (no controller for the gyro, the microphone
+     * switched off) are left out of the wheel and behave like empty sectors.
      */
     private val isItemAvailable: (StartWheelAction) -> Boolean = { true }
 ) {
@@ -157,7 +104,6 @@ internal class StartGestureReducer(
         SHOW_WHEEL,
         HIDE_WHEEL,
         SELECTION_CHANGED,
-        RING_CHANGED,
         COMMIT_ACTION,
         OPEN_GAME_MENU,
         EXIT_STREAM
@@ -175,8 +121,6 @@ internal class StartGestureReducer(
 
     private var state = State.IDLE
     private var startDownTimeMs = 0L
-    private var level = StartWheelSnapshot.LEVEL_CATEGORIES
-    private var category = -1
     private var selectedSlot = -1
     private var armed = true
     private var blockedDirection = -1
@@ -184,8 +128,6 @@ internal class StartGestureReducer(
     private var inputSource: InputSource? = null
     private var directionCandidate = -1
     private var directionCandidateFrames = 0
-    /** Whether letting go of the D-pad direction runs the highlight; false for one held across a ring change. */
-    private var dpadTapCommits = true
     private var nextMenuOpenRequestId = 0L
     private var pendingMenuOpenRequestId: Long? = null
     private var pendingMenuSnapshot: PendingSnapshot? = null
@@ -211,8 +153,6 @@ internal class StartGestureReducer(
         lastButtonFlags = lastButtonFlags or ControllerPacket.PLAY_FLAG
         startDownTimeMs = eventTimeMs
         clearSelection()
-        level = StartWheelSnapshot.LEVEL_CATEGORIES
-        dpadTapCommits = true
         wheelInputCaptured = false
         neutralStateSent = false
         state = State.START_HELD
@@ -258,7 +198,6 @@ internal class StartGestureReducer(
         dpadFlags: Int
     ): Update {
         if (state != State.WHEEL_VISIBLE) return snapshot()
-        val previousSource = inputSource
         val dpadAxis = dpadToAxis(dpadFlags)
         val captureStarted = !wheelInputCaptured && (
             dpadAxis.first != 0f || dpadAxis.second != 0f ||
@@ -276,16 +215,6 @@ internal class StartGestureReducer(
             rightStickX,
             rightStickY
         )
-        if (previousSource == InputSource.DPAD &&
-            dpadAxis.first == 0f && dpadAxis.second == 0f &&
-            selectedSlot >= 0 && dpadTapCommits
-        ) {
-            // A tapped D-pad direction runs the highlighted item as soon as the direction is released.
-            forgetDirectionCandidate()
-            return commitSelectedAction()
-        }
-        // With the D-pad let go, the next press is a tap again.
-        if (dpadAxis.first == 0f && dpadAxis.second == 0f) dpadTapCommits = true
         inputSource = resolveInputSource(
             leftStickX,
             leftStickY,
@@ -300,11 +229,16 @@ internal class StartGestureReducer(
             null -> 0f to 0f
         }
         if (!axisActive(x, y, exitThreshold)) {
-            // Let go: the highlight stays where the last push left it, so a stick that springs back
-            // costs nothing. All that can change is a stick that was blocked after the ring folded back.
+            // Let go: what was pointed at runs now, whichever control was released first. With nothing
+            // pointed at, letting go only clears (and a direction blocked at open is released here).
+            if (selectedSlot >= 0 && highlightedItem() != null) {
+                forgetDirectionCandidate()
+                return commitSelectedAction()
+            }
             val wasBlocked = !armed
             releaseBlock()
             forgetDirectionCandidate()
+            selectedSlot = -1
             return snapshot(
                 actions = if (wasBlocked) listOf(EventAction.SELECTION_CHANGED) else emptyList(),
                 sendNeutralState = captureStarted
@@ -315,7 +249,7 @@ internal class StartGestureReducer(
         }
         val candidate = sectorForAxis(x, y)
         if (candidate < 0) {
-            // Off the middle but not far enough to be a direction: the highlight stays.
+            // Off the middle but not far enough to be a direction: nothing is highlighted.
             return snapshot(sendNeutralState = captureStarted)
         }
         val digitalTransition = inputSource == InputSource.DPAD
@@ -326,45 +260,6 @@ internal class StartGestureReducer(
             actions = listOf(EventAction.SELECTION_CHANGED),
             sendNeutralState = captureStarted
         )
-    }
-
-    /**
-     * RB: expands the outer ring of the highlighted category. The category's own item sits on the
-     * category's direction, so what releasing Start would run stays the same until the stick picks
-     * another item. Without a highlighted category it only keeps the wheel from passing this bumper
-     * on to the game.
-     */
-    @Synchronized
-    fun onRingDeeper(): Update {
-        if (state != State.WHEEL_VISIBLE) return snapshot()
-        val captureStarted = captureForWheelButton()
-        if (level != StartWheelSnapshot.LEVEL_CATEGORIES || selectedSlot < 0) {
-            return snapshot(sendNeutralState = captureStarted)
-        }
-        category = selectedSlot
-        level = StartWheelSnapshot.LEVEL_ACTIONS
-        armed = true
-        blockedDirection = -1
-        forgetDirectionCandidate()
-        // A D-pad direction held to pick the category must not run the item it lands on when let go.
-        dpadTapCommits = false
-        return snapshot(actions = listOf(EventAction.RING_CHANGED), sendNeutralState = captureStarted)
-    }
-
-    /**
-     * LB: folds the outer ring back into the categories, or dismisses the wheel from the category ring
-     * without running anything.
-     */
-    @Synchronized
-    fun onRingBack(): Update {
-        if (state != State.WHEEL_VISIBLE) return snapshot()
-        val captureStarted = captureForWheelButton()
-        if (level == StartWheelSnapshot.LEVEL_ACTIONS) {
-            level = StartWheelSnapshot.LEVEL_CATEGORIES
-            clearSelectionForFoldBack()
-            return snapshot(actions = listOf(EventAction.RING_CHANGED), sendNeutralState = captureStarted)
-        }
-        return dismissWheel(captureStarted)
     }
 
     /** B: dismisses the wheel without running anything. */
@@ -424,7 +319,7 @@ internal class StartGestureReducer(
             return snapshot(actions = actions)
         }
         actions += EventAction.HIDE_WHEEL
-        if (!wheelInputCaptured) {
+        if (!wheelInputCaptured || highlightedItem() == null) {
             clearStartGesture()
             state = State.IDLE
             return snapshot(actions = actions)
@@ -520,7 +415,7 @@ internal class StartGestureReducer(
     @Synchronized
     fun state(): State = state
 
-    /** Item that releasing Start would run right now, or null. */
+    /** Item that releasing would run right now, or null. */
     @Synchronized
     fun selectedAction(): StartWheelAction? = highlightedItem()
 
@@ -604,47 +499,23 @@ internal class StartGestureReducer(
 
     private fun highlightedItem(): StartWheelAction? {
         if (state != State.WHEEL_VISIBLE || !armed || selectedSlot < 0) return null
-        val action = if (level == StartWheelSnapshot.LEVEL_ACTIONS) {
-            StartWheelLayout.ringAction(StartWheelCategory.at(category) ?: return null, selectedSlot)
-        } else {
-            StartWheelCategory.at(selectedSlot)?.let(StartWheelLayout::categoryDefault)
-        }
-        return action?.takeIf(isItemAvailable)
+        return StartWheelLayout.action(selectedSlot)?.takeIf(isItemAvailable)
     }
 
     private fun clearStartGesture() {
         startDownTimeMs = 0L
         clearSelection()
-        level = StartWheelSnapshot.LEVEL_CATEGORIES
         inputSource = null
         wheelInputCaptured = false
     }
 
     private fun clearSelection() {
-        category = -1
         selectedSlot = -1
         releaseBlock()
         forgetDirectionCandidate()
     }
 
-    /**
-     * Empties the highlight after the ring folded back. The stick usually still points where the outer
-     * item was, which is another category's direction now, so the sector it rests on stays blocked until
-     * the stick clearly moves elsewhere; a centered stick is fine.
-     */
-    private fun clearSelectionForFoldBack() {
-        val (x, y) = activeAxis()
-        blockedAngle = angleOf(x, y)
-        blockedDirection = if (selectedSlot >= 0) selectedSlot else nearestSector(blockedAngle)
-        armed = !axisActive(x, y, exitThreshold)
-        if (armed) blockedDirection = -1
-        selectedSlot = -1
-        forgetDirectionCandidate()
-        // A D-pad direction held to pick the outer item must not run a category when let go.
-        dpadTapCommits = false
-    }
-
-    /** Ends the block once [x]/[y] point away from where the stick rested; returns true once unblocked. */
+    /** Ends the block once [x]/[y] point away from where the direction was held; returns true once unblocked. */
     private fun releaseBlock(x: Float, y: Float): Boolean {
         if (!armed) {
             val angle = angleOf(x, y)
@@ -661,9 +532,7 @@ internal class StartGestureReducer(
 
     /**
      * A direction that is already held when the wheel appears is the player moving, not choosing.
-     * Since the highlight stays after the stick springs back, letting it count would run its category
-     * on nothing more than a long press of Start. The direction waits until it is let go or clearly
-     * turns to another sector.
+     * The sector it points at waits until the direction is let go or clearly turns.
      */
     private fun blockPushedDirection(
         leftStickX: Float,
@@ -693,13 +562,6 @@ internal class StartGestureReducer(
     private fun forgetDirectionCandidate() {
         directionCandidate = -1
         directionCandidateFrames = 0
-    }
-
-    private fun activeAxis(): Pair<Float, Float> = when (inputSource) {
-        InputSource.RIGHT_STICK -> lastRightStickX to lastRightStickY
-        InputSource.LEFT_STICK -> lastLeftStickX to lastLeftStickY
-        InputSource.DPAD -> dpadToAxis(lastButtonFlags)
-        null -> 0f to 0f
     }
 
     private fun updatePhysicalInput(
@@ -755,7 +617,7 @@ internal class StartGestureReducer(
     private fun axisActive(x: Float, y: Float, threshold: Float): Boolean =
         axisMagnitude(x, y) >= threshold
 
-    /** Chebyshev length of a stick vector, so the four cardinal directions share one activation line. */
+    /** Chebyshev length of a stick vector, so every direction shares one activation line. */
     private fun axisMagnitude(x: Float, y: Float): Float = maxOf(abs(x), abs(y))
 
     /** Degrees clockwise from up: 0 up, 90 right, 180 down, 270 left. */
@@ -790,27 +652,10 @@ internal class StartGestureReducer(
         }
     }
 
-    /** Sector the stick points at, the current sector while it is still held there, or -1 near the center. */
+    /** Sector the direction points at, or -1 while it is too close to the middle to mean one. */
     private fun sectorForAxis(x: Float, y: Float): Int {
-        if (selectedSlot >= 0 && isSelectedDirectionHeld(x, y, selectedSlot)) {
-            return selectedSlot
-        }
-        val magnitude = x * x + y * y
-        if (magnitude < exitThreshold * exitThreshold) return -1
         if (maxOf(abs(x), abs(y)) < enterThreshold) return -1
-        return if (abs(x) >= abs(y)) {
-            if (x >= 0) SECTOR_RIGHT else SECTOR_LEFT
-        } else {
-            if (y >= 0) SECTOR_DOWN else SECTOR_UP
-        }
-    }
-
-    private fun isSelectedDirectionHeld(x: Float, y: Float, sector: Int): Boolean = when (sector) {
-        SECTOR_RIGHT -> x >= exitThreshold && abs(x) >= abs(y)
-        SECTOR_LEFT -> x <= -exitThreshold && abs(x) >= abs(y)
-        SECTOR_UP -> y <= -exitThreshold && abs(y) > abs(x)
-        SECTOR_DOWN -> y >= exitThreshold && abs(y) > abs(x)
-        else -> false
+        return nearestSector(angleOf(x, y))
     }
 
     private fun dpadToAxis(flags: Int): Pair<Float, Float> {
@@ -840,12 +685,6 @@ internal class StartGestureReducer(
             actions = actions,
             wheel = StartWheelSnapshot(
                 visible = wheelVisible,
-                level = level,
-                category = if (level == StartWheelSnapshot.LEVEL_ACTIONS) {
-                    StartWheelCategory.at(category)
-                } else {
-                    StartWheelCategory.at(selectedSlot)
-                },
                 slot = selectedSlot,
                 armed = armed,
                 highlighted = highlighted,
@@ -860,17 +699,12 @@ internal class StartGestureReducer(
     }
 
     private companion object {
-        const val SECTOR_UP = 0
-        const val SECTOR_RIGHT = 1
-        const val SECTOR_DOWN = 2
-        const val SECTOR_LEFT = 3
+        const val SECTOR_DEGREES = 45f
 
-        const val SECTOR_DEGREES = 90f
+        /** A turn this far past a blocked sector's centre counts as a deliberate move, not wobble. */
+        const val BLOCK_RELEASE_DEGREES = 30f
 
-        /** A sector spans 45 degrees either side of its center; 7 more degrees of margin absorb stick wobble. */
-        const val BLOCK_RELEASE_DEGREES = 52f
-
-        /** Smaller turns than this are jitter, not a deliberate move to another sector. */
+        /** Smaller turns than this are jitter, not a deliberate move. */
         const val BLOCK_JITTER_DEGREES = 12f
     }
 }
