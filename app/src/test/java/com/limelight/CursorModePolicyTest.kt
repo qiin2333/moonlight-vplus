@@ -8,21 +8,55 @@ class CursorModePolicyTest {
     @Test
     fun `system pointer keeps the default arrow until host cursor state is known`() {
         assertTrue(
-            CursorModePolicy.shouldShowPendingSystemCursor(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
                 cursorStateKnown = false,
+                hostCursorVisible = false,
+                hasCursorShape = false,
                 usesSystemMousePointer = true
             )
         )
         assertFalse(
-            CursorModePolicy.shouldShowPendingSystemCursor(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
                 cursorStateKnown = true,
+                hostCursorVisible = false,
+                hasCursorShape = false,
                 usesSystemMousePointer = true
             )
         )
         assertFalse(
-            CursorModePolicy.shouldShowPendingSystemCursor(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
                 cursorStateKnown = false,
+                hostCursorVisible = true,
+                hasCursorShape = true,
                 usesSystemMousePointer = false
+            )
+        )
+    }
+
+    @Test
+    fun `visible system cursor without a shape uses the default arrow`() {
+        assertTrue(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = true,
+                hasCursorShape = false,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = true,
+                hasCursorShape = true,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = false,
+                hasCursorShape = false,
+                usesSystemMousePointer = true
             )
         )
     }

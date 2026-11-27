@@ -291,7 +291,7 @@ class CursorServiceManager(
             hostCursorVisible = false
             cursorStateKnown = false
             currentShapeId = null
-            showPendingSystemCursor()
+            showPlaceholderSystemCursor()
             updateRelativeCursorRenderers()
             scheduleCursorUpdateTimeout()
             LimeLog.info("Cursor: local rendering mode enabled")
@@ -374,11 +374,14 @@ class CursorServiceManager(
             restoreDefaultCursor()
             return
         }
-        if (CursorModePolicy.shouldShowPendingSystemCursor(
+        val sourceShape = currentShapeId?.let(cursorCache::get)
+        if (CursorModePolicy.shouldShowPlaceholderSystemCursor(
                 cursorStateKnown = cursorStateKnown,
+                hostCursorVisible = hostCursorVisible,
+                hasCursorShape = sourceShape != null,
                 usesSystemMousePointer = prefConfig.usesSystemMousePointer
             )) {
-            showPendingSystemCursor()
+            showPlaceholderSystemCursor()
             return
         }
         if (!hostCursorVisible) {
@@ -386,14 +389,8 @@ class CursorServiceManager(
             return
         }
 
-        val shapeId = currentShapeId ?: run {
-            hideLocalPresentation()
-            return
-        }
-        val source = cursorCache.get(shapeId) ?: run {
-            hideLocalPresentation()
-            return
-        }
+        val shapeId = currentShapeId ?: return
+        val source = sourceShape ?: return
         val shape = scaleShapeForView(shapeId, source)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
@@ -454,7 +451,7 @@ class CursorServiceManager(
         cursorOverlay?.setHostCursorVisible(false)
     }
 
-    private fun showPendingSystemCursor() {
+    private fun showPlaceholderSystemCursor() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
             try {
                 streamView.pointerIcon = PointerIcon.getSystemIcon(
@@ -501,11 +498,14 @@ class CursorServiceManager(
 }
 
 internal object CursorModePolicy {
-    fun shouldShowPendingSystemCursor(
+    fun shouldShowPlaceholderSystemCursor(
         cursorStateKnown: Boolean,
+        hostCursorVisible: Boolean,
+        hasCursorShape: Boolean,
         usesSystemMousePointer: Boolean
     ): Boolean {
-        return usesSystemMousePointer && !cursorStateKnown
+        return usesSystemMousePointer &&
+                (!cursorStateKnown || (hostCursorVisible && !hasCursorShape))
     }
 
     fun shouldUseLocalMode(
