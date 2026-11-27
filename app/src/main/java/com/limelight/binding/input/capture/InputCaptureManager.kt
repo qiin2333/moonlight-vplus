@@ -1,6 +1,7 @@
 package com.limelight.binding.input.capture
 
 import android.app.Activity
+import android.view.View
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.R
@@ -10,7 +11,11 @@ import com.limelight.binding.input.evdev.EvdevListener
 import com.limelight.preferences.PreferenceConfiguration
 
 object InputCaptureManager {
-    fun getInputCaptureProvider(activity: Activity, rootListener: EvdevListener): InputCaptureProvider {
+    fun getInputCaptureProvider(
+        activity: Activity,
+        rootListener: EvdevListener,
+        targetView: View = activity.findViewById(R.id.surfaceView)
+    ): InputCaptureProvider {
         return when {
             EvdevCaptureProviderShim.isCaptureProviderSupported() -> {
                 LimeLog.info("Using Evdev mouse capture")
@@ -18,7 +23,7 @@ object InputCaptureManager {
             }
             AndroidNativePointerCaptureProvider.isCaptureProviderSupported() -> {
                 LimeLog.info("Using Android O+ native mouse capture")
-                AndroidNativePointerCaptureProvider(activity, activity.findViewById(R.id.surfaceView))
+                AndroidNativePointerCaptureProvider(activity, targetView)
             }
             // LineageOS implemented broken NVIDIA capture extensions, so avoid using them on root builds.
             !BuildConfig.ROOT_BUILD && ShieldCaptureProvider.isCaptureProviderSupported() -> {
@@ -29,7 +34,7 @@ object InputCaptureManager {
                 // Android N's native capture can't capture over system UI elements
                 // so we want to only use it if there's no other option.
                 LimeLog.info("Using Android N+ pointer hiding")
-                AndroidPointerIconCaptureProvider(activity, activity.findViewById(R.id.surfaceView))
+                AndroidPointerIconCaptureProvider(activity, targetView)
             }
             else -> {
                 LimeLog.info("Mouse capture not available")
@@ -42,7 +47,11 @@ object InputCaptureManager {
      * 获取支持外接显示器的输入捕获提供者
      * 外接显示器模式下，使用更兼容的捕获方式
      */
-    fun getInputCaptureProviderForExternalDisplay(activity: Activity, rootListener: EvdevListener): InputCaptureProvider {
+    fun getInputCaptureProviderForExternalDisplay(
+        activity: Activity,
+        rootListener: EvdevListener,
+        targetView: View = activity.findViewById(R.id.surfaceView)
+    ): InputCaptureProvider {
         // 外接显示器模式下，优先使用Evdev捕获，因为它对多显示器支持更好
         return if (EvdevCaptureProviderShim.isCaptureProviderSupported()) {
             LimeLog.info("Using Evdev mouse capture for external display")
@@ -50,7 +59,7 @@ object InputCaptureManager {
         } else {
             // 如果Evdev不可用，回退到标准方式
             LimeLog.info("Falling back to standard capture provider for external display")
-            getInputCaptureProvider(activity, rootListener)
+            getInputCaptureProvider(activity, rootListener, targetView)
         }
     }
 

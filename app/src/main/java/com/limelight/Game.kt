@@ -24,6 +24,7 @@ import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog
 import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
+import com.limelight.binding.input.capture.NullCaptureProvider
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touchpad.ScreenDs5Touchpad
 import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
@@ -476,13 +477,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         backgroundTouchView.setOnTouchListener(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val sourceFlags = InputDevice.SOURCE_CLASS_BUTTON or
-                    InputDevice.SOURCE_CLASS_JOYSTICK or
-                    InputDevice.SOURCE_CLASS_POINTER or
-                    InputDevice.SOURCE_CLASS_POSITION or
-                    InputDevice.SOURCE_CLASS_TRACKBALL
-            streamView.requestUnbufferedDispatch(sourceFlags)
-            backgroundTouchView.requestUnbufferedDispatch(sourceFlags)
+            requestUnbufferedDispatch(streamView)
+            requestUnbufferedDispatch(backgroundTouchView)
         }
 
         notificationOverlayManager = NotificationOverlayManager(
@@ -725,8 +721,27 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         view.setOnGenericMotionListener(this)
         view.setOnKeyListener(this)
         view.setInputCallbacks(this)
-        findViewById<View>(R.id.backgroundTouchView)?.setOnTouchListener(this)
+        view.rootView.findViewById<View>(R.id.backgroundTouchView)?.setOnTouchListener(this)
         view.holder.addCallback(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            view.setOnCapturedPointerListener { _, event ->
+                usbForwarding?.consumes(event.device) == true ||
+                    touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
+            }
+        }
+        requestUnbufferedDispatch(view)
+        view.isFocusableInTouchMode = true
+        view.requestFocus()
+    }
+
+    private fun requestUnbufferedDispatch(view: View) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val sourceFlags = InputDevice.SOURCE_CLASS_BUTTON or
+                InputDevice.SOURCE_CLASS_JOYSTICK or
+                InputDevice.SOURCE_CLASS_POINTER or
+                InputDevice.SOURCE_CLASS_POSITION or
+                InputDevice.SOURCE_CLASS_TRACKBALL
+        view.requestUnbufferedDispatch(sourceFlags)
     }
 
     /** Create the ExternalDisplayManager callback (shared by onCreate & prepareConnection). */
@@ -736,7 +751,9 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
-                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(this@Game, this@Game)
+                // The Presentation's StreamView is not attached yet. Wait for
+                // onStreamViewReady() before creating a provider that targets it.
+                inputCaptureProvider = NullCaptureProvider()
                 cursorServiceManager.setExternalDisplayActive(true)
             }
 
@@ -745,6 +762,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
+                inputCaptureProvider.destroy()
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
                 setInputGrabState(grabbedInput)
                 cursorServiceManager.setExternalDisplayActive(false)
             }
@@ -753,7 +772,24 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 externalStreamView = streamView
                 retargetTouchContexts(streamView)
                 setupStreamViewListeners(streamView)
+                inputCaptureProvider.disableCapture()
+                inputCaptureProvider.destroy()
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(
+                    this@Game,
+                    this@Game,
+                    streamView
+                )
+                setInputGrabState(grabbedInput)
+                if (streamView.hasWindowFocus()) {
+                    inputCaptureProvider.onWindowFocusChanged(true)
+                }
                 LimeLog.info("External display StreamView ready: ${streamView.width}x${streamView.height}")
+            }
+
+            override fun onExternalDisplayWindowFocusChanged(hasFocus: Boolean) {
+                if (externalStreamView != null) {
+                    inputCaptureProvider.onWindowFocusChanged(hasFocus)
+                }
             }
         }
     }
