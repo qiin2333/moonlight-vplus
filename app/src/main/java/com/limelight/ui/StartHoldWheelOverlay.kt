@@ -144,7 +144,7 @@ private const val SELECTION_ANIMATION_MS = 120
 private const val OPEN_ANIMATION_MS = 300
 
 /** Fitted labels never shrink below this share of their normal size. */
-private const val MIN_TEXT_SCALE = 0.62f
+private const val MIN_TEXT_SCALE = 0.55f
 
 /** The disc never takes more than this share of the screen height, so the game stays in view. */
 private const val WHEEL_MAX_HEIGHT_SHARE = 0.68f
