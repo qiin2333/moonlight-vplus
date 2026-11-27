@@ -8,5 +8,6 @@
             android:theme="@style/SettingsThemeCompat"
             android:resizeableActivity="true"
             android:label="@string/title_mic_test" />
+        <activity android:name="com.limelight.binding.audio.MatReplayActivity" android:exported="true" android:label="MAT HDMI diagnostic" />
     </application>
 </manifest>
