@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify draft APKs and recover already published APKs.
+"""Prepare empty release placeholders and recover already published APKs.
 
 Uses GH_TOKEN and GITHUB_REPOSITORY through the GitHub CLI. Publication never
 replaces an asset. Recovery emits JSON so a workflow can resume post-release
@@ -47,10 +47,31 @@ def releases(repo, tag):
         raise ValueError(f'multiple releases found for {tag}; resolve manually')
     # ncipollo/release-action v1.21.0 searches only the default first page
     # (30 releases) when locating an existing draft. Fail closed if it cannot
-    # see a draft that the paginated check did find.
-    if matches and matches[0]['draft'] and matches[0] not in pages[0][:30]:
+    # see a draft that the paginated check did find. Check empty published
+    # placeholders too, before recovery turns them back into drafts.
+    if (matches and (matches[0]['draft'] or matches[0].get('assets') == [])
+            and matches[0] not in pages[0][:30]):
         raise ValueError('existing draft is outside the Action\'s first page; resolve it manually')
     return matches[0] if matches else None
+
+
+def update_empty_release(repo, tag, release, **changes):
+    if release.get('assets') != [] or not isinstance(release.get('id'), int):
+        raise ValueError('only a release with no attachments can be prepared')
+    fields = []
+    for key, value in changes.items():
+        if isinstance(value, bool):
+            fields.extend(['--field', f'{key}={str(value).lower()}'])
+        else:
+            fields.extend(['--raw-field', f'{key}={value}'])
+    request_json('--method', 'PATCH', f'repos/{repo}/releases/{release["id"]}', *fields)
+    updated = releases(repo, tag)
+    expected = {key: release.get(key) for key in
+                ('id', 'tag_name', 'draft', 'prerelease', 'name', 'body', 'assets')}
+    expected.update(changes)
+    if updated is None or any(updated.get(key) != value for key, value in expected.items()):
+        raise ValueError('release changed while preparing an empty draft; review before retrying')
+    return updated
 
 
 def apk_name(tag):
@@ -94,6 +115,16 @@ def recover(repo, tag, dest):
     if rel is None or rel['draft']:
         print(json.dumps({'published': False}))
         return
+    if rel.get('assets') == []:
+        if rel.get('prerelease') is not ('-' in tag):
+            raise ValueError('empty release channel differs from tag')
+        if rel.get('body'):
+            raise ValueError('published release has no APK but contains release notes; review and resolve before retrying')
+        # Notes generation rejects already published tags. Restore the draft
+        # before building; preflight will fill its empty notes after the APK exists.
+        update_empty_release(repo, tag, rel, draft=True)
+        print(json.dumps({'published': False}))
+        return
     item = asset(rel, expected_name)
     validate_asset(item)
     dest = Path(dest).resolve()
@@ -133,7 +164,13 @@ def check_draft(repo, tag, apk, notes, prerelease, require_asset):
         raise ValueError('release is already published; refusing to modify it')
     if rel.get('prerelease') is not prerelease:
         raise ValueError('draft release channel differs')
-    if rel.get('body') != Path(notes).read_text(encoding='utf-8'):
+    expected_notes = Path(notes).read_text(encoding='utf-8')
+    if not require_asset and rel.get('assets') == [] and not rel.get('body'):
+        changes = {'body': expected_notes}
+        if not rel.get('name'):
+            changes['name'] = f'Moonlight V+ {tag[1:]}'
+        rel = update_empty_release(repo, tag, rel, **changes)
+    if rel.get('body') != expected_notes:
         raise ValueError('draft release notes differ; review and resolve before retrying')
     assets = rel.get('assets')
     if not isinstance(assets, list):
