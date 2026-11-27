@@ -6,6 +6,28 @@ import org.junit.Test
 
 class CursorModePolicyTest {
     @Test
+    fun `system pointer keeps the default arrow until host cursor state is known`() {
+        assertTrue(
+            CursorModePolicy.shouldShowPendingSystemCursor(
+                cursorStateKnown = false,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPendingSystemCursor(
+                cursorStateKnown = true,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPendingSystemCursor(
+                cursorStateKnown = false,
+                usesSystemMousePointer = false
+            )
+        )
+    }
+
+    @Test
     fun `external mouse uses video cursor even when touchpad local cursor is disabled`() {
         assertFalse(
             CursorModePolicy.shouldUseLocalMode(

@@ -73,6 +73,7 @@ class CursorServiceManager(
     private var destroyed = false
 
     private var hostCursorVisible = false
+    private var cursorStateKnown = false
     private var currentShapeId: Int? = null
     private var streamWidth = prefConfig.width.coerceAtLeast(1)
     private var streamHeight = prefConfig.height.coerceAtLeast(1)
@@ -171,6 +172,7 @@ class CursorServiceManager(
                     cancelCursorUpdateTimeout()
                     currentShapeId = shapeId
                     hostCursorVisible = visible
+                    cursorStateKnown = true
                     applyCurrentCursorOnUiThread()
                 }
             }
@@ -287,8 +289,9 @@ class CursorServiceManager(
         if (result == MoonBridge.LI_CURSOR_MODE_OK) {
             localModeActive = true
             hostCursorVisible = false
+            cursorStateKnown = false
             currentShapeId = null
-            hideLocalPresentation()
+            showPendingSystemCursor()
             updateRelativeCursorRenderers()
             scheduleCursorUpdateTimeout()
             LimeLog.info("Cursor: local rendering mode enabled")
@@ -371,6 +374,13 @@ class CursorServiceManager(
             restoreDefaultCursor()
             return
         }
+        if (CursorModePolicy.shouldShowPendingSystemCursor(
+                cursorStateKnown = cursorStateKnown,
+                usesSystemMousePointer = prefConfig.usesSystemMousePointer
+            )) {
+            showPendingSystemCursor()
+            return
+        }
         if (!hostCursorVisible) {
             hideLocalPresentation()
             return
@@ -444,6 +454,19 @@ class CursorServiceManager(
         cursorOverlay?.setHostCursorVisible(false)
     }
 
+    private fun showPendingSystemCursor() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
+            try {
+                streamView.pointerIcon = PointerIcon.getSystemIcon(
+                    streamView.context,
+                    PointerIcon.TYPE_ARROW
+                )
+            } catch (_: Exception) {
+            }
+        }
+        cursorOverlay?.setHostCursorVisible(false)
+    }
+
     private fun restoreDefaultCursor() {
         uiCallback.runOnUi {
             if (!uiCallback.isActivityAlive()) return@runOnUi
@@ -463,6 +486,7 @@ class CursorServiceManager(
 
     private fun clearCursorState() {
         hostCursorVisible = false
+        cursorStateKnown = false
         currentShapeId = null
         cursorCache.evictAll()
         renderedCursorCache.evictAll()
@@ -477,6 +501,13 @@ class CursorServiceManager(
 }
 
 internal object CursorModePolicy {
+    fun shouldShowPendingSystemCursor(
+        cursorStateKnown: Boolean,
+        usesSystemMousePointer: Boolean
+    ): Boolean {
+        return usesSystemMousePointer && !cursorStateKnown
+    }
+
     fun shouldUseLocalMode(
         nativePointerSupported: Boolean,
         nativePointerEnabled: Boolean,
