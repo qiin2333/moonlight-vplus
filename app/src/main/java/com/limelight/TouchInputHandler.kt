@@ -194,6 +194,7 @@ class TouchInputHandler(private val game: Game) {
             } else {
                 nonRootTouchpadHandler.cancelAll(game.conn)
             }
+            game.cursorServiceManager.hideTouchCursor()
             return true
         }
 
