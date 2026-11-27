@@ -11,6 +11,10 @@
     "v12.15.39-rc1": {
       "commit": "353e2cb3465fd09fd7581e62b4715592c9feca03",
       "versionCode": 121531004
+    },
+    "v12.16-rc1": {
+      "commit": "42a3ce4f8e943cbcf93532f6ab366206a76b251b",
+      "versionCode": 121531005
     }
   },
   "schema": 1
