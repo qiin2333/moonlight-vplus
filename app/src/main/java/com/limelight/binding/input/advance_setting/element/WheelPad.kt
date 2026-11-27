@@ -104,7 +104,6 @@ class WheelPad(attributesMap: Map<String, Any>,
 
     private var diameter: Int              // 轮盘自身直径
     private var triggerDiameter: Int = 0   // 屏幕中心弹出模式下触发按钮的独立直径（也作为 View 尺寸）
-    private var currentViewSize: Int = -1
     private var segmentCount: Int
     private var innerRadiusPercent: Int
     private var isPopupMode: Boolean
@@ -216,7 +215,6 @@ class WheelPad(attributesMap: Map<String, Any>,
         // 历史数据里 width 就是轮盘直径；新数据在中心弹出模式下 width 只是触发按钮直径，
         // 真正的轮盘直径由 extra_attributes.wheelDiameter 保存。
         val savedViewWidth = (attributesMap.get(COLUMN_INT_ELEMENT_WIDTH) as Long).toInt()
-        this.currentViewSize = savedViewWidth
         this.diameter = clampWheelDiameter(savedViewWidth)
 
         val textObj = attributesMap.get(COLUMN_STRING_ELEMENT_TEXT)
@@ -339,13 +337,7 @@ class WheelPad(attributesMap: Map<String, Any>,
     private fun syncViewSizeForCurrentMode() {
         val lp = layoutParams ?: return
         val targetSize = getExpectedViewSize()
-        if (targetSize != currentViewSize ||
-            getElementWidth() != targetSize ||
-            getElementHeight() != targetSize ||
-            lp.width != targetSize ||
-            lp.height != targetSize
-        ) {
-            currentViewSize = targetSize
+        if (lp.width != targetSize || lp.height != targetSize) {
             setElementWidth(targetSize)
             setElementHeight(targetSize)
         }
@@ -555,7 +547,6 @@ class WheelPad(attributesMap: Map<String, Any>,
             popupAnimProgress = targetPopup
         }
 
-        ensureSegPopCapacity(segmentCount)
         for (i in 0 until segmentCount) {
             val targetPop = if (i == activeIndex) 1f else 0f
             if (Math.abs(targetPop - segPopProgress[i]) > 0.01f) {
@@ -605,7 +596,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         canvas.scale(scale, scale, centerX, centerY)
 
         val sweepAngle = WheelPadGeometry.sweepAngleDegrees(segmentCount)
-        val halfGap = if (segmentCount >= 2) GLASS_SEGMENT_GAP_DEG / 2.0f else 0f
+        val halfGap = GLASS_SEGMENT_GAP_DEG / 2.0f
         val drawSweep = Math.max(1f, sweepAngle - halfGap * 2f)
         val glassStroke = Math.max(1.2f, thick * 0.35f)
 
@@ -773,10 +764,6 @@ class WheelPad(attributesMap: Map<String, Any>,
         sweepAngleDeg: Float
     ): Float {
         if (sweepAngleDeg <= 0f || outerR <= innerR) return 0f
-        if (sweepAngleDeg >= 180f) {
-            return (outerR - innerR).coerceAtLeast(0f) * 0.92f
-        }
-
         val halfH = (lineHeight * 0.45f).coerceAtLeast(0.5f)
         val a1 = Math.toRadians(startAngleDeg.toDouble())
         val a2 = Math.toRadians((startAngleDeg + sweepAngleDeg).toDouble())
@@ -838,16 +825,10 @@ class WheelPad(attributesMap: Map<String, Any>,
 
         if (absY < innerR) {
             val xInner = Math.sqrt((innerR * innerR - y * y).toDouble()).toFloat()
-            val leftMax = minOf(xMax, -xInner)
-            val rightMin = maxOf(xMin, xInner)
             if (tx >= 0f) {
-                if (rightMin < xMax) xMin = rightMin
-                else if (xMin < leftMax) xMax = leftMax
-                else return 0f
+                xMin = maxOf(xMin, xInner)
             } else {
-                if (xMin < leftMax) xMax = leftMax
-                else if (rightMin < xMax) xMin = rightMin
-                else return 0f
+                xMax = minOf(xMax, -xInner)
             }
         }
 
@@ -1718,13 +1699,7 @@ class WheelPad(attributesMap: Map<String, Any>,
     }
 
     /** element_value 只存纯键位，空位保留为空串，保证索引与分区一一对应。 */
-    private fun serializeSegmentValues(): String {
-        val list = ArrayList<String>(segmentCount)
-        for (i in 0 until segmentCount) {
-            list.add(if (i < segmentValues.size) segmentValues[i] else "")
-        }
-        return list.joinToString(",")
-    }
+    private fun serializeSegmentValues(): String = segmentValues.joinToString(",")
 
     protected fun setSegmentCount(count: Int) {
         var count = count
