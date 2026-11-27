@@ -2,7 +2,7 @@ package com.limelight.ui
 
 import android.view.KeyEvent
 import com.limelight.binding.input.GameInputDevice
-import com.limelight.binding.input.StartWheelAction
+import com.limelight.binding.input.StartWheelSnapshot
 
 interface GameGestures {
     fun toggleKeyboard()
@@ -18,8 +18,10 @@ interface GameGestures {
     ): Boolean
     fun showUsbControllerShortcutHint()
     fun hideUsbControllerShortcutHint()
-    fun showStartHoldWheel()
-    fun updateStartHoldWheelSelection(action: StartWheelAction)
+
+    /** Shows the Start hold wheel. [device] is the controller that opened it. */
+    fun showStartHoldWheel(device: GameInputDevice?)
+    fun updateStartHoldWheel(wheel: StartWheelSnapshot)
     fun hideStartHoldWheel()
 }
 

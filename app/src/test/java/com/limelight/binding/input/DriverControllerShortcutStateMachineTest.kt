@@ -1,282 +1,191 @@
 package com.limelight.binding.input
 
+import com.limelight.binding.input.DriverControllerShortcutStateMachine.Action
+import com.limelight.binding.input.DriverControllerShortcutStateMachine.Update
 import com.limelight.nvstream.input.ControllerPacket
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** The USB-takeover side of the wheel: snapshots instead of events, same state machine. */
 class DriverControllerShortcutStateMachineTest {
     @Test
-    fun shortPressDoesNotOpenWheelOrRunClientAction() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-
-        val down = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
-        val up = machine.onButtonSnapshot(0, 300, true)
-
-        assertTrue(down.actions.contains(DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS))
-        assertFalse(up.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertFalse(up.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
+    fun shortPressAndDisabledStartPassThrough() {
+        val short = machine()
+        assertTrue(short.buttons(ControllerPacket.PLAY_FLAG, 100).actions.contains(Action.SCHEDULE_LONG_PRESS))
+        val up = short.buttons(0, 300)
+        assertFalse(up.actions.contains(Action.COMMIT_ACTION))
         assertFalse(up.consumeAllInput)
         assertFalse(up.sendNeutralState)
+
+        val off = machine()
+        assertFalse(
+            off.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, false)
+                .actions.contains(Action.SCHEDULE_LONG_PRESS)
+        )
+        assertFalse(off.onLongPressTimeout(850, false).wheel.visible)
+        assertFalse(off.onButtonSnapshot(0, 851, false).consumeAllInput)
     }
 
     @Test
-    fun longPressShowsWheelWithoutCapturingOrNeutralizingHostInput() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
+    fun longPressShowsTheWheelWithoutCapturingOrNeutralizingHostInput() {
+        val wheel = machine().open()
 
-        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
-        val wheel = machine.onLongPressTimeout(850, true)
-
-        assertTrue(wheel.actions.contains(DriverControllerShortcutStateMachine.Action.SHOW_WHEEL))
-        assertTrue(wheel.wheelVisible)
+        assertTrue(wheel.actions.contains(Action.SHOW_WHEEL))
+        assertTrue(wheel.wheel.visible)
         assertFalse(wheel.consumeAllInput)
         assertFalse(wheel.sendNeutralState)
-        assertFalse(machine.isLocalInputCaptureActive())
     }
 
     @Test
-    fun selectionUsesTwoStableFramesAndMapsCardinalDirections() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
+    fun axesSelectAndReleasingThemRunsTheItem() {
+        val machine = machine().also { it.open() }
 
-        val firstRight = machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
-        val secondRight = machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
-        assertFalse(firstRight.actions.contains(DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION))
-        assertEquals(StartWheelAction.MOUSE, secondRight.selectedAction)
-
-        machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
-        val menu = machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
-        assertEquals(StartWheelAction.MENU, menu.selectedAction)
-    }
-
-    @Test
-    fun digitalDpadSelectsOnFirstSnapshot() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
-        machine.onButtonSnapshot(
-            ControllerPacket.PLAY_FLAG or ControllerPacket.LEFT_FLAG,
-            851,
-            true
-        )
-
-        val selected = machine.onSelectionAxes(0f, 0f, 0f, 0f)
-
-        assertEquals(StartWheelAction.PERFORMANCE, selected.selectedAction)
-        assertTrue(selected.actions.contains(DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION))
+        val first = machine.pull(rightX = 0.9f, frames = 1)
+        val selected = machine.pull(rightX = 0.9f, frames = 1)
+        assertEquals(StartWheelAction.MOUSE, selected.wheel.highlighted)
+        assertTrue(first.sendNeutralState)
+        assertFalse(selected.sendNeutralState)
         assertTrue(selected.consumeAllInput)
-        assertTrue(selected.sendNeutralState)
+
+        val release = machine.pull(frames = 1)
+        assertEquals(StartWheelAction.MOUSE, release.committedAction)
+        assertTrue(release.actions.contains(Action.COMMIT_ACTION))
+        assertTrue(release.actions.contains(Action.HIDE_WHEEL))
+        assertTrue(machine.isLocalInputCaptureActive())
+
+        machine.buttons(0, 900)
+        assertFalse(machine.isLocalInputCaptureActive())
     }
 
     @Test
-    fun tappedDpadDirectionCommitsOnDirectionReleaseOnlyOnce() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
+    fun aTappedDpadDirectionRunsOnRelease() {
+        val machine = machine().also { it.open() }
 
-        machine.onButtonSnapshot(
-            ControllerPacket.PLAY_FLAG or ControllerPacket.UP_FLAG,
-            851,
-            true
-        )
-        machine.onSelectionAxes(0f, 0f, 0f, 0f)
-        val dpadRelease = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
-        val commit = machine.onSelectionAxes(0f, 0f, 0f, 0f)
-        val startRelease = machine.onButtonSnapshot(0, 900, true)
+        machine.buttons(ControllerPacket.PLAY_FLAG or ControllerPacket.UP_FLAG, 851)
+        assertEquals(StartWheelAction.MENU, machine.pull(frames = 1).wheel.highlighted)
+        val released = machine.buttons(ControllerPacket.PLAY_FLAG, 852)
+        val commit = machine.pull(frames = 1)
 
-        assertTrue(dpadRelease.consumeAllInput)
-        assertTrue(commit.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertFalse(startRelease.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
+        assertEquals(StartWheelAction.MENU, commit.committedAction)
+        assertTrue(commit.actions.contains(Action.OPEN_GAME_MENU))
+        assertNull(released.committedAction)
     }
 
     @Test
-    fun nonMenuDpadActionRunsOnDirectionReleaseAndWaitsForStart() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
+    fun aDirectionHeldAtOpenIsNotSelectedUntilLetGo() {
+        val machine = machine()
+        machine.buttons(ControllerPacket.PLAY_FLAG, 100)
+        machine.pull(leftY = -0.9f, frames = 1)
 
-        machine.onButtonSnapshot(
-            ControllerPacket.PLAY_FLAG or ControllerPacket.RIGHT_FLAG,
-            851,
-            true
-        )
-        machine.onSelectionAxes(0f, 0f, 0f, 0f)
-        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 852, true)
-        val commit = machine.onSelectionAxes(0f, 0f, 0f, 0f)
-        val startRelease = machine.onButtonSnapshot(0, 900, true)
+        val shown = machine.onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
 
-        assertTrue(commit.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
-        assertTrue(commit.consumeAllInput)
-        assertFalse(startRelease.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
-        assertFalse(startRelease.consumeAllInput)
+        repeat(3) { assertNull(machine.pull(leftY = -0.9f, frames = 1).wheel.highlighted) }
+        assertNull(machine.pull(frames = 1).committedAction)
     }
 
     @Test
-    fun capturedWheelDoesNotPromoteExitCombo() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
-        machine.onButtonSnapshot(
-            ControllerPacket.PLAY_FLAG or ControllerPacket.RIGHT_FLAG,
-            851,
-            true
-        )
-        machine.onSelectionAxes(0f, 0f, 0f, 0f)
+    fun theBDismissesEvenInTheReportThatReleasesStart() {
+        val machine = machine().also {
+            it.open()
+            it.pull(rightX = 0.9f)
+        }
 
-        val combo = machine.onButtonSnapshot(
-            DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
-            852,
-            true
-        )
+        // Start and B change in one driver snapshot: the dismiss wins over the commit.
+        val cancel = machine.buttons(ControllerPacket.B_FLAG, 851)
 
-        assertTrue(combo.consumeAllInput)
-        assertFalse(combo.actions.contains(DriverControllerShortcutStateMachine.Action.EXIT_STREAM))
+        assertTrue(cancel.actions.contains(Action.HIDE_WHEEL))
+        assertNull(cancel.committedAction)
+        assertTrue(cancel.consumeAllInput)
+
+        val released = machine.buttons(0, 900)
+        assertNull(released.committedAction)
+        // The wheel had captured the stick too, so the capture ends once it is back in the middle.
+        assertTrue(machine.isLocalInputCaptureActive())
+        machine.pull(frames = 1)
+        assertFalse(machine.isLocalInputCaptureActive())
     }
 
     @Test
-    fun menuCommitIsEmittedOnlyAfterStartUp() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
-        val firstSelection = machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
-        machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
-
-        val commit = machine.onButtonSnapshot(0, 851, true)
-
-        assertTrue(firstSelection.consumeAllInput)
-        assertTrue(firstSelection.sendNeutralState)
-        assertTrue(commit.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertTrue(commit.consumeAllInput)
-        assertFalse(commit.sendNeutralState)
-        assertNotNull(commit.menuOpenRequestId)
-        assertFalse(machine.isMenuActive())
-
-        val opened = machine.onGameMenuOpenResult(requireNotNull(commit.menuOpenRequestId), true)
+    fun theMenuWaitsForItsOwnRequestAndAFailureWaitsForRelease() {
+        val opening = machine().also { it.open() }
+        val request = requestMenu(opening)
+        assertTrue(request.actions.contains(Action.OPEN_GAME_MENU))
+        assertNotNull(request.menuOpenRequestId)
+        val opened = opening.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
         assertTrue(opened.consumeAllInput)
-        assertFalse(opened.sendNeutralState)
-        assertTrue(machine.isMenuActive())
+        assertTrue(opening.isMenuActive())
+
+        // The player lets go of everything while the menu is open, then closes it.
+        opening.buttons(0, 900)
+        val dismissed = opening.onGameMenuUnavailable()
+        assertFalse(opening.isMenuActive())
+        assertFalse(dismissed.consumeAllInput)
+        assertFalse(opening.isLocalInputCaptureActive())
+
+        val failing = machine().also { it.open() }
+        val failedRequest = requestMenu(failing)
+        val failed = failing.onGameMenuOpenResult(requireNotNull(failedRequest.menuOpenRequestId), false)
+        assertTrue(failed.consumeAllInput)
+        assertFalse(failing.buttons(0, 900).consumeAllInput)
+        assertFalse(failing.pull(frames = 1).consumeAllInput)
     }
 
     @Test
-    fun nonMenuActionsCommitOnceOnStartUp() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
-        assertTrue(machine.needsAxisUpdates())
-        machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
-        machine.onSelectionAxes(0f, 0f, 0.9f, 0f)
-
-        val release = machine.onButtonSnapshot(0, 851, true)
-
-        assertEquals(
-            listOf(DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS,
-                DriverControllerShortcutStateMachine.Action.HIDE_WHEEL,
-                DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION),
-            release.actions
-        )
-        assertTrue(release.consumeAllInput)
-        assertTrue(machine.isLocalInputCaptureActive())
-        assertTrue(machine.needsAxisUpdates())
-
-        machine.onSelectionAxes(0f, 0f, 0f, 0f)
-        assertFalse(machine.isLocalInputCaptureActive())
-        assertFalse(machine.needsAxisUpdates())
-    }
-
-    @Test
-    fun longPressReleaseWithoutDirectionContinuesHostInput() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
-
-        val release = machine.onButtonSnapshot(0, 900, true)
-
-        assertTrue(release.actions.contains(DriverControllerShortcutStateMachine.Action.HIDE_WHEEL))
-        assertFalse(release.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertFalse(release.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
-        assertFalse(release.consumeAllInput)
-        assertFalse(machine.isLocalInputCaptureActive())
-    }
-
-    @Test
-    fun disabledStartActionPassesThroughWithoutWheelOrClientCommit() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-
-        val down = machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, false)
-        val timeout = machine.onLongPressTimeout(850, false)
-        val release = machine.onButtonSnapshot(0, 851, false)
-
-        assertFalse(down.actions.contains(DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS))
-        assertFalse(timeout.wheelVisible)
-        assertFalse(release.actions.contains(DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU))
-        assertFalse(release.actions.contains(DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION))
-        assertFalse(release.consumeAllInput)
-    }
-
-    @Test
-    fun activeMenuForwardsOnlySupportedNavigationAndWaitsForReleaseAfterFailure() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        val request = requestMenu(machine)
-        machine.onGameMenuOpenResult(requireNotNull(request.menuOpenRequestId), true)
-
-        val right = machine.onButtonSnapshot(ControllerPacket.RIGHT_FLAG, 900, true)
-        assertTrue(right.consumeAllInput)
-        assertEquals(
-            listOf(DriverControllerShortcutStateMachine.ButtonChange(ControllerPacket.RIGHT_FLAG, true)),
-            right.menuButtonChanges
-        )
-
-        machine.onGameMenuUnavailable()
-        assertTrue(machine.isLocalInputCaptureActive())
-        machine.onButtonSnapshot(0, 901, true)
-        assertTrue(machine.isLocalInputCaptureActive())
-        machine.onSelectionAxes(0f, 0f, 0f, 0f)
-        assertFalse(machine.isLocalInputCaptureActive())
-    }
-
-    @Test
-    fun exitComboStillHasPriorityAndExitsOnRelease() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        val pressed = machine.onButtonSnapshot(
-            DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
-            100,
-            true
-        )
-        val released = machine.onButtonSnapshot(0, 101, true)
-
+    fun theExitComboWinsAtIdleAndOverTheWheel() {
+        val idle = machine()
+        val pressed = idle.buttons(DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS, 100)
         assertTrue(pressed.consumeAllInput)
         assertTrue(pressed.sendNeutralState)
-        assertEquals(
-            listOf(DriverControllerShortcutStateMachine.Action.EXIT_STREAM),
-            released.actions
-        )
+        assertEquals(listOf(Action.EXIT_STREAM), idle.buttons(0, 101).actions)
+
+        // The wheel has already taken the stick, so it holds the capture the combo must win over.
+        val overWheel = machine().also {
+            it.open()
+            it.pull(rightX = 0.9f)
+        }
+        assertTrue(overWheel.isLocalInputCaptureActive())
+        val combo = overWheel.buttons(DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS, 851)
+        assertTrue(combo.actions.contains(Action.HIDE_WHEEL))
+        assertFalse(combo.actions.contains(Action.EXIT_STREAM))
+        assertEquals(listOf(Action.EXIT_STREAM), overWheel.buttons(0, 900).actions)
     }
 
-    @Test
-    fun exitComboHidesVisibleWheelBeforeWaitingForRelease() {
-        val machine = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
-        showWheel(machine)
+    private fun machine() = DriverControllerShortcutStateMachine(TEST_LONG_PRESS_MS)
 
-        val pressed = machine.onButtonSnapshot(
-            DriverControllerShortcutStateMachine.EXIT_COMBO_FLAGS,
-            900,
-            true
-        )
-
-        assertTrue(pressed.actions.contains(DriverControllerShortcutStateMachine.Action.CANCEL_LONG_PRESS))
-        assertTrue(pressed.actions.contains(DriverControllerShortcutStateMachine.Action.HIDE_WHEEL))
-        assertFalse(pressed.wheelVisible)
-        assertTrue(pressed.consumeAllInput)
+    private fun DriverControllerShortcutStateMachine.open(): Update {
+        buttons(ControllerPacket.PLAY_FLAG, 100)
+        return onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
     }
 
-    private fun showWheel(machine: DriverControllerShortcutStateMachine) {
-        machine.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, true)
-        machine.onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
+    /** Holds a direction for [frames] snapshots; analog selection needs two stable frames. */
+    private fun DriverControllerShortcutStateMachine.pull(
+        leftX: Float = 0f,
+        leftY: Float = 0f,
+        rightX: Float = 0f,
+        rightY: Float = 0f,
+        frames: Int = 2
+    ): Update {
+        var update = onSelectionAxes(leftX, leftY, rightX, rightY)
+        repeat(frames - 1) { update = onSelectionAxes(leftX, leftY, rightX, rightY) }
+        return update
     }
 
-    private fun requestMenu(machine: DriverControllerShortcutStateMachine): DriverControllerShortcutStateMachine.Update {
-        showWheel(machine)
-        machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
-        machine.onSelectionAxes(0f, 0f, 0f, -0.9f)
-        return machine.onButtonSnapshot(0, 100 + TEST_LONG_PRESS_MS + 1, true)
+    private fun DriverControllerShortcutStateMachine.buttons(flags: Int, at: Long): Update =
+        onButtonSnapshot(flags, at, true)
+
+    /** A tapped D-pad Up needs two snapshots: the press, then the report that commits it. */
+    private fun requestMenu(machine: DriverControllerShortcutStateMachine): Update {
+        machine.buttons(ControllerPacket.PLAY_FLAG or ControllerPacket.UP_FLAG, 851)
+        machine.pull(frames = 1)
+        machine.buttons(ControllerPacket.PLAY_FLAG, 852)
+        return machine.pull(frames = 1)
     }
 
-    companion object {
+    private companion object {
         private const val TEST_LONG_PRESS_MS = 750L
     }
 }

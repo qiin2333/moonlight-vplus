@@ -10,7 +10,8 @@ import com.limelight.nvstream.input.ControllerPacket
  * all menu navigation input away from the streamed host until every local button is released.
  */
 internal class DriverControllerShortcutStateMachine(
-    private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong()
+    private val longPressDurationMs: Long = ControllerHandler.START_DOWN_TIME_MOUSE_MODE_MS.toLong(),
+    isItemAvailable: (StartWheelAction) -> Boolean = { true }
 ) {
     enum class Action {
         SCHEDULE_LONG_PRESS,
@@ -18,9 +19,7 @@ internal class DriverControllerShortcutStateMachine(
         SHOW_WHEEL,
         HIDE_WHEEL,
         UPDATE_SELECTION,
-        TOGGLE_MOUSE_EMULATION,
-        TOGGLE_KEYBOARD,
-        TOGGLE_PERFORMANCE,
+        COMMIT_ACTION,
         OPEN_GAME_MENU,
         EXIT_STREAM
     }
@@ -33,11 +32,11 @@ internal class DriverControllerShortcutStateMachine(
         val consumeAllInput: Boolean = false,
         val sendNeutralState: Boolean = false,
         val menuOpenRequestId: Long? = null,
-        val selectedAction: StartWheelAction = StartWheelAction.CONTINUE,
-        val wheelVisible: Boolean = false
+        val committedAction: StartWheelAction? = null,
+        val wheel: StartWheelSnapshot = StartWheelSnapshot()
     )
 
-    private val reducer = StartGestureReducer(longPressDurationMs)
+    private val reducer = StartGestureReducer(longPressDurationMs, isItemAvailable = isItemAvailable)
     private var lastButtonFlags = 0
     private var exitPending = false
     private var hostNeutralStateSent = false
@@ -61,7 +60,13 @@ internal class DriverControllerShortcutStateMachine(
             return Update(consumeAllInput = true)
         }
 
-        if (!reducer.isLocalInputCaptureActive() && buttonFlags == EXIT_COMBO_FLAGS) {
+        // The quit combo still quits while the wheel is up or winding down, but not once a dialog has
+        // the input.
+        val wheelWindingDown = reducer.state() == StartGestureReducer.State.WAIT_FOR_RELEASE
+        val wheelVisible = reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE
+        if ((!reducer.isLocalInputCaptureActive() || wheelWindingDown || wheelVisible) &&
+            buttonFlags == EXIT_COMBO_FLAGS
+        ) {
             val resetUpdate = reducer.reset().toDriverUpdate()
             exitPending = true
             pendingMenuPressedFlags = 0
@@ -76,6 +81,7 @@ internal class DriverControllerShortcutStateMachine(
         val startPressed = buttonFlags and ControllerPacket.PLAY_FLAG != 0
         val startWasPressed = previousButtonFlags and ControllerPacket.PLAY_FLAG != 0
         if (reducerState == StartGestureReducer.State.WHEEL_VISIBLE) {
+            // B dismisses the wheel inside the reducer, even in a report that also releases Start.
             val reducerUpdate = if (!startPressed && startWasPressed) {
                 reducer.onStartUp(
                     eventTimeMs,
@@ -86,6 +92,8 @@ internal class DriverControllerShortcutStateMachine(
                     lastRightStickY
                 )
             } else {
+                // A wheel button is the first wheel input that arrives without an axis event, so
+                // the snapshot it came in still has to be recorded as what is held.
                 reducer.onInputSnapshot(
                     buttonFlags,
                     lastLeftStickX,
@@ -182,7 +190,12 @@ internal class DriverControllerShortcutStateMachine(
     fun onLongPressTimeout(eventTimeMs: Long, startActionEnabled: Boolean): Update {
         return reducer.onLongPressTimeout(
             eventTimeMs,
-            startActionEnabled
+            startActionEnabled,
+            lastLeftStickX,
+            lastLeftStickY,
+            lastRightStickX,
+            lastRightStickY,
+            lastButtonFlags
         ).toDriverUpdate()
     }
 
@@ -228,7 +241,8 @@ internal class DriverControllerShortcutStateMachine(
 
     @Synchronized
     fun needsAxisUpdates(): Boolean =
-        reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE || isLocalInputCaptureActive()
+        reducer.state() == StartGestureReducer.State.START_HELD ||
+            reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE || isLocalInputCaptureActive()
 
     @Synchronized
     fun isStartPressed(): Boolean = lastButtonFlags and ControllerPacket.PLAY_FLAG != 0
@@ -292,12 +306,8 @@ internal class DriverControllerShortcutStateMachine(
                 StartGestureReducer.EventAction.SHOW_WHEEL -> Action.SHOW_WHEEL
                 StartGestureReducer.EventAction.HIDE_WHEEL -> Action.HIDE_WHEEL
                 StartGestureReducer.EventAction.OPEN_GAME_MENU -> Action.OPEN_GAME_MENU
-                StartGestureReducer.EventAction.COMMIT_ACTION -> when (committedAction) {
-                    StartWheelAction.MOUSE -> Action.TOGGLE_MOUSE_EMULATION
-                    StartWheelAction.KEYBOARD -> Action.TOGGLE_KEYBOARD
-                    StartWheelAction.PERFORMANCE -> Action.TOGGLE_PERFORMANCE
-                    else -> null
-                }
+                StartGestureReducer.EventAction.COMMIT_ACTION ->
+                    if (committedAction != null) Action.COMMIT_ACTION else null
                 StartGestureReducer.EventAction.SELECTION_CHANGED -> Action.UPDATE_SELECTION
                 StartGestureReducer.EventAction.EXIT_STREAM -> Action.EXIT_STREAM
             }
@@ -308,8 +318,8 @@ internal class DriverControllerShortcutStateMachine(
             consumeAllInput = consumeAllInput,
             sendNeutralState = sendNeutralState,
             menuOpenRequestId = menuOpenRequestId,
-            selectedAction = selectedAction,
-            wheelVisible = wheelVisible
+            committedAction = committedAction,
+            wheel = wheel
         )
     }
 

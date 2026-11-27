@@ -926,6 +926,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
         } else {
             val startPressed = simulatorPressedFlags and ControllerPacket.PLAY_FLAG != 0
             val startWasPressed = previousFlags and ControllerPacket.PLAY_FLAG != 0
+            // B dismisses the wheel inside the shared state machine, in either branch below.
             val update = when {
                 startPressed && !startWasPressed ->
                     systemSimulatorGesture.onStartDown(eventTimeMs, startKeyActionEnabled)
@@ -970,7 +971,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
 
     private fun applySimulatorUpdate(update: DriverControllerShortcutStateMachine.Update) {
         var result = simulatorUiState.result
-        var wheelVisible = simulatorUiState.hintVisible || update.wheelVisible
+        var wheelVisible = simulatorUiState.hintVisible || update.wheel.visible
         for (action in update.actions) {
             when (action) {
                 DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
@@ -994,12 +995,8 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
                         if (result == ShortcutSimulatorResult.HINT) result = ShortcutSimulatorResult.IDLE
                     }
                 DriverControllerShortcutStateMachine.Action.UPDATE_SELECTION -> Unit
-                DriverControllerShortcutStateMachine.Action.TOGGLE_MOUSE_EMULATION ->
-                    result = ShortcutSimulatorResult.MOUSE_EMULATION
-                DriverControllerShortcutStateMachine.Action.TOGGLE_KEYBOARD ->
-                    result = ShortcutSimulatorResult.IDLE
-                DriverControllerShortcutStateMachine.Action.TOGGLE_PERFORMANCE ->
-                    result = ShortcutSimulatorResult.PERFORMANCE_OVERLAY
+                DriverControllerShortcutStateMachine.Action.COMMIT_ACTION ->
+                    result = simulatorResultFor(update.committedAction, result)
                 DriverControllerShortcutStateMachine.Action.OPEN_GAME_MENU -> {
                     result = ShortcutSimulatorResult.GAME_MENU
                     update.menuOpenRequestId?.let { requestId ->
@@ -1020,7 +1017,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
 
     private fun applySystemReducerUpdate(update: StartGestureReducer.Update) {
         var result = simulatorUiState.result
-        var wheelVisible = simulatorUiState.hintVisible || update.wheelVisible
+        var wheelVisible = simulatorUiState.hintVisible || update.wheel.visible
         for (action in update.actions) {
             when (action) {
                 StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS -> {
@@ -1042,12 +1039,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
                 }
                 StartGestureReducer.EventAction.SELECTION_CHANGED -> Unit
                 StartGestureReducer.EventAction.COMMIT_ACTION -> {
-                    result = when (update.committedAction) {
-                        StartWheelAction.MOUSE -> ShortcutSimulatorResult.MOUSE_EMULATION
-                        StartWheelAction.PERFORMANCE -> ShortcutSimulatorResult.PERFORMANCE_OVERLAY
-                        StartWheelAction.MENU, StartWheelAction.KEYBOARD -> result
-                        StartWheelAction.CONTINUE, null -> ShortcutSimulatorResult.IDLE
-                    }
+                    result = simulatorResultFor(update.committedAction, result)
                 }
                 StartGestureReducer.EventAction.OPEN_GAME_MENU -> {
                     result = ShortcutSimulatorResult.GAME_MENU
@@ -1061,6 +1053,17 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
         }
         simulatorUiState = simulatorUiState.copy(result = result, hintVisible = wheelVisible)
         evaluateShortcutAttempt()
+    }
+
+    /** Collapses the wheel's items into the shortcut a test can recognize. */
+    private fun simulatorResultFor(
+        action: StartWheelAction?,
+        current: ShortcutSimulatorResult
+    ): ShortcutSimulatorResult = when (action) {
+        StartWheelAction.MOUSE -> ShortcutSimulatorResult.MOUSE_EMULATION
+        StartWheelAction.PERFORMANCE_TOGGLE -> ShortcutSimulatorResult.PERFORMANCE_OVERLAY
+        null -> ShortcutSimulatorResult.IDLE
+        else -> current
     }
 
     private fun evaluateShortcutAttempt() {
@@ -3442,39 +3445,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawControllerLabel
     drawContext.canvas.nativeCanvas.drawText(label, center.x, baseline, paint)
 }
 
-@Composable
-private fun ControllerKeyIndicator(label: String, pressed: Boolean) {
-    val accent = appAccentColor()
-    Surface(
-        color = accent.copy(alpha = if (pressed) 0.16f else 0.03f),
-        shape = CircleShape,
-        border = BorderStroke(
-            GameMenuDimens.surfaceStroke,
-            accent.copy(alpha = if (pressed) 0.55f else 0.12f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .background(
-                        if (pressed) accent else appAccentSoftColor(),
-                        CircleShape
-                    )
-            )
-            Text(
-                text = label,
-                color = if (pressed) accent else colorResource(R.color.game_menu_text_secondary),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
 
 @Composable
 private fun simulatorResultLabel(result: ShortcutSimulatorResult): String {
