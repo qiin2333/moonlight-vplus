@@ -71,6 +71,8 @@ class CursorServiceManager(
     private var localModeActive = false
     @Volatile
     private var destroyed = false
+    @Volatile
+    private var touchCursorVisible = false
 
     private var hostCursorVisible = false
     private var cursorStateKnown = false
@@ -107,6 +109,9 @@ class CursorServiceManager(
     }
 
     fun refreshCursorMode() {
+        if (!prefConfig.usesSystemMousePointer) {
+            touchCursorVisible = false
+        }
         reconcileCursorMode()
         updateRelativeCursorRenderers()
         if (localModeActive) {
@@ -211,6 +216,23 @@ class CursorServiceManager(
         postApplyCurrentCursor()
     }
 
+    /** Shows the host cursor for touch because Android only draws PointerIcon for real pointers. */
+    fun showTouchCursorAt(x: Float, y: Float) {
+        if (!localModeActive || !prefConfig.usesSystemMousePointer || cursorOverlay == null) return
+
+        touchCursorVisible = true
+        cursorOverlay?.show()
+        cursorOverlay?.updateCursorPosition(x, y)
+        postApplyCurrentCursor()
+    }
+
+    fun hideTouchCursor() {
+        if (!touchCursorVisible) return
+
+        touchCursorVisible = false
+        cursorOverlay?.hide()
+    }
+
     /** Kept for existing lifecycle call sites while the old socket service is removed. */
     fun stopService() {
         val wasLocal = localModeActive
@@ -220,6 +242,7 @@ class CursorServiceManager(
 
         connected = false
         localModeActive = false
+        touchCursorVisible = false
         sessionGeneration.incrementAndGet()
         cancelCursorUpdateTimeout()
         clearCursorState()
@@ -270,6 +293,7 @@ class CursorServiceManager(
                 MoonBridge.setCursorMode(MoonBridge.LI_CURSOR_MODE_VIDEO)
             }
             localModeActive = false
+            touchCursorVisible = false
             hostCursorVisible = false
             updateRelativeCursorRenderers()
             restoreDefaultCursor()
@@ -403,6 +427,8 @@ class CursorServiceManager(
             } catch (e: Exception) {
                 LimeLog.warning("Cursor: failed to apply native pointer: ${e.message}")
             }
+            cursorOverlay?.setCursorBitmap(shape.bitmap, shape.hotspotX, shape.hotspotY)
+            cursorOverlay?.setHostCursorVisible(touchCursorVisible)
         } else if (shouldRenderOverlay()) {
             cursorOverlay?.setCursorBitmap(shape.bitmap, shape.hotspotX, shape.hotspotY)
             cursorOverlay?.setHostCursorVisible(true)
@@ -461,7 +487,12 @@ class CursorServiceManager(
             } catch (_: Exception) {
             }
         }
-        cursorOverlay?.setHostCursorVisible(false)
+        if (touchCursorVisible) {
+            cursorOverlay?.resetToDefault()
+            cursorOverlay?.setHostCursorVisible(true)
+        } else {
+            cursorOverlay?.setHostCursorVisible(false)
+        }
     }
 
     private fun restoreDefaultCursor() {

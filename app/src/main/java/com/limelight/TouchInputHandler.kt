@@ -338,6 +338,7 @@ class TouchInputHandler(private val game: Game) {
 
                 navigationButtons.update(buttonState)
                 lastButtonState = buttonState
+                game.cursorServiceManager.hideTouchCursor()
                 return true
             }
         }
@@ -605,6 +606,9 @@ class TouchInputHandler(private val game: Game) {
                             twoFingerTapPending = false
                         }
                         context.touchDownEvent(coords[0].toInt(), coords[1].toInt(), event.eventTime, true)
+                        if (event.pointerCount == 1) {
+                            showTouchCursorForFinger(event, actionIndex, coords)
+                        }
                     }
                     MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_UP -> {
                         val coords = getNormalizedCoordinates(game.streamView, event.getX(actionIndex), event.getY(actionIndex))
@@ -660,6 +664,13 @@ class TouchInputHandler(private val game: Game) {
                             context.touchUpEvent(coords[0].toInt(), coords[1].toInt(), event.eventTime)
                         }
 
+                        if (event.pointerCount == 1 &&
+                            event.actionIndex == 0 &&
+                            event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+                        ) {
+                            showTouchCursorForFinger(event, 0, coords)
+                        }
+
                         for (tc in touchContextMap) tc?.setPointerCount(event.pointerCount - 1)
                         if (actionIndex == 0 && event.pointerCount > 1 && !context.isCancelled()) {
                             val secondCoords = getNormalizedCoordinates(game.streamView, event.getX(1), event.getY(1))
@@ -687,6 +698,9 @@ class TouchInputHandler(private val game: Game) {
                                 val cc = getNormalizedCoordinates(game.streamView, event.getX(tc.getActionIndex()), event.getY(tc.getActionIndex()))
                                 tc.touchMoveEvent(cc[0].toInt(), cc[1].toInt(), event.eventTime)
                             }
+                        }
+                        if (event.pointerCount == 1) {
+                            showTouchCursorForFinger(event, 0, getNormalizedCoordinates(game.streamView, event.getX(0), event.getY(0)))
                         }
                     }
                     MotionEvent.ACTION_CANCEL -> {
@@ -1568,6 +1582,16 @@ class TouchInputHandler(private val game: Game) {
 
     private fun getTouchContext(actionIndex: Int): TouchContext? =
         if (actionIndex < touchContextMap.size) touchContextMap[actionIndex] else null
+
+    private fun showTouchCursorForFinger(
+        event: MotionEvent,
+        actionIndex: Int,
+        coords: FloatArray
+    ) {
+        if (!game.cursorVisible) return
+        if (event.getToolType(actionIndex) != MotionEvent.TOOL_TYPE_FINGER) return
+        game.cursorServiceManager.showTouchCursorAt(coords[0], coords[1])
+    }
 
     private fun logIgnoredStylusBranchToolType(event: MotionEvent, pointerIndex: Int, phase: String) {
         LimeLog.warning(

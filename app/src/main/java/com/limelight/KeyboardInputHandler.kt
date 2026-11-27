@@ -187,7 +187,10 @@ class KeyboardInputHandler(private val game: Game) {
                         }
                         game.cursorVisible = !game.cursorVisible
                         if (game.cursorVisible) game.inputCaptureProvider.showCursor()
-                        else game.inputCaptureProvider.hideCursor()
+                        else {
+                            game.inputCaptureProvider.hideCursor()
+                            game.cursorServiceManager.hideTouchCursor()
+                        }
                     }
                     KeyEvent.KEYCODE_M -> game.toggleExternalMouseDesktopMode()
                 }
