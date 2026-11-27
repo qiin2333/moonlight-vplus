@@ -83,7 +83,6 @@ internal data class StartWheelFeatureState(
     val gyroEnabled: Boolean = false,
     val mouseEmulationActive: Boolean = false,
     val keyboardVisible: Boolean = false,
-    val micActive: Boolean = false,
     /** Items whose feature is not set up on this device are left out, as in the game menu. */
     val unavailable: Set<StartWheelAction> = emptySet()
 )
@@ -770,7 +769,6 @@ private fun startWheelItemVisuals(features: StartWheelFeatureState): Map<StartWh
 private fun itemState(action: StartWheelAction, features: StartWheelFeatureState): ItemState = when (action) {
     StartWheelAction.GYRO -> if (features.gyroEnabled) ItemState.ON else ItemState.OFF
     StartWheelAction.MOUSE -> if (features.mouseEmulationActive) ItemState.ON else ItemState.OFF
-    StartWheelAction.MIC -> if (features.micActive) ItemState.ON else ItemState.OFF
     StartWheelAction.KEYBOARD -> if (features.keyboardVisible) ItemState.ON else ItemState.OFF
     StartWheelAction.PERFORMANCE_TOGGLE -> if (features.perfOverlayVisible) ItemState.ON else ItemState.OFF
     else -> ItemState.NONE

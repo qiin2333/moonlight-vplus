@@ -18,11 +18,11 @@ class StartGestureReducerTest {
         Triple(0, 0f to hostStickYToWheelAxis(32766), StartWheelAction.MENU),
         Triple(1, 0.7f to -0.7f, StartWheelAction.GYRO),
         Triple(2, 0.9f to 0f, StartWheelAction.MOUSE),
-        Triple(3, 0.7f to 0.7f, StartWheelAction.MIC),
+        Triple(3, 0.7f to 0.7f, StartWheelAction.GAME_BAR),
         Triple(4, 0f to hostStickYToWheelAxis(-32766), StartWheelAction.KEYBOARD),
         Triple(5, -0.7f to 0.7f, StartWheelAction.DISCONNECT),
         Triple(6, -0.9f to 0f, StartWheelAction.PERFORMANCE_TOGGLE),
-        Triple(7, -0.7f to -0.7f, StartWheelAction.ESC)
+        Triple(7, -0.7f to -0.7f, StartWheelAction.WIN)
     )
 
     @Test
@@ -163,7 +163,7 @@ class StartGestureReducerTest {
 
     @Test
     fun aHighlightDoesNotLingerWhenAHeldStickTakesOver() {
-        val reducer = wheel(heldStickX = 0.9f, isItemAvailable = { it != StartWheelAction.MIC })
+        val reducer = wheel(heldStickX = 0.9f, isItemAvailable = { it != StartWheelAction.GAME_BAR })
         assertEquals(3, reducer.pull(0.9f, 0f, rightX = 0.9f, rightY = 0.9f).wheel.slot)
 
         // The stick that pointed at the empty sector is let go; the other is still held from before.
@@ -217,11 +217,11 @@ class StartGestureReducerTest {
 
     @Test
     fun anUnavailableItemIsAnEmptySector() {
-        val reducer = wheel(isItemAvailable = { it != StartWheelAction.MIC })
+        val reducer = wheel(isItemAvailable = { it != StartWheelAction.GYRO })
 
-        val empty = reducer.pull(0.7f, 0.7f)
+        val empty = reducer.pull(0.7f, -0.7f)
 
-        assertEquals(3, empty.wheel.slot)
+        assertEquals(1, empty.wheel.slot)
         assertTrue(empty.wheel.emptySlot)
         assertNull(empty.wheel.highlighted)
         assertNull(reducer.letGo().committedAction)

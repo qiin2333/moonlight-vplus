@@ -194,6 +194,10 @@ class StreamActionExecutor(
             }
             "send_win" -> sendKeys(shortArrayOf(KeyboardTranslator.VK_LWIN.toShortKey()))
             "send_esc" -> sendKeys(shortArrayOf(KeyboardTranslator.VK_ESCAPE.toShortKey()))
+            "open_game_bar" -> sendKeys(shortArrayOf(
+                KeyboardTranslator.VK_LWIN.toShortKey(),
+                KeyboardTranslator.VK_G.toShortKey()
+            ))
             "toggle_hdr" -> sendKeys(shortArrayOf(
                 KeyboardTranslator.VK_LWIN.toShortKey(),
                 KeyboardTranslator.VK_MENU.toShortKey(),
