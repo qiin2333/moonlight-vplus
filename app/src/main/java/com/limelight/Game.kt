@@ -2744,7 +2744,13 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         )
         runCatching { mgr.start() }
             .onFailure { LimeLog.warning("Clipboard sync start failed: ${it.message}") }
-            .onSuccess { clipboardSyncManager = mgr }
+            .onSuccess {
+                clipboardSyncManager = mgr
+                // A clip copied while the stream was paused is read on focus, but focus comes back
+                // before the connection does, when there is no manager yet. Send it now instead of
+                // waiting for the next focus change.
+                if (hasWindowFocus()) mgr.onFocusGained()
+            }
     }
 
     /** 启动智能码率（如设置已开启）。在连接建立后调用。*/
