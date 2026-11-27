@@ -300,6 +300,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     }
 
     private var externalStreamView: StreamView? = null
+    private var externalCaptureProviderReady = false
     lateinit var notificationOverlayManager: NotificationOverlayManager
     private var performanceOverlayManager: PerformanceOverlayManager? = null
     private var jitterMonitorManager: JitterMonitorManager? = null
@@ -748,17 +749,26 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun createExternalDisplayCallback(): ExternalDisplayManager.ExternalDisplayCallback {
         return object : ExternalDisplayManager.ExternalDisplayCallback {
             override fun onExternalDisplayConnected(display: Display) {
+                if (externalCaptureProviderReady && externalStreamView != null) {
+                    LimeLog.info("External display already active, preserving input capture target")
+                    cursorServiceManager.setExternalDisplayActive(true)
+                    setInputGrabState(grabbedInput)
+                    return
+                }
+
                 LimeLog.info("External display connected, reinitializing input capture provider")
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
                 // The Presentation's StreamView is not attached yet. Wait for
                 // onStreamViewReady() before creating a provider that targets it.
                 inputCaptureProvider = NullCaptureProvider()
+                externalCaptureProviderReady = false
                 cursorServiceManager.setExternalDisplayActive(true)
             }
 
             override fun onExternalDisplayDisconnected() {
                 externalStreamView = null
+                externalCaptureProviderReady = false
                 LimeLog.info("External display disconnected, cleared externalStreamView")
                 retargetTouchContexts(this@Game.streamView)
                 inputCaptureProvider.disableCapture()
@@ -779,6 +789,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                     this@Game,
                     streamView
                 )
+                externalCaptureProviderReady = true
                 setInputGrabState(grabbedInput)
                 if (streamView.hasWindowFocus()) {
                     inputCaptureProvider.onWindowFocusChanged(true)
@@ -947,6 +958,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
     private fun prepareExternalDisplay() {
         externalDisplayManager?.cleanup()
         externalStreamView = null
+        externalCaptureProviderReady = false
         val manager = ExternalDisplayManager(this, prefConfig, targetDisplayResolver)
         externalDisplayManager = manager
         // Input and Surface callbacks need the new connection and touch contexts first.
