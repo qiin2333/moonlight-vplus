@@ -1,25 +1,34 @@
 package com.limelight.preferences
 
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.util.Log
 import android.view.Gravity
+import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -110,6 +119,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
@@ -194,6 +205,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     @Volatile
     private var developerPendingDeviceCode: GitHubStarVerifier.DeviceCode? = null
     private var developerDeviceCodeDialog: AlertDialog? = null
+    private var crownCreatorDialog: Dialog? = null
+    private var crownCreatorPreviousOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private var crownCreatorFilePathCallback: ValueCallback<Array<Uri>>? = null
+    private val crownCreatorSaveInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
     private val composeUiState = mutableStateOf(CrownStoreUiState())
     private val profilePreviewStates = mutableStateOf<Map<String, ProfilePreviewUiState>>(emptyMap())
     private val storePreviewExecutor = Executors.newFixedThreadPool(3) { task ->
@@ -239,6 +254,10 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     }
 
     override fun onDestroy() {
+        crownCreatorDialog?.dismiss()
+        crownCreatorDialog = null
+        crownCreatorFilePathCallback?.onReceiveValue(null)
+        crownCreatorFilePathCallback = null
         storePreviewExecutor.shutdownNow()
         localPreviewExecutor.shutdownNow()
         super.onDestroy()
@@ -944,6 +963,8 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
             iconRes = R.drawable.phc_settings
         )
         Spacer(modifier = Modifier.height(10.dp))
+        CrownQuickCreatorCard()
+        Spacer(modifier = Modifier.height(10.dp))
         CrownLegacyToolsCard()
     }
 
@@ -1085,6 +1106,42 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
                         )
                         .padding(horizontal = 9.dp, vertical = 4.dp)
                 )
+            }
+        }
+    }
+
+    @Composable
+    private fun CrownQuickCreatorCard() {
+        CrownProfileCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.phc_crown),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.crown_quick_creator_title),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    CrownBodyText(stringResource(R.string.crown_quick_creator_summary), maxLines = 2)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                CrownActionButton(
+                    text = stringResource(R.string.crown_store_action_open),
+                    iconRes = R.drawable.ic_add,
+                    compact = true
+                ) {
+                    showCrownQuickCreator()
+                }
             }
         }
     }
@@ -2974,6 +3031,12 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_OPEN_CROWN_CREATOR_FILE) {
+            val callback = crownCreatorFilePathCallback
+            crownCreatorFilePathCallback = null
+            callback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+            return
+        }
         if (resultCode != RESULT_OK) return
 
         when (requestCode) {
@@ -3064,6 +3127,231 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         ConfigurationSyncScheduler.requestSyncSoon(this)
         if (selectedTab == CrownTab.MINE) {
             renderMineTab()
+        }
+    }
+
+    private fun showCrownQuickCreator() {
+        if (crownCreatorDialog?.isShowing == true) return
+
+        val creatorWebView = WebView(this)
+        with(creatorWebView.settings) {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
+            useWideViewPort = true
+            loadWithOverviewMode = true
+            builtInZoomControls = true
+            displayZoomControls = false
+        }
+        creatorWebView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                Log.i("CrownCreator", "Editor page finished: $url")
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: android.webkit.WebResourceRequest?,
+                error: android.webkit.WebResourceError?
+            ) {
+                Log.w(
+                    "CrownCreator",
+                    "Editor load error: ${error?.errorCode} ${error?.description} ${request?.url}"
+                )
+            }
+        }
+        creatorWebView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                crownCreatorFilePathCallback?.onReceiveValue(null)
+                crownCreatorFilePathCallback = filePathCallback
+                return try {
+                    val intent = fileChooserParams?.createIntent()
+                        ?: Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                        }
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(intent, REQUEST_CODE_OPEN_CROWN_CREATOR_FILE)
+                    true
+                } catch (e: Exception) {
+                    Log.w("CrownCreator", "Unable to open file chooser", e)
+                    crownCreatorFilePathCallback = null
+                    filePathCallback?.onReceiveValue(null)
+                    false
+                }
+            }
+        }
+        creatorWebView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun saveRawConfig(elementsJson: String, configName: String) {
+                if (!crownCreatorSaveInFlight.compareAndSet(false, true)) return
+                val sessionDialog = crownCreatorDialog
+                var importedConfigId = 0L
+                val errorCode = try {
+                    val version = 8
+                    val settingsJson = JSONObject().apply {
+                        put("mouse_wheel_speed", 20)
+                        put("touch_enable", "true")
+                        put("touch_mode", "true")
+                        put("enhanced_touch", "false")
+                        put("config_id", System.currentTimeMillis())
+                        put("config_name", configName.ifBlank { "Moonlight 王冠配置" })
+                    }.toString()
+                    val md5 = com.limelight.utils.MathUtils.computeMD5(
+                        "$version$settingsJson$elementsJson"
+                    )
+                    val payload = JSONObject().apply {
+                        put("version", version)
+                        put("settings", settingsJson)
+                        put("elements", elementsJson)
+                        put("md5", md5)
+                    }.toString()
+                    CrownProfileShareManager.validatePayload(payload)
+                    helper.importConfigWithId(payload) { importedConfigId = it }
+                } catch (e: Exception) {
+                    Log.w("CrownCreator", "Failed to build/import Crown profile", e)
+                    -1
+                }
+                val importedId = if (errorCode == 0 && importedConfigId != 0L) {
+                    importedConfigId.toString()
+                } else {
+                    null
+                }
+                mainHandler.post {
+                    if (isDestroyed) return@post
+                    if (errorCode == 0) {
+                        onLocalProfilesChanged()
+                        composeUiState.value = composeUiState.value.copy(recentlyImportedId = importedId)
+                        selectTab(CrownTab.MINE)
+                        Toast.makeText(
+                            this@CrownStoreActivity,
+                            R.string.toast_crown_quick_creator_save_success,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        if (sessionDialog?.isShowing == true) sessionDialog.dismiss()
+                    } else {
+                        crownCreatorSaveInFlight.set(false)
+                        Toast.makeText(
+                            this@CrownStoreActivity,
+                            R.string.toast_crown_quick_creator_save_failed,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+
+            @JavascriptInterface
+            fun saveConfig(payloadText: String) {
+                if (!crownCreatorSaveInFlight.compareAndSet(false, true)) return
+                val sessionDialog = crownCreatorDialog
+                var importedConfigId = 0L
+                val errorCode = try {
+                    CrownProfileShareManager.validatePayload(payloadText)
+                    helper.importConfigWithId(payloadText) { importedConfigId = it }
+                } catch (e: Exception) {
+                    Log.w("CrownCreator", "Failed to validate created Crown profile", e)
+                    -1
+                }
+                val importedId = if (errorCode == 0 && importedConfigId != 0L) {
+                    importedConfigId.toString()
+                } else {
+                    null
+                }
+                mainHandler.post {
+                    if (isDestroyed) return@post
+                    if (errorCode == 0) {
+                        onLocalProfilesChanged()
+                        composeUiState.value = composeUiState.value.copy(recentlyImportedId = importedId)
+                        selectTab(CrownTab.MINE)
+                        Toast.makeText(
+                            this@CrownStoreActivity,
+                            R.string.toast_crown_quick_creator_save_success,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        if (sessionDialog?.isShowing == true) sessionDialog.dismiss()
+                    } else {
+                        crownCreatorSaveInFlight.set(false)
+                        Toast.makeText(
+                            this@CrownStoreActivity,
+                            R.string.toast_crown_quick_creator_save_failed,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        }, "MoonlightCrown")
+
+        val rootLayout = FrameLayout(this)
+        rootLayout.addView(
+            creatorWebView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        val dialog = Dialog(this, R.style.AppDialogStyle)
+        dialog.setContentView(rootLayout)
+        crownCreatorDialog = dialog
+        crownCreatorSaveInFlight.set(false)
+        dialog.setOnDismissListener {
+            crownCreatorSaveInFlight.set(false)
+            crownCreatorFilePathCallback?.onReceiveValue(null)
+            crownCreatorFilePathCallback = null
+            creatorWebView.stopLoading()
+            creatorWebView.removeJavascriptInterface("MoonlightCrown")
+            (creatorWebView.parent as? ViewGroup)?.removeView(creatorWebView)
+            creatorWebView.destroy()
+            if (crownCreatorDialog === dialog) crownCreatorDialog = null
+            if (!isFinishing && !isDestroyed) {
+                requestedOrientation = crownCreatorPreviousOrientation
+            }
+        }
+        crownCreatorPreviousOrientation = requestedOrientation
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        dialog.show()
+        dialog.window?.let { window ->
+            window.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            window.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            )
+            window.setDimAmount(0f)
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                window.attributes = window.attributes.apply {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+            }
+            window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
+        creatorWebView.loadUrl("file:///android_asset/crown_creator/index.html")
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        crownCreatorDialog?.window?.let { window ->
+            window.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            WindowCompat.getInsetsController(window, window.decorView)
+                .hide(WindowInsetsCompat.Type.systemBars())
         }
     }
 
@@ -3338,6 +3626,7 @@ class CrownStoreActivity : ThemedAppCompatActivity() {
         private const val REQUEST_CODE_OPEN_LEGACY_MERGE = 503
         private const val REQUEST_CODE_CREATE_CROWN_SHARE = 504
         private const val REQUEST_CODE_OPEN_CROWN_SHARE = 505
+        private const val REQUEST_CODE_OPEN_CROWN_CREATOR_FILE = 506
         private const val CROWN_STORE_INDEX_URL =
             "https://raw.githubusercontent.com/qiin2333/crown-profiles/main/index/v1.json"
         private const val CROWN_STORE_MAX_INDEX_BYTES = 256 * 1024

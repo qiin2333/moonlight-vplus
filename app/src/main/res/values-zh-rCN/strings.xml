@@ -1882,6 +1882,10 @@
     <string name="crown_store_profile_count">%1$d 套</string>
     <string name="crown_store_profile_unit">套配置</string>
     <string name="crown_store_profile_active">当前使用</string>
+    <string name="crown_quick_creator_title">快速创作王冠布局</string>
+    <string name="crown_quick_creator_summary">在应用内编排按键，保存后即可在我的王冠中使用。</string>
+    <string name="toast_crown_quick_creator_save_success">已保存到我的王冠</string>
+    <string name="toast_crown_quick_creator_save_failed">保存失败，请检查布局后重试。</string>
     <string name="crown_store_legacy_tool_summary">从旧版 .mdat 文件恢复王冠配置。</string>
     <string name="crown_store_action_open">打开</string>
     <string name="crown_store_action_import_package">导入分享包</string>
