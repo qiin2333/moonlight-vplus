@@ -1118,13 +1118,13 @@ class ControllerHandler(
         }
     }
 
-    /** Runs an item committed from the Start wheel. Mouse mode belongs to the controller that drove it. */
+    /**
+     * Runs an item committed from the Start wheel. Mouse mode belongs to the controller that drove it;
+     * the activity hears about every item all the same, to count it.
+     */
     private fun runStartWheelAction(context: GenericControllerContext, action: StartWheelAction) {
-        if (action == StartWheelAction.MOUSE) {
-            context.toggleMouseEmulation()
-        } else {
-            onStartWheelAction(action)
-        }
+        if (action == StartWheelAction.MOUSE) context.toggleMouseEmulation()
+        onStartWheelAction(action)
     }
 
     /**
@@ -1157,8 +1157,8 @@ class ControllerHandler(
     )
 
     /**
-     * LB and RB steer the Start wheel, so the quit combo is often completed only after the wheel has
-     * taken the input. Keep honouring it while the wheel's capture is winding down.
+     * The quit combo is often completed only after the wheel has taken the input, so it is honoured
+     * again while the wheel's capture is winding down.
      */
     private fun noteSystemQuitComboWhileWheelCaptured(context: InputDeviceContext) {
         if (context.startGesture.state() != StartGestureReducer.State.WAIT_FOR_RELEASE) return

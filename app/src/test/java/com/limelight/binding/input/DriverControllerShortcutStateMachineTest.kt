@@ -26,7 +26,7 @@ class DriverControllerShortcutStateMachineTest {
             off.onButtonSnapshot(ControllerPacket.PLAY_FLAG, 100, false)
                 .actions.contains(Action.SCHEDULE_LONG_PRESS)
         )
-        assertFalse(off.onLongPressTimeout(850, false).wheelVisible)
+        assertFalse(off.onLongPressTimeout(850, false).wheel.visible)
         assertFalse(off.onButtonSnapshot(0, 851, false).consumeAllInput)
     }
 
@@ -35,7 +35,7 @@ class DriverControllerShortcutStateMachineTest {
         val wheel = machine().open()
 
         assertTrue(wheel.actions.contains(Action.SHOW_WHEEL))
-        assertTrue(wheel.wheelVisible)
+        assertTrue(wheel.wheel.visible)
         assertFalse(wheel.consumeAllInput)
         assertFalse(wheel.sendNeutralState)
     }
@@ -83,11 +83,8 @@ class DriverControllerShortcutStateMachineTest {
 
         val shown = machine.onLongPressTimeout(100 + TEST_LONG_PRESS_MS, true)
 
-        assertFalse(shown.wheel.armed)
         repeat(3) { assertNull(machine.pull(leftY = -0.9f, frames = 1).wheel.highlighted) }
-        val letGo = machine.pull(frames = 1)
-        assertTrue(letGo.wheel.armed)
-        assertNull(letGo.committedAction)
+        assertNull(machine.pull(frames = 1).committedAction)
     }
 
     @Test

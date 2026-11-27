@@ -88,26 +88,24 @@ internal data class StartWheelFeatureState(
     val unavailable: Set<StartWheelAction> = emptySet()
 )
 
-/** Everything the Start hold wheel overlay draws: the wheel itself, or the disconnect it can call off. */
+/** Everything the Start hold wheel overlay draws: the wheel itself, or a disconnect waiting to run. */
 @Immutable
 internal data class StartWheelUiState(
     val wheel: StartWheelSnapshot = StartWheelSnapshot(),
     val features: StartWheelFeatureState = StartWheelFeatureState(),
-    /** True while a chosen disconnect waits out its cancel window. */
-    val undoVisible: Boolean = false
+    /** True while a chosen disconnect waits out the window in which B can still call it off. */
+    val disconnectCountdown: Boolean = false
 ) {
     val visible: Boolean get() = wheel.visible
 }
 
 /** How long a chosen disconnect waits before it runs, leaving time to call it off with B. */
-internal const val START_WHEEL_UNDO_MS = 2000L
+internal const val START_WHEEL_DISCONNECT_COUNTDOWN_MS = 2000L
 
 @Immutable
 private data class WheelItemVisual(
     val title: String,
     @param:DrawableRes val icon: Int,
-    /** Drawn as a warning until it is the item selected. */
-    val danger: Boolean = false,
     /** What the item says about the feature it switches; shown as a small dot by its icon. */
     val state: ItemState = ItemState.NONE
 )
@@ -177,14 +175,14 @@ private class WheelTypography(compact: Boolean) {
  * its lines from the app's own moon-wheel icon: the rim is a ring with one opening and a needle that
  * turns towards whatever is highlighted, and the hub shows the icon itself while nothing would run.
  *
- * A disconnect runs through a short cancel window instead of a confirmation: the same overlay draws
- * a small prompt while B can still call it off.
+ * A disconnect does not ask first: it waits a moment while B can still call it off, and the same
+ * overlay draws a small prompt for that time.
  */
 @Composable
 internal fun StartHoldWheelOverlay(state: StartWheelUiState, modifier: Modifier = Modifier) {
     when {
         state.wheel.visible -> StartWheelDisc(state, modifier)
-        state.undoVisible -> StartWheelUndoPrompt(modifier)
+        state.disconnectCountdown -> StartWheelDisconnectPrompt(modifier)
     }
 }
 
@@ -291,13 +289,16 @@ private fun Wheel(
                 }
         ) {
             WheelSlices(geometry, wheel, accent, inkOnAccent)
-            for (sector in 0 until SECTOR_COUNT) {
-                val action = StartWheelLayout.action(sector) ?: continue
-                val visual = itemVisuals[action] ?: continue
+            for ((sector, item) in StartWheelLayout.items.withIndex()) {
+                val visual = itemVisuals[item.action] ?: continue
                 SectorLabel(
                     geometry = geometry,
                     sector = sector,
-                    ink = if (wheel.slot == sector) inkOnAccent else if (visual.danger) WheelDanger else WheelText,
+                    ink = when {
+                        wheel.slot == sector -> inkOnAccent
+                        item.danger -> WheelDanger
+                        else -> WheelText
+                    },
                     icon = visual.icon,
                     title = visual.title,
                     state = visual.state,
@@ -320,14 +321,14 @@ private fun Wheel(
 }
 
 /**
- * The cancel window after choosing to disconnect. The game keeps the whole screen; only a small pill
- * appears over the bottom edge, counting down the time B still has to call the disconnect off.
+ * The window after choosing to disconnect. The game keeps the whole screen; only a small pill appears
+ * over the bottom edge, counting down the time B still has to call the disconnect off.
  */
 @Composable
-private fun StartWheelUndoPrompt(modifier: Modifier = Modifier) {
+private fun StartWheelDisconnectPrompt(modifier: Modifier = Modifier) {
     val remaining = remember { Animatable(1f) }
     LaunchedEffect(Unit) {
-        remaining.animateTo(0f, tween(START_WHEEL_UNDO_MS.toInt(), easing = LinearEasing))
+        remaining.animateTo(0f, tween(START_WHEEL_DISCONNECT_COUNTDOWN_MS.toInt(), easing = LinearEasing))
     }
     BoxWithConstraints(modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         val compact = minOf(maxHeight * 0.84f, maxWidth * 0.86f, WheelMaxSize) < WheelCompactBelow
@@ -343,7 +344,7 @@ private fun StartWheelUndoPrompt(modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = stringResource(R.string.start_wheel_undo_disconnecting),
+                text = stringResource(R.string.start_wheel_disconnecting),
                 color = WheelText,
                 fontSize = typography.itemTitle,
                 lineHeight = typography.itemTitleLine,
@@ -751,42 +752,30 @@ private fun KeyHint(
 
 /** Names and icons of every wheel item, following the live state of the feature each one switches. */
 @Composable
-private fun startWheelItemVisuals(
-    features: StartWheelFeatureState
-): Map<StartWheelAction, WheelItemVisual> {
+private fun startWheelItemVisuals(features: StartWheelFeatureState): Map<StartWheelAction, WheelItemVisual> {
     val items = LinkedHashMap<StartWheelAction, WheelItemVisual>()
     for (item in StartWheelLayout.items) {
         if (item.action in features.unavailable) continue
-        items[item.action] = if (item.action == StartWheelAction.PERFORMANCE_TOGGLE) {
-            // The one item whose label and icon say what using it will do, not what it is.
-            val hidden = !features.perfOverlayVisible
-            WheelItemVisual(
-                title = stringResource(
-                    if (hidden) R.string.start_wheel_item_perf_show else R.string.start_wheel_item_perf_hide
-                ),
-                icon = item.iconRes,
-                state = if (hidden) ItemState.OFF else ItemState.ON
-            )
-        } else {
-            WheelItemVisual(
-                title = stringResource(item.titleRes),
-                icon = item.iconRes,
-                danger = item.danger,
-                state = itemState(item.action, features)
-            )
-        }
+        // The stats item is the one whose name says what using it will do, not what it is.
+        val statsHidden = item.action == StartWheelAction.PERFORMANCE_TOGGLE && !features.perfOverlayVisible
+        items[item.action] = WheelItemVisual(
+            title = stringResource(if (statsHidden) R.string.start_wheel_item_perf_show else item.titleRes),
+            icon = item.iconRes,
+            state = itemState(item.action, features)
+        )
     }
     return items
 }
 
-private fun itemState(action: StartWheelAction, features: StartWheelFeatureState): ItemState =
-    when (action) {
-        StartWheelAction.GYRO -> if (features.gyroEnabled) ItemState.ON else ItemState.OFF
-        StartWheelAction.MOUSE -> if (features.mouseEmulationActive) ItemState.ON else ItemState.OFF
-        StartWheelAction.MIC -> if (features.micActive) ItemState.ON else ItemState.OFF
-        StartWheelAction.KEYBOARD -> if (features.keyboardVisible) ItemState.ON else ItemState.OFF
-        else -> ItemState.NONE
-    }
+private fun itemState(action: StartWheelAction, features: StartWheelFeatureState): ItemState = when (action) {
+    StartWheelAction.GYRO -> if (features.gyroEnabled) ItemState.ON else ItemState.OFF
+    StartWheelAction.MOUSE -> if (features.mouseEmulationActive) ItemState.ON else ItemState.OFF
+    StartWheelAction.MIC -> if (features.micActive) ItemState.ON else ItemState.OFF
+    StartWheelAction.KEYBOARD -> if (features.keyboardVisible) ItemState.ON else ItemState.OFF
+    StartWheelAction.PERFORMANCE_TOGGLE -> if (features.perfOverlayVisible) ItemState.ON else ItemState.OFF
+    else -> ItemState.NONE
+}
+
 
 /**
  * Largest size at which [text] stays on one line within [maxWidth]. A label that would otherwise run

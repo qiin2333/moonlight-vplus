@@ -30,7 +30,7 @@ class StartGestureReducerTest {
         val reducer = StartGestureReducer(750)
         reducer.onStartDown(100, false)
 
-        assertFalse(reducer.onLongPressTimeout(900, false).wheelVisible)
+        assertFalse(reducer.onLongPressTimeout(900, false).wheel.visible)
         assertFalse(reducer.onStartUp(901).actions.contains(StartGestureReducer.EventAction.COMMIT_ACTION))
         assertEquals(StartGestureReducer.State.IDLE, reducer.state())
     }
@@ -40,7 +40,7 @@ class StartGestureReducerTest {
         val shown = StartGestureReducer(750).also { it.onStartDown(100, true) }
             .onLongPressTimeout(850, true)
 
-        assertTrue(shown.wheelVisible)
+        assertTrue(shown.wheel.visible)
         assertEquals(-1, shown.wheel.slot)
         assertFalse(shown.consumeAllInput)
         assertFalse(shown.sendNeutralState)
@@ -124,14 +124,12 @@ class StartGestureReducerTest {
         val held = reducer.pull(0.9f, 0f, frames = 3)
 
         assertEquals(-1, held.wheel.slot)
-        assertFalse(held.wheel.armed)
         assertNull(held.wheel.highlighted)
         // The direction is the player moving, so the game keeps it until the wheel uses it.
         assertFalse(held.consumeAllInput)
         assertFalse(held.sendNeutralState)
 
         val letGo = reducer.letGo()
-        assertTrue(letGo.wheel.armed)
         assertNull(letGo.committedAction)
         reducer.pull(0.9f, 0f)
         assertEquals(StartWheelAction.MOUSE, reducer.letGo().committedAction)
@@ -141,8 +139,39 @@ class StartGestureReducerTest {
     fun aBlockedDirectionSelectsOnceItClearlyTurns() {
         val turned = wheel(heldStickX = 0.9f).pull(0.7f, -0.7f)
 
-        assertTrue(turned.wheel.armed)
         assertEquals(StartWheelAction.GYRO, turned.wheel.highlighted)
+    }
+
+    @Test
+    fun aHeldStickStaysQuietWhenTheOtherOneIsLetGo() {
+        // Walking with the left stick and steering the camera with the right as the wheel appears.
+        val reducer = wheel(heldLeftY = -0.9f, heldRightX = 0.9f)
+        assertNull(reducer.pull(0f, -0.9f, rightX = 0.9f).wheel.highlighted)
+
+        // The camera stick relaxes; the walking stick has not moved, so it still does not choose.
+        val relaxed = reducer.pull(0f, -0.9f, rightX = 0.2f)
+
+        assertEquals(-1, relaxed.wheel.slot)
+        assertFalse(relaxed.consumeAllInput)
+        assertNull(reducer.onStartUp(900, leftStickY = -0.9f).committedAction)
+
+        // Once it has rested, the same stick chooses as usual.
+        val rested = wheel(heldLeftY = -0.9f, heldRightX = 0.9f)
+        rested.pull(0f, 0f, rightX = 0.2f)
+        assertEquals(StartWheelAction.MENU, rested.pull(0f, -0.9f, rightX = 0.2f).wheel.highlighted)
+    }
+
+    @Test
+    fun aHighlightDoesNotLingerWhenAHeldStickTakesOver() {
+        val reducer = wheel(heldStickX = 0.9f, isItemAvailable = { it != StartWheelAction.MIC })
+        assertEquals(3, reducer.pull(0.9f, 0f, rightX = 0.9f, rightY = 0.9f).wheel.slot)
+
+        // The stick that pointed at the empty sector is let go; the other is still held from before.
+        val leftBehind = reducer.pull(0.9f, 0f, frames = 1)
+
+        assertEquals(-1, leftBehind.wheel.slot)
+        assertTrue(leftBehind.actions.contains(StartGestureReducer.EventAction.SELECTION_CHANGED))
+        assertNull(reducer.onStartUp(900, leftStickX = 0.9f).committedAction)
     }
 
     @Test
@@ -254,7 +283,7 @@ class StartGestureReducerTest {
         val shown = wheel().also { it.pull(0.9f, 0f) }
         val opened = shown.onGameMenuOpenedExternally()
         assertEquals(1, opened.actions.count { it == StartGestureReducer.EventAction.HIDE_WHEEL })
-        assertFalse(opened.wheelVisible)
+        assertFalse(opened.wheel.visible)
         assertEquals(StartGestureReducer.State.MENU_ACTIVE, shown.state())
 
         // Start is still held, so dismissal waits for its release.
@@ -272,13 +301,15 @@ class StartGestureReducerTest {
         assertTrue(selected.actions.contains(StartGestureReducer.EventAction.SELECTION_CHANGED))
     }
 
-    /** The wheel opened and waiting, with an optional direction already held as it appeared. */
+    /** The wheel opened and waiting, with optional directions already held as it appeared. */
     private fun wheel(
         heldStickX: Float = 0f,
-        isItemAvailable: (StartWheelAction) -> Boolean = { true }
+        isItemAvailable: (StartWheelAction) -> Boolean = { true },
+        heldLeftY: Float = 0f,
+        heldRightX: Float = 0f
     ): StartGestureReducer = StartGestureReducer(750, isItemAvailable = isItemAvailable).also {
         it.onStartDown(100, true)
-        it.onLongPressTimeout(850, true, leftStickX = heldStickX)
+        it.onLongPressTimeout(850, true, leftStickX = heldStickX, leftStickY = heldLeftY, rightStickX = heldRightX)
     }
 
     /** Holds a direction for [frames] reports; analog selection needs two stable frames. */

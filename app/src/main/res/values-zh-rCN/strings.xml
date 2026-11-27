@@ -338,7 +338,7 @@
     <string name="start_wheel_item_perf_show">显示图层</string>
     <string name="start_wheel_item_perf_hide">隐藏图层</string>
     <string name="start_wheel_item_disconnect">断开串流</string>
-    <string name="start_wheel_undo_disconnecting">正在断开串流</string>
+    <string name="start_wheel_disconnecting">正在断开串流</string>
     <string name="start_wheel_control_cancel">取消</string>
     <string name="start_wheel_item_gyro">体感助手</string>
     <string name="start_wheel_item_mic">麦克风</string>

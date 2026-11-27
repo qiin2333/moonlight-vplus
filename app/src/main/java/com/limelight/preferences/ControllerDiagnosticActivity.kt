@@ -971,7 +971,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
 
     private fun applySimulatorUpdate(update: DriverControllerShortcutStateMachine.Update) {
         var result = simulatorUiState.result
-        var wheelVisible = simulatorUiState.hintVisible || update.wheelVisible
+        var wheelVisible = simulatorUiState.hintVisible || update.wheel.visible
         for (action in update.actions) {
             when (action) {
                 DriverControllerShortcutStateMachine.Action.SCHEDULE_LONG_PRESS -> {
@@ -1017,7 +1017,7 @@ class ControllerDiagnosticActivity : ThemedComponentActivity(), UsbDriverListene
 
     private fun applySystemReducerUpdate(update: StartGestureReducer.Update) {
         var result = simulatorUiState.result
-        var wheelVisible = simulatorUiState.hintVisible || update.wheelVisible
+        var wheelVisible = simulatorUiState.hintVisible || update.wheel.visible
         for (action in update.actions) {
             when (action) {
                 StartGestureReducer.EventAction.SCHEDULE_LONG_PRESS -> {

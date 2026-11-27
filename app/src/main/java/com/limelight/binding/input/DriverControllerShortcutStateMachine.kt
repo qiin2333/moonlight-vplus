@@ -33,8 +33,7 @@ internal class DriverControllerShortcutStateMachine(
         val sendNeutralState: Boolean = false,
         val menuOpenRequestId: Long? = null,
         val committedAction: StartWheelAction? = null,
-        val wheel: StartWheelSnapshot = StartWheelSnapshot(),
-        val wheelVisible: Boolean = false
+        val wheel: StartWheelSnapshot = StartWheelSnapshot()
     )
 
     private val reducer = StartGestureReducer(longPressDurationMs, isItemAvailable = isItemAvailable)
@@ -61,10 +60,9 @@ internal class DriverControllerShortcutStateMachine(
             return Update(consumeAllInput = true)
         }
 
-        // LB and RB steer the Start wheel, so the quit combo is often completed only after the wheel
-        // has taken them. It is honoured while that capture winds down, but not once a dialog has it.
+        // The quit combo still quits while the wheel is up or winding down, but not once a dialog has
+        // the input.
         val wheelWindingDown = reducer.state() == StartGestureReducer.State.WAIT_FOR_RELEASE
-        // The wheel takes LB and RB, so the quit combo is often completed over it; it still quits.
         val wheelVisible = reducer.state() == StartGestureReducer.State.WHEEL_VISIBLE
         if ((!reducer.isLocalInputCaptureActive() || wheelWindingDown || wheelVisible) &&
             buttonFlags == EXIT_COMBO_FLAGS
@@ -321,8 +319,7 @@ internal class DriverControllerShortcutStateMachine(
             sendNeutralState = sendNeutralState,
             menuOpenRequestId = menuOpenRequestId,
             committedAction = committedAction,
-            wheel = wheel,
-            wheelVisible = wheelVisible
+            wheel = wheel
         )
     }
 

@@ -430,7 +430,7 @@
     <string name="start_wheel_item_perf_show">Show stats</string>
     <string name="start_wheel_item_perf_hide">Hide stats</string>
     <string name="start_wheel_item_disconnect">Disconnect</string>
-    <string name="start_wheel_undo_disconnecting">Disconnecting from the stream</string>
+    <string name="start_wheel_disconnecting">Disconnecting from the stream</string>
     <string name="start_wheel_control_cancel">Cancel</string>
     <string name="start_wheel_item_gyro">Gyro</string>
     <string name="start_wheel_item_mic">Microphone</string>

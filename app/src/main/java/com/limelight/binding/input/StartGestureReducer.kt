@@ -108,11 +108,6 @@ data class StartWheelSnapshot(
     val visible: Boolean = false,
     /** Highlighted sector (0 up, clockwise), or -1 when nothing is highlighted. */
     val slot: Int = -1,
-    /**
-     * False while a direction that was already held when the wheel appeared keeps pointing somewhere;
-     * that direction is the player moving, not choosing, until it is let go or clearly turns.
-     */
-    val armed: Boolean = true,
     /** Item that releasing would run; null when nothing, or a sector without an available item, is highlighted. */
     val highlighted: StartWheelAction? = null,
     /** True while the highlight sits on a sector with no item, or one whose feature is off. */
@@ -174,7 +169,6 @@ internal class StartGestureReducer(
     internal data class Update(
         val actions: List<EventAction> = emptyList(),
         val wheel: StartWheelSnapshot = StartWheelSnapshot(),
-        val wheelVisible: Boolean = false,
         val consumeAllInput: Boolean = false,
         val sendNeutralState: Boolean = false,
         val menuOpenRequestId: Long? = null,
@@ -184,9 +178,8 @@ internal class StartGestureReducer(
     private var state = State.IDLE
     private var startDownTimeMs = 0L
     private var selectedSlot = -1
-    private var armed = true
-    private var blockedDirection = -1
-    private var blockedAngle = 0f
+    /** Where each control pointed when the wheel appeared, or NaN once it is let go or clearly turns. */
+    private val heldDirections = FloatArray(InputSource.entries.size) { Float.NaN }
     private var inputSource: InputSource? = null
     private var directionCandidate = -1
     private var directionCandidateFrames = 0
@@ -243,11 +236,8 @@ internal class StartGestureReducer(
         inputSource = null
         state = State.WHEEL_VISIBLE
         updatePhysicalInput(lastButtonFlags, leftStickX, leftStickY, rightStickX, rightStickY)
-        blockPushedDirection(leftStickX, leftStickY, rightStickX, rightStickY, dpadFlags)
-        return snapshot(
-            actions = listOf(EventAction.SHOW_WHEEL),
-            wheelVisible = true
-        )
+        blockHeldDirections(leftStickX, leftStickY, rightStickX, rightStickY, dpadFlags)
+        return snapshot(actions = listOf(EventAction.SHOW_WHEEL))
     }
 
     /** Updates wheel selection from the active source, preferring explicit D-pad input. */
@@ -269,6 +259,7 @@ internal class StartGestureReducer(
             rightStickX,
             rightStickY
         )
+        forgetLetGoDirections(leftStickX, leftStickY, rightStickX, rightStickY, dpadAxis)
         if (previousSource != null && selectedSlot >= 0 && highlightedItem() != null &&
             !isSourceActive(previousSource, leftStickX, leftStickY, rightStickX, rightStickY, dpadAxis)
         ) {
@@ -292,24 +283,18 @@ internal class StartGestureReducer(
         }
         if (!axisActive(x, y, exitThreshold)) {
             // Let go: what was pointed at runs now, whichever control was released first. With nothing
-            // pointed at, letting go only clears (and a direction blocked at open is released here).
+            // pointed at, letting go only clears.
             if (selectedSlot >= 0 && highlightedItem() != null) {
                 forgetDirectionCandidate()
                 return commitSelectedAction()
             }
-            val hadSlot = selectedSlot >= 0
-            val wasBlocked = !armed
-            releaseBlock()
-            forgetDirectionCandidate()
-            selectedSlot = -1
-            return snapshot(
-                actions = if (hadSlot || wasBlocked) listOf(EventAction.SELECTION_CHANGED) else emptyList()
-            )
+            return clearHighlight()
         }
-        if (!armed && !releaseBlock(x, y)) {
-            // Held before the wheel appeared: the player is moving, not choosing. The direction keeps
+        val source = inputSource
+        if (source != null && isHeldDirection(source) && !releaseHeldDirection(source, x, y)) {
+            // Pushed before the wheel appeared: the player is moving, not choosing. The direction keeps
             // reaching the game and nothing is captured until it is let go or clearly turned.
-            return snapshot()
+            return clearHighlight()
         }
         if (inputSource != InputSource.DPAD && !axisActive(x, y, enterThreshold)) {
             // Inside the dead band the wheel does not act on the direction, so the game keeps it.
@@ -595,7 +580,7 @@ internal class StartGestureReducer(
     }
 
     private fun highlightedItem(): StartWheelAction? {
-        if (state != State.WHEEL_VISIBLE || !armed || selectedSlot < 0) return null
+        if (state != State.WHEEL_VISIBLE || selectedSlot < 0) return null
         return StartWheelLayout.action(selectedSlot)?.takeIf(isItemAvailable)
     }
 
@@ -608,30 +593,24 @@ internal class StartGestureReducer(
 
     private fun clearSelection() {
         selectedSlot = -1
-        releaseBlock()
+        heldDirections.fill(Float.NaN)
         forgetDirectionCandidate()
     }
 
-    /** Ends the block once [x]/[y] point away from where the direction was held; returns true once unblocked. */
-    private fun releaseBlock(x: Float, y: Float): Boolean {
-        if (!armed) {
-            val angle = angleOf(x, y)
-            val blockedSectorAngle = blockedDirection * SECTOR_DEGREES
-            if (nearestSector(angle) != blockedDirection &&
-                angleDistance(angle, blockedSectorAngle) >= BLOCK_RELEASE_DEGREES &&
-                angleDistance(angle, blockedAngle) >= BLOCK_JITTER_DEGREES
-            ) {
-                releaseBlock()
-            }
-        }
-        return armed
+    /** Nothing is pointed at any more: the highlight goes, and nothing runs. */
+    private fun clearHighlight(): Update {
+        val hadSlot = selectedSlot >= 0
+        forgetDirectionCandidate()
+        selectedSlot = -1
+        return snapshot(actions = if (hadSlot) listOf(EventAction.SELECTION_CHANGED) else emptyList())
     }
 
     /**
-     * A direction that is already held when the wheel appears is the player moving, not choosing.
-     * The sector it points at waits until the direction is let go or clearly turns.
+     * A control that is already pushed when the wheel appears is the player moving, not choosing.
+     * Where it points waits until it is let go or clearly turns, whichever other control is let go
+     * around it: walking with one stick and steering the camera with the other is how games are played.
      */
-    private fun blockPushedDirection(
+    private fun blockHeldDirections(
         leftStickX: Float,
         leftStickY: Float,
         rightStickX: Float,
@@ -639,21 +618,54 @@ internal class StartGestureReducer(
         dpadFlags: Int
     ) {
         val dpadAxis = dpadToAxis(dpadFlags)
-        val leftMagnitude = axisMagnitude(leftStickX, leftStickY)
-        val rightMagnitude = axisMagnitude(rightStickX, rightStickY)
-        val (x, y) = when {
-            dpadAxis.first != 0f || dpadAxis.second != 0f -> dpadAxis
-            leftMagnitude < exitThreshold && rightMagnitude < exitThreshold -> return
-            else -> if (rightMagnitude >= leftMagnitude) rightStickX to rightStickY else leftStickX to leftStickY
+        if (dpadAxis.first != 0f || dpadAxis.second != 0f) {
+            heldDirections[InputSource.DPAD.ordinal] = angleOf(dpadAxis.first, dpadAxis.second)
         }
-        blockedAngle = angleOf(x, y)
-        blockedDirection = nearestSector(blockedAngle)
-        armed = false
+        if (axisActive(leftStickX, leftStickY, enterThreshold)) {
+            heldDirections[InputSource.LEFT_STICK.ordinal] = angleOf(leftStickX, leftStickY)
+        }
+        if (axisActive(rightStickX, rightStickY, enterThreshold)) {
+            heldDirections[InputSource.RIGHT_STICK.ordinal] = angleOf(rightStickX, rightStickY)
+        }
     }
 
-    private fun releaseBlock() {
-        armed = true
-        blockedDirection = -1
+    /**
+     * A control is let go once it is back inside the activation threshold, the same line that made it
+     * count as pushed, so a later push is free to choose.
+     */
+    private fun forgetLetGoDirections(
+        leftStickX: Float,
+        leftStickY: Float,
+        rightStickX: Float,
+        rightStickY: Float,
+        dpadAxis: Pair<Float, Float>
+    ) {
+        if (!axisActive(leftStickX, leftStickY, enterThreshold)) {
+            heldDirections[InputSource.LEFT_STICK.ordinal] = Float.NaN
+        }
+        if (!axisActive(rightStickX, rightStickY, enterThreshold)) {
+            heldDirections[InputSource.RIGHT_STICK.ordinal] = Float.NaN
+        }
+        if (dpadAxis.first == 0f && dpadAxis.second == 0f) {
+            heldDirections[InputSource.DPAD.ordinal] = Float.NaN
+        }
+    }
+
+    private fun isHeldDirection(source: InputSource): Boolean = !heldDirections[source.ordinal].isNaN()
+
+    /** Ends the hold once [x]/[y] point clearly away from where the control was pushed; true once it has. */
+    private fun releaseHeldDirection(source: InputSource, x: Float, y: Float): Boolean {
+        val heldAngle = heldDirections[source.ordinal]
+        if (heldAngle.isNaN()) return true
+        val angle = angleOf(x, y)
+        val heldSector = nearestSector(heldAngle)
+        if (nearestSector(angle) != heldSector &&
+            angleDistance(angle, heldSector * SECTOR_DEGREES) >= BLOCK_RELEASE_DEGREES &&
+            angleDistance(angle, heldAngle) >= BLOCK_JITTER_DEGREES
+        ) {
+            heldDirections[source.ordinal] = Float.NaN
+        }
+        return heldDirections[source.ordinal].isNaN()
     }
 
     private fun forgetDirectionCandidate() {
@@ -796,11 +808,9 @@ internal class StartGestureReducer(
             wheel = StartWheelSnapshot(
                 visible = wheelVisible,
                 slot = selectedSlot,
-                armed = armed,
                 highlighted = highlighted,
-                emptySlot = wheelVisible && armed && selectedSlot >= 0 && highlighted == null
+                emptySlot = wheelVisible && selectedSlot >= 0 && highlighted == null
             ),
-            wheelVisible = wheelVisible,
             consumeAllInput = consumeAllInput,
             sendNeutralState = sendNeutralState,
             menuOpenRequestId = menuOpenRequestId,

@@ -375,7 +375,7 @@
     <string name="start_wheel_item_perf_show">Показать</string>
     <string name="start_wheel_item_perf_hide">Скрыть</string>
     <string name="start_wheel_item_disconnect">Отключить</string>
-    <string name="start_wheel_undo_disconnecting">Отключение</string>
+    <string name="start_wheel_disconnecting">Отключение</string>
     <string name="start_wheel_control_cancel">Отмена</string>
     <string name="start_wheel_item_gyro">Гироскоп</string>
     <string name="start_wheel_item_mic">Микрофон</string>

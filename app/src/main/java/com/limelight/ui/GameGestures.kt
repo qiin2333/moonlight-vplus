@@ -19,7 +19,7 @@ interface GameGestures {
     fun showUsbControllerShortcutHint()
     fun hideUsbControllerShortcutHint()
 
-    /** Shows the Start hold wheel on its category ring. [device] is the controller that opened it. */
+    /** Shows the Start hold wheel. [device] is the controller that opened it. */
     fun showStartHoldWheel(device: GameInputDevice?)
     fun updateStartHoldWheel(wheel: StartWheelSnapshot)
     fun hideStartHoldWheel()
