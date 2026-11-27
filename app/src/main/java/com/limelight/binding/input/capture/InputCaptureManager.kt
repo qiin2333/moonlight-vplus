@@ -50,7 +50,8 @@ object InputCaptureManager {
     fun getInputCaptureProviderForExternalDisplay(
         activity: Activity,
         rootListener: EvdevListener,
-        targetView: View = activity.findViewById(R.id.surfaceView)
+        captureHostView: View,
+        externalStreamView: View? = null
     ): InputCaptureProvider {
         // 外接显示器模式下，优先使用Evdev捕获，因为它对多显示器支持更好
         return if (EvdevCaptureProviderShim.isCaptureProviderSupported()) {
@@ -59,7 +60,11 @@ object InputCaptureManager {
         } else {
             // 如果Evdev不可用，回退到标准方式
             LimeLog.info("Falling back to standard capture provider for external display")
-            getInputCaptureProvider(activity, rootListener, targetView)
+            if (externalStreamView != null) {
+                AndroidExternalPointerCaptureProvider(activity, captureHostView, externalStreamView)
+            } else {
+                AndroidNativePointerCaptureProvider(activity, captureHostView)
+            }
         }
     }
 

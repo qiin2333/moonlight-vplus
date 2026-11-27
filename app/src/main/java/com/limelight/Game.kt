@@ -24,7 +24,6 @@ import com.limelight.binding.input.advance_setting.CrownConfigPickerDialog
 import com.limelight.binding.input.advance_setting.KeyboardUIController
 import com.limelight.binding.input.capture.InputCaptureManager
 import com.limelight.binding.input.capture.InputCaptureProvider
-import com.limelight.binding.input.capture.NullCaptureProvider
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touchpad.ScreenDs5Touchpad
 import com.limelight.binding.input.touchpad.TouchpadPointerSpeed
@@ -511,6 +510,10 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 usbForwarding?.consumes(event.device) == true ||
                     touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
             }
+            findViewById<View>(R.id.backgroundTouchView).setOnCapturedPointerListener { _, event ->
+                usbForwarding?.consumes(event.device) == true ||
+                    touchInputHandler.handleMotionEvent(getMotionEventTargetView(), event)
+            }
         }
 
         val connMgr = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -745,6 +748,24 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
         view.requestUnbufferedDispatch(sourceFlags)
     }
 
+    private fun prepareExternalCaptureHost() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val captureHost = findViewById<View>(R.id.backgroundTouchView)
+        captureHost.isFocusable = true
+        captureHost.isFocusableInTouchMode = true
+        captureHost.defaultFocusHighlightEnabled = false
+        captureHost.requestFocus()
+    }
+
+    private fun releaseExternalCaptureHost() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val captureHost = findViewById<View>(R.id.backgroundTouchView)
+        captureHost.clearFocus()
+        captureHost.isFocusable = false
+        captureHost.isFocusableInTouchMode = false
+        streamView.requestFocus()
+    }
+
     /** Create the ExternalDisplayManager callback (shared by onCreate & prepareConnection). */
     private fun createExternalDisplayCallback(): ExternalDisplayManager.ExternalDisplayCallback {
         return object : ExternalDisplayManager.ExternalDisplayCallback {
@@ -757,12 +778,16 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 }
 
                 LimeLog.info("External display connected, reinitializing input capture provider")
+                prepareExternalCaptureHost()
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
-                // The Presentation's StreamView is not attached yet. Wait for
-                // onStreamViewReady() before creating a provider that targets it.
-                inputCaptureProvider = NullCaptureProvider()
-                externalCaptureProviderReady = false
+                inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(
+                    this@Game,
+                    this@Game,
+                    findViewById(R.id.backgroundTouchView),
+                    externalStreamView
+                )
+                externalCaptureProviderReady = true
                 cursorServiceManager.setExternalDisplayActive(true)
             }
 
@@ -775,6 +800,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
                 setInputGrabState(grabbedInput)
+                releaseExternalCaptureHost()
                 cursorServiceManager.setExternalDisplayActive(false)
             }
 
@@ -787,6 +813,7 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProviderForExternalDisplay(
                     this@Game,
                     this@Game,
+                    findViewById(R.id.backgroundTouchView),
                     streamView
                 )
                 externalCaptureProviderReady = true
