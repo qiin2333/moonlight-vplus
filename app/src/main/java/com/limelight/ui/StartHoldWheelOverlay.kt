@@ -146,6 +146,12 @@ private const val MIN_TEXT_SCALE = 0.55f
 /** The disc never takes more than this share of the screen height, so the game stays in view. */
 private const val WHEEL_MAX_HEIGHT_SHARE = 0.68f
 
+/**
+ * Share of the radius a label in one of the two lower diagonal sectors may be wide. Its text sits
+ * between the cut on the hub side and the rim, where a horizontal line is short.
+ */
+private const val DIAGONAL_LABEL_WIDTH = 0.40f
+
 /** Share of the available width a fitted label may claim. */
 private const val FIT_SLACK = 0.94f
 
@@ -527,7 +533,9 @@ private fun SectorLabel(
 ) {
     val density = LocalDensity.current
     val center = geometry.labelCenter(sector)
-    val maxLine = with(density) { (geometry.radius * 0.47f).toDp() }
+    val maxLine = with(density) {
+        (geometry.radius * if (sector == 3 || sector == 5) DIAGONAL_LABEL_WIDTH else 0.47f).toDp()
+    }
     val titleSize = fittedFontSize(
         text = title,
         base = typography.itemTitle,

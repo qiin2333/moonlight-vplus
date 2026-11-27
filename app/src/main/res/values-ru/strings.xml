@@ -378,7 +378,7 @@
     <string name="start_wheel_disconnecting">Отключение</string>
     <string name="start_wheel_control_cancel">Отмена</string>
     <string name="start_wheel_item_gyro">Гироскоп</string>
-    <string name="start_wheel_item_game_bar">Xbox Game Bar</string>
+    <string name="start_wheel_item_game_bar">Game Bar</string>
     <string name="start_wheel_item_win">Win</string>
     <string name="start_wheel_hint_release_runs">Отпустите, чтобы выполнить</string>
     <string name="start_wheel_toast_perf_floating">Слой статистики: поверх</string>

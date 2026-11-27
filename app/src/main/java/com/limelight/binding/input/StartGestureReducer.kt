@@ -66,7 +66,7 @@ object StartWheelLayout {
         StartWheelItem(
             StartWheelAction.GAME_BAR,
             R.string.start_wheel_item_game_bar,
-            R.drawable.phc_video_camera
+            R.drawable.ic_xbox
         ),
         StartWheelItem(
             StartWheelAction.KEYBOARD,

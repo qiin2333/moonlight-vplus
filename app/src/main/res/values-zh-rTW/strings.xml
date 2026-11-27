@@ -223,7 +223,7 @@
     <string name="start_wheel_disconnecting">正在中斷串流</string>
     <string name="start_wheel_control_cancel">取消</string>
     <string name="start_wheel_item_gyro">體感助手</string>
-    <string name="start_wheel_item_game_bar">Xbox Game Bar</string>
+    <string name="start_wheel_item_game_bar">遊戲列</string>
     <string name="start_wheel_item_win">Win 鍵</string>
     <string name="start_wheel_hint_release_runs">放開即執行</string>
     <string name="start_wheel_toast_perf_floating">效能圖層：懸浮</string>
