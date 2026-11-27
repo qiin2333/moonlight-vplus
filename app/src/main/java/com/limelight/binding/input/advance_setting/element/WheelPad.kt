@@ -166,6 +166,7 @@ class WheelPad(attributesMap: Map<String, Any>,
 
     private var activeIndex = -1
     private var lastActiveIndex = -1
+    private val heldHandlers = ArrayList<ElementController.SendEventHandler>()
     private var isWheelActive = false
     private var popupAtScreenCenter: Boolean
     private var previewGroupChildren = false
@@ -287,30 +288,9 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
 
         val valuesString = attributesMap.get(COLUMN_STRING_ELEMENT_VALUE) as String?
-        segmentValues = ArrayList()
-        segmentNames = ArrayList()
-        val legacyNames = ArrayList<String>()
-        if (valuesString != null && !valuesString.isEmpty()) {
-            val segments = valuesString.split(",")
-            for (segment in segments) {
-                // 保留空位，避免 k51,,k47 这类配置在加载后整体前移错位
-                val parts = segment.split("|", limit = 2)
-                segmentValues.add(parts[0])
-                legacyNames.add(if (parts.size > 1) parts[1] else "")
-            }
-        }
-        while (segmentValues.size < segmentCount) {
-            segmentValues.add("null")
-        }
-        // 名称优先读 extra_attributes（不含分隔符冲突），旧数据回退到 value|name 里的名称
-        for (i in 0 until segmentCount) {
-            val name = when {
-                segmentNamesFromExtra != null -> segmentNamesFromExtra!!.getOrElse(i) { "" }
-                i < legacyNames.size -> legacyNames[i]
-                else -> ""
-            }
-            segmentNames.add(name)
-        }
+        val bindings = WheelPadBindings.load(valuesString, segmentNamesFromExtra, segmentCount)
+        segmentValues = bindings.values
+        segmentNames = bindings.names
 
         ensureSegPopCapacity(segmentCount)
     }
@@ -505,7 +485,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         val centerY = height / 2.0f
         val triggerRadius = getTriggerRadius()
 
-        val bgAlpha = Math.max(45, Color.alpha(backgroundColor))
+        val bgAlpha = Color.alpha(backgroundColor)
         val innerGlass = Color.argb(Math.round(bgAlpha * 0.65f),
             Color.red(backgroundColor), Color.green(backgroundColor), Color.blue(backgroundColor))
         val outerGlass = Color.argb(Math.round(bgAlpha * 0.92f),
@@ -593,9 +573,9 @@ class WheelPad(attributesMap: Map<String, Any>,
             lastShaderBgColor != backgroundColor || lastShaderPressedColor != pressedColor) {
 
             val bgA = Color.alpha(backgroundColor)
-            val bgInner = Color.argb(Math.max(20, Math.round(bgA * 0.55f)),
+            val bgInner = Color.argb(Math.round(bgA * 0.55f),
                 Color.red(backgroundColor), Color.green(backgroundColor), Color.blue(backgroundColor))
-            val bgOuter = Color.argb(Math.max(30, Math.round(bgA * 0.88f)),
+            val bgOuter = Color.argb(Math.round(bgA * 0.88f),
                 Color.red(backgroundColor), Color.green(backgroundColor), Color.blue(backgroundColor))
             cachedNormalShader = RadialGradient(centerX, centerY, Math.max(1f, maxOuterForShader),
                 intArrayOf(bgInner, bgOuter),
@@ -603,9 +583,9 @@ class WheelPad(attributesMap: Map<String, Any>,
                 Shader.TileMode.CLAMP)
 
             val prA = Color.alpha(pressedColor)
-            val prInner = Color.argb(Math.max(35, Math.round(prA * 0.28f)),
+            val prInner = Color.argb(Math.round(prA * 0.28f),
                 Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
-            val prOuter = Color.argb(Math.max(60, Math.round(prA * 0.68f)),
+            val prOuter = Color.argb(Math.round(prA * 0.68f),
                 Color.red(pressedColor), Color.green(pressedColor), Color.blue(pressedColor))
             cachedPressedShader = RadialGradient(centerX, centerY, Math.max(1f, maxOuterForShader),
                 intArrayOf(prInner, prOuter),
@@ -960,14 +940,14 @@ class WheelPad(attributesMap: Map<String, Any>,
         val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.4f
         val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
         if (!canTryTwoLines || preferOneLine) {
-            val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
+            val finalOne = ellipsizeWithFallback(text, paintText, maxW1)
             drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
             return
         }
 
         val lines = splitBalancedTwoLines(text)
         if (lines[1].isEmpty()) {
-            val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
+            val finalOne = ellipsizeWithFallback(text, paintText, maxW1)
             drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
             return
         }
@@ -1018,12 +998,12 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
 
         if (size2 > size1 * 1.15f || measured1 > maxW1) {
-            val l1 = ellipsizeWithFallback(lines[0], paintText, wLine1, size2)
-            val l2 = ellipsizeWithFallback(lines[1], paintText, wLine2, size2)
+            val l1 = ellipsizeWithFallback(lines[0], paintText, wLine1)
+            val l2 = ellipsizeWithFallback(lines[1], paintText, wLine2)
             drawTwoLinesCentered(canvas, l1, l2, drawX, drawY, step2, paintText)
         } else {
             paintText.textSize = size1
-            val finalOne = ellipsizeWithFallback(text, paintText, maxW1, size1)
+            val finalOne = ellipsizeWithFallback(text, paintText, maxW1)
             drawSingleLineCentered(canvas, finalOne, drawX, drawY, paintText)
         }
     }
@@ -1060,14 +1040,14 @@ class WheelPad(attributesMap: Map<String, Any>,
         val canTryTwoLines = text.length >= 4 && maxHeight >= minSize * 2.4f
         val preferOneLine = measured1 <= maxW1 && size1 >= targetSize * 0.65f
         if (!canTryTwoLines || preferOneLine) {
-            val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
+            val finalOne = ellipsizeWithFallback(text, paint, maxW1)
             drawSingleLineCentered(canvas, finalOne, cx, cy, paint)
             return
         }
 
         val lines = splitBalancedTwoLines(text)
         if (lines[1].isEmpty()) {
-            val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
+            val finalOne = ellipsizeWithFallback(text, paint, maxW1)
             drawSingleLineCentered(canvas, finalOne, cx, cy, paint)
             return
         }
@@ -1097,12 +1077,12 @@ class WheelPad(attributesMap: Map<String, Any>,
         }
 
         if (size2 > size1 * 1.15f || measured1 > maxW1) {
-            val l1 = ellipsizeWithFallback(lines[0], paint, maxW2, size2)
-            val l2 = ellipsizeWithFallback(lines[1], paint, maxW2, size2)
+            val l1 = ellipsizeWithFallback(lines[0], paint, maxW2)
+            val l2 = ellipsizeWithFallback(lines[1], paint, maxW2)
             drawTwoLinesCentered(canvas, l1, l2, cx, cy, step2, paint)
         } else {
             paint.textSize = size1
-            val finalOne = ellipsizeWithFallback(text, paint, maxW1, size1)
+            val finalOne = ellipsizeWithFallback(text, paint, maxW1)
             drawSingleLineCentered(canvas, finalOne, cx, cy, paint)
         }
     }
@@ -1148,7 +1128,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         return arrayOf(l1, l2)
     }
 
-    private fun ellipsizeWithFallback(text: String, paint: Paint, maxWidth: Float, currentSize: Float): String {
+    private fun ellipsizeWithFallback(text: String, paint: Paint, maxWidth: Float): String {
         if (text.isEmpty() || maxWidth <= 0f) return ""
         if (paint.measureText(text) <= maxWidth) return text
 
@@ -1160,9 +1140,11 @@ class WheelPad(attributesMap: Map<String, Any>,
             val firstGlyph = text.substring(0, firstCharCount)
             val singleW = paint.measureText(firstGlyph)
             if (singleW > maxWidth && singleW > 0f) {
-                paint.textSize = maxOf(6f, currentSize * ((maxWidth * 0.92f) / singleW))
+                // 两行共用 Paint，以上一行处理后的实际字号为上限，禁止兜底反向放大。
+                val currentSize = paint.textSize
+                paint.textSize = minOf(currentSize, maxOf(6f, currentSize * ((maxWidth * 0.92f) / singleW)))
             }
-            return firstGlyph
+            return if (paint.measureText(firstGlyph) <= maxWidth) firstGlyph else ""
         }
         return result
     }
@@ -1179,6 +1161,14 @@ class WheelPad(attributesMap: Map<String, Any>,
         val baseCenter = cy - (tempFontMetrics.ascent + tempFontMetrics.descent) / 2.0f
         canvas.drawText(l1, cx, baseCenter - lineStep / 2.0f, paint)
         canvas.drawText(l2, cx, baseCenter + lineStep / 2.0f, paint)
+    }
+
+    override fun onModeChanged(newMode: ElementController.Mode) {
+        super.onModeChanged(newMode)
+        if (newMode !== ElementController.Mode.Normal) {
+            resetWheelState()
+            releaseHeldHandlers()
+        }
     }
 
     override fun onElementTouchEvent(event: MotionEvent): Boolean {
@@ -1312,23 +1302,30 @@ class WheelPad(attributesMap: Map<String, Any>,
     }
 
     private fun updateSendingState() {
-        if (activeIndex != lastActiveIndex) {
-            if (lastActiveIndex != -1 && lastActiveIndex < segmentValues.size) {
-                val lastValue = segmentValues[lastActiveIndex]
-                val lastHandlers = getHandlersForValueNow(lastValue)
-                for (i in lastHandlers.indices.reversed()) {
-                    lastHandlers[i].sendEvent(false)
-                }
-            }
+        if (activeIndex == lastActiveIndex) return
 
-            if (activeIndex != -1 && activeIndex < segmentValues.size) {
-                val activeValue = segmentValues[activeIndex]
-                val activeHandlers = getHandlersForValueNow(activeValue)
-                for (handler in activeHandlers) {
-                    handler.sendEvent(true)
-                }
-            }
-            lastActiveIndex = activeIndex
+        releaseHeldHandlers()
+        val index = activeIndex
+        if (index !in segmentValues.indices ||
+            elementController.getMode() !== ElementController.Mode.Normal) return
+
+        lastActiveIndex = index
+        for (handler in getHandlersForValueNow(segmentValues[index])) {
+            // A binding can synchronously enter edit mode. Record only the handlers
+            // reached so far so mode cleanup never releases an unpressed binding.
+            heldHandlers.add(handler)
+            handler.sendEvent(true)
+            if (lastActiveIndex != index ||
+                elementController.getMode() !== ElementController.Mode.Normal) break
+        }
+    }
+
+    private fun releaseHeldHandlers() {
+        val handlers = heldHandlers.toList()
+        heldHandlers.clear()
+        lastActiveIndex = -1
+        for (i in handlers.indices.reversed()) {
+            handlers[i].sendEvent(false)
         }
     }
 
@@ -1734,14 +1731,7 @@ class WheelPad(attributesMap: Map<String, Any>,
         if (count < 2) count = 2
         this.segmentCount = count
         ensureSegPopCapacity(count)
-        while (segmentValues.size < count) {
-            segmentValues.add("null")
-            segmentNames.add("")
-        }
-        while (segmentValues.size > count) {
-            segmentValues.removeAt(segmentValues.size - 1)
-            segmentNames.removeAt(segmentNames.size - 1)
-        }
+        WheelPadBindings.resize(segmentValues, segmentNames, count)
         invalidateWheel()
     }
 
