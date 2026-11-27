@@ -16,6 +16,7 @@ case "$*" in
   *'/releases/assets/'*) cat "$MOCK_APK" ;;
   *'/releases?per_page=100'*) cat "$MOCK_RELEASES" ;;
   *'--method PATCH '*)
+    printf 'PATCH\n' >> "$MOCK_PATCHES"
     if [ "${FAIL_PATCH:-0}" = 1 ]; then
       echo 'Release update failed' >&2
       exit 1
@@ -38,12 +39,30 @@ if os.environ.get('IGNORE_PATCH') != '1':
 print(json.dumps(release))
 PY
     ;;
+  *'repos/owner/repo/releases/1')
+    python3 - <<'PY'
+import json, os
+path = os.environ['MOCK_RELEASES']
+with open(path) as f: pages = json.load(f)
+release = pages[0][0]
+change = os.environ.get('CHANGE_BEFORE_PATCH')
+if change == 'body':
+    release['body'] = 'Notes edited by maintainer'
+elif change == 'assets':
+    release['assets'].append({'id': 3, 'name': 'manual-upload.apk'})
+if change:
+    with open(path, 'w') as f: json.dump(pages, f)
+print(json.dumps(release))
+PY
+    ;;
   *) echo 'unexpected GitHub operation' >&2; exit 1 ;;
 esac
 SH
 chmod +x "$tmp/bin/gh"
 export PATH="$tmp/bin:$PATH" GITHUB_REPOSITORY=owner/repo
 export MOCK_RELEASES="$tmp/releases.json"
+export MOCK_PATCHES="$tmp/patches.log"
+: > "$MOCK_PATCHES"
 export MOCK_APK="$tmp/Moonlight.V+.12.15.32-beta.1.apk"
 printf 'a published APK\n' > "$MOCK_APK"
 printf 'release notes\n' > "$tmp/notes.md"
@@ -156,6 +175,30 @@ write_release draft no
 edit_release '{"body":""}'
 expect_unchanged_failure env FAIL_PATCH=1 python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
 expect_unchanged_failure env IGNORE_PATCH=1 python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
+# Edits after the list response must be detected before any PATCH is sent.
+for state in published draft; do
+  for change in body assets; do
+    write_release "$state" no
+    edit_release '{"body":""}'
+    cp "$MOCK_PATCHES" "$tmp/before-patches.log"
+    if [ "$state" = published ]; then
+      expect_failure env CHANGE_BEFORE_PATCH="$change" python3 "$script" recover v12.15.32-beta.1 "$tmp/recovered.apk"
+    else
+      expect_failure env CHANGE_BEFORE_PATCH="$change" python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease
+    fi
+    cmp "$tmp/before-patches.log" "$MOCK_PATCHES"
+    python3 - "$MOCK_RELEASES" "$state" "$change" <<'PY'
+import json, sys
+with open(sys.argv[1]) as f: release = json.load(f)[0][0]
+assert release['draft'] is (sys.argv[2] == 'draft')
+assert release['name'] == 'Custom release title'
+if sys.argv[3] == 'body':
+    assert release['body'] == 'Notes edited by maintainer' and release['assets'] == []
+else:
+    assert release['body'] == '' and release['assets'] == [{'id': 3, 'name': 'manual-upload.apk'}]
+PY
+  done
+done
 # A retry may reuse an identical draft asset, never replace different bytes.
 write_release draft yes
 [ "$(python3 "$script" preflight v12.15.32-beta.1 "$MOCK_APK" "$tmp/notes.md" prerelease)" = '{"needs_upload": false}' ]

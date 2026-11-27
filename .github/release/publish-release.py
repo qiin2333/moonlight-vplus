@@ -58,6 +58,13 @@ def releases(repo, tag):
 def update_empty_release(repo, tag, release, **changes):
     if release.get('assets') != [] or not isinstance(release.get('id'), int):
         raise ValueError('only a release with no attachments can be prepared')
+    expected = {key: release.get(key) for key in
+                ('id', 'tag_name', 'draft', 'prerelease', 'name', 'body', 'assets')}
+    # GitHub has no atomic compare-and-swap update for Releases. Release jobs
+    # are serialized, but a manual edit can still race this fresh read and PATCH.
+    current = request_json(f'repos/{repo}/releases/{release["id"]}')
+    if not isinstance(current, dict) or any(current.get(key) != value for key, value in expected.items()):
+        raise ValueError('release changed before preparing an empty draft; review before retrying')
     fields = []
     for key, value in changes.items():
         if isinstance(value, bool):
@@ -66,8 +73,6 @@ def update_empty_release(repo, tag, release, **changes):
             fields.extend(['--raw-field', f'{key}={value}'])
     request_json('--method', 'PATCH', f'repos/{repo}/releases/{release["id"]}', *fields)
     updated = releases(repo, tag)
-    expected = {key: release.get(key) for key in
-                ('id', 'tag_name', 'draft', 'prerelease', 'name', 'body', 'assets')}
     expected.update(changes)
     if updated is None or any(updated.get(key) != value for key, value in expected.items()):
         raise ValueError('release changed while preparing an empty draft; review before retrying')
