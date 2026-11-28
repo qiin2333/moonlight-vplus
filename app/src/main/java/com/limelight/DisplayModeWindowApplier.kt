@@ -13,7 +13,9 @@ internal object DisplayModeWindowApplier {
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             layoutParams.preferredRefreshRate = selection.refreshRate
         } else {
-            return
+            // No exact mode (the setFrameRate() path): clear a pin left by an earlier
+            // selection so it cannot override this one. 0 means "no preference".
+            layoutParams.preferredDisplayModeId = 0
         }
 
         window.attributes = layoutParams
