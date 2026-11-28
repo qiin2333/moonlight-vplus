@@ -19,6 +19,7 @@ import com.limelight.nvstream.wol.WakeOnLanSender
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.HostCacheKey
 import com.limelight.utils.Dialog
+import com.limelight.utils.AppSettingsManager
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.SpinnerDialog
 import com.limelight.utils.UiHelper
@@ -165,11 +166,14 @@ class ShortcutTrampoline : ThemedActivity() {
     ) {
         if (app != null) {
             if (details.runningGameId == 0 || details.runningGameId == app?.appId) {
-                intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, binder))
+                intentStack.add(ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, binder).also {
+                    AppSettingsManager.forwardExternalSessionSettings(intent, it)
+                })
                 finish()
                 startActivities(intentStack.toTypedArray())
             } else {
                 val startIntent = ServerHelper.createStartIntent(this@ShortcutTrampoline, app!!, details, binder)
+                AppSettingsManager.forwardExternalSessionSettings(intent, startIntent)
 
                 UiHelper.displayQuitConfirmationDialog(this@ShortcutTrampoline, {
                     intentStack.add(startIntent)

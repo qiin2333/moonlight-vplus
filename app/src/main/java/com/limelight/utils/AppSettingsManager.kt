@@ -428,7 +428,10 @@ class AppSettingsManager(private val context: Context) {
                 prefConfig.showWaveformHapticsCard
             )
 
-            prefConfig.videoFormat = parseVideoFormat(intent.getStringExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT))
+            // A partial override (e.g. from a launcher) keeps the user's codec when none is given.
+            if (intent.hasExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT)) {
+                prefConfig.videoFormat = parseVideoFormat(intent.getStringExtra(INTENT_LAST_SETTINGS_VIDEO_FORMAT))
+            }
 
             true
         } catch (e: Exception) {
@@ -450,6 +453,43 @@ class AppSettingsManager(private val context: Context) {
     }
 
     companion object {
+        /**
+         * Video settings an external launcher may set for one session through [ShortcutTrampoline]
+         * (resolution, frame rate, bitrate, scale, codec, HDR). Microphone and input settings are never
+         * accepted from outside the app.
+         */
+        private val EXTERNAL_SESSION_KEYS by lazy {
+            setOf(
+                INTENT_LAST_SETTINGS_WIDTH, INTENT_LAST_SETTINGS_HEIGHT, INTENT_LAST_SETTINGS_FPS,
+                INTENT_LAST_SETTINGS_BITRATE, INTENT_LAST_SETTINGS_RESOLUTION_SCALE,
+                INTENT_LAST_SETTINGS_VIDEO_FORMAT, INTENT_LAST_SETTINGS_ENABLE_HDR,
+                INTENT_LAST_SETTINGS_ENABLE_HDR_HIGH_BRIGHTNESS,
+            )
+        }
+
+        /**
+         * Copy a launcher's one-session video settings from [from] (a shortcut intent carrying
+         * `UseLastSettings=true`) onto the stream [to] intent. Returns whether anything was copied.
+         */
+        @JvmStatic
+        fun forwardExternalSessionSettings(from: Intent?, to: Intent): Boolean {
+            val extras = from?.extras ?: return false
+            if (!extras.getBoolean(INTENT_USE_LAST_SETTINGS, false)) return false
+            val forwarded = android.os.Bundle()
+            for (key in extras.keySet()) {
+                if (key !in EXTERNAL_SESSION_KEYS) continue
+                when (val value = extras.get(key)) {
+                    is Int -> forwarded.putInt(key, value)
+                    is Boolean -> forwarded.putBoolean(key, value)
+                    is String -> forwarded.putString(key, value)
+                }
+            }
+            if (forwarded.isEmpty) return false
+            to.putExtras(forwarded)
+            to.putExtra(INTENT_USE_LAST_SETTINGS, true)
+            return true
+        }
+
         private const val PREF_FILE_NAME = "app_last_settings"
         private const val KEY_USE_LAST_SETTINGS = "use_last_settings"
 
