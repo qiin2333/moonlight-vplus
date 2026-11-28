@@ -177,9 +177,17 @@ def render(tag, prerelease, apk, repo, releases):
         raise ValueError('release channel differs from tag')
     if not os.path.isfile(apk):
         raise ValueError(f'APK not found: {apk}')
+    body_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'notes', f'{tag}.md')
+    body = None
+    if os.path.exists(body_path):
+        with open(body_path, encoding='utf-8') as stream:
+            body = stream.read().strip()
+        if not body:
+            raise ValueError(f'curated release notes are empty: {body_path}')
     previous = prepared['previous']
     revision = f'{previous}..{tag}' if previous else tag
-    log = run('git', 'log', '--no-merges', '--format=%s', revision)
+    # Curated notes replace the change list, while release metadata stays dynamic.
+    log = '' if body is not None else run('git', 'log', '--no-merges', '--format=%s', revision)
     categories = {'feat': [], 'fix': [], 'perf': [], 'remove': []}
     ignored = {'chore', 'ci', 'docs', 'style', 'test', 'build'}
     unmatched = []
@@ -205,6 +213,8 @@ def render(tag, prerelease, apk, repo, releases):
         out.extend(['**测试版**：适合愿意参与测试的用户，更新内容仍可能调整。', ''])
     if previous:
         out.extend([f'本次更新汇总 **{previous} 之后至 {tag}** 的改动。', ''])
+    if body is not None:
+        out.extend([body, ''])
     for kind, heading, icon in [('feat', '新增', '✨'), ('perf', '优化', '⚡'),
                                 ('fix', '修复', '🐛'), ('remove', '其他', '🗑️')]:
         if categories[kind]:

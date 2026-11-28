@@ -46,6 +46,16 @@ v12.15.17 and v12.15.31 official APKs. For an intentional key rotation, first
 verify the new fingerprint independently and check Android signing lineage and
 update compatibility; then update the verifier's pin.
 
+## Reviewed release notes
+
+For a release with edited, user-facing notes, commit its Markdown body to
+`.github/release/notes/<tag>.md` before creating the tag. For example,
+`.github/release/notes/v12.16.md` supplies the body for `v12.16`. Write the
+feature and fix sections there; CI supplies the title, release channel and
+baseline context, full change link, APK filename, SHA-256, and feedback link.
+An empty notes file fails the release. Tags without a notes file continue to
+use the commit-based summary. Both paths enforce the same release checks.
+
 ## Mapping archive
 
 Each published build's mapping is compressed into this public repository's

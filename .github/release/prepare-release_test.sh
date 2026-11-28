@@ -143,6 +143,40 @@ for text in '王冠预览' '修复音频兼容' '暂停输入' '商店导入' 'h
 done
 assert_absent '独立分支' "$tmp/stable.md"
 assert_absent '新功能' "$tmp/stable.md"
+# Resolve curated bodies beside the script, not from the current Git directory.
+# Keep every fixture in the temporary copy so tests never modify repository notes.
+mkdir -p "$tmp/curated/notes"
+curated_script="$tmp/curated/prepare-release.py"
+cp "$script" "$curated_script"
+cat > "$tmp/curated-body.md" <<'MD'
+### 使用体验
+
+- 人工整理的体验改进，保留 [项目链接](https://example.com/project)。
+MD
+cp "$tmp/curated-body.md" "$tmp/curated/notes/v12.15.31.md"
+python3 "$curated_script" notes v12.15.31 "$tmp/app.apk" > "$tmp/curated.md"
+python3 - "$tmp/curated.md" "$tmp/curated-body.md" "$tmp/app.apk" <<'PY'
+import hashlib, sys
+with open(sys.argv[1], encoding='utf-8') as f: notes = f.read()
+with open(sys.argv[2], encoding='utf-8') as f: body = f.read().strip()
+with open(sys.argv[3], 'rb') as f: digest = hashlib.sha256(f.read()).hexdigest()
+assert body in notes
+assert '## 🌙 Moonlight V+ 12.15.31' in notes
+assert 'v12.15.17 之后至 v12.15.31' in notes
+assert 'https://github.com/example/project/compare/v12.15.17...v12.15.31' in notes
+assert 'APK 文件：`app.apk`' in notes and f'{digest}  app.apk' in notes
+assert '[Issues](https://github.com/example/project/issues)' in notes
+assert '王冠预览' not in notes and '商店导入' not in notes
+PY
+rm "$tmp/curated/notes/v12.15.31.md"
+python3 "$curated_script" notes v12.15.31 "$tmp/app.apk" > "$tmp/fallback.md"
+cmp "$tmp/stable.md" "$tmp/fallback.md"
+printf ' \n\t\n' > "$tmp/curated/notes/v12.15.31.md"
+expect_failure python3 "$curated_script" notes v12.15.31 "$tmp/app.apk"
+grep -Fq 'curated release notes are empty' "$tmp/rejected.err"
+cp "$tmp/curated-body.md" "$tmp/curated/notes/v12.15.28.md"
+expect_failure python3 "$curated_script" notes v12.15.28 "$tmp/app.apk"
+grep -Fq 'already published' "$tmp/rejected.err"
 # A draft created before midnight must remain retryable the next day. Generate
 # the same notes with two UTC clocks, while preserving the real release history
 # and APK so this catches any future dependency on the current date.
@@ -193,6 +227,12 @@ grep -Fq 'v12.15.32-beta.1 之后至 v12.15.32-beta.2' "$tmp/beta.md"
 grep -Fq '测试版' "$tmp/beta.md"
 grep -Fq '测试修复' "$tmp/beta.md"
 assert_absent '最终修复' "$tmp/beta.md"
+cp "$tmp/curated-body.md" "$tmp/curated/notes/v12.15.32-beta.2.md"
+python3 "$curated_script" notes v12.15.32-beta.2 "$tmp/app.apk" > "$tmp/curated-beta.md"
+grep -Fq '测试版' "$tmp/curated-beta.md"
+grep -Fq 'v12.15.32-beta.1 之后至 v12.15.32-beta.2' "$tmp/curated-beta.md"
+grep -Fq '人工整理的体验改进' "$tmp/curated-beta.md"
+assert_absent '测试修复' "$tmp/curated-beta.md"
 python3 "$script" notes v12.15.32 "$tmp/app.apk" > "$tmp/final.md"
 grep -Fq 'v12.15.31 之后至 v12.15.32' "$tmp/final.md"
 for text in '新功能' '测试修复' '最终修复'; do grep -Fq "$text" "$tmp/final.md"; done
@@ -233,6 +273,9 @@ for text in v12.15.46 v12.16-rc1 versionName versionCode; do
   grep -Fq "$text" "$tmp/rejected.err"
 done
 expect_failure python3 "$script" notes v12.15.46 "$tmp/app.apk"
+cp "$tmp/curated-body.md" "$tmp/curated/notes/v12.15.46.md"
+expect_failure python3 "$curated_script" notes v12.15.46 "$tmp/app.apk"
+grep -Fq 'versionName' "$tmp/rejected.err"
 python3 "$script" preflight v12.16 > "$tmp/preflight.json"
 python3 - "$tmp/preflight.json" <<'PY'
 import json, sys
