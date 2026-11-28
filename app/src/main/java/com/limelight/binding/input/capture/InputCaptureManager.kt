@@ -60,7 +60,9 @@ object InputCaptureManager {
         } else {
             // 如果Evdev不可用，回退到标准方式
             LimeLog.info("Falling back to standard capture provider for external display")
-            if (externalStreamView != null) {
+            if (!AndroidNativePointerCaptureProvider.isCaptureProviderSupported()) {
+                getInputCaptureProvider(activity, rootListener, captureHostView)
+            } else if (externalStreamView != null) {
                 AndroidExternalPointerCaptureProvider(activity, captureHostView, externalStreamView)
             } else {
                 AndroidNativePointerCaptureProvider(activity, captureHostView)

@@ -799,8 +799,8 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
                 inputCaptureProvider.disableCapture()
                 inputCaptureProvider.destroy()
                 inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this@Game, this@Game)
-                setInputGrabState(grabbedInput)
                 releaseExternalCaptureHost()
+                setInputGrabState(grabbedInput)
                 cursorServiceManager.setExternalDisplayActive(false)
             }
 
