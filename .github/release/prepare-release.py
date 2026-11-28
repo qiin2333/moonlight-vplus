@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify a release tag and generate notes from published releases."""
+"""Classify and preflight a release tag, or generate its release notes."""
 
 import argparse
 import hashlib
@@ -91,7 +91,8 @@ def ensure_stable_is_newer(tag, releases):
         previous = release['tag_name']
         if newer_than(tag, previous) is False:
             raise ValueError(f'stable release {tag} is not newer than published {previous}; '
-                             'choose a higher version')
+                             'update detection compares versionName, so a higher versionCode '
+                             'does not make it an update; choose a higher versionName')
 
 
 def releases_from_json(payload):
@@ -158,15 +159,35 @@ def select_previous(releases, tag, prerelease):
     return None
 
 
-def render(tag, prerelease, apk, repo, releases):
+def validate_release(tag, releases):
+    prerelease = classify(tag, releases)
     if not prerelease:
         ensure_stable_is_newer(tag, releases)
+    try:
+        run('git', 'rev-parse', '--verify', f'refs/tags/{tag}^{{commit}}')
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f'current release tag {tag} does not resolve to a local commit') from error
+    previous = select_previous(releases, tag, prerelease)
+    return {'tag': tag, 'prerelease': prerelease, 'previous': previous}
+
+
+def render(tag, prerelease, apk, repo, releases):
+    prepared = validate_release(tag, releases)
+    if prepared['prerelease'] is not prerelease:
+        raise ValueError('release channel differs from tag')
     if not os.path.isfile(apk):
         raise ValueError(f'APK not found: {apk}')
-    run('git', 'rev-parse', '--verify', f'refs/tags/{tag}^{{commit}}')
-    previous = select_previous(releases, tag, prerelease)
+    body_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'notes', f'{tag}.md')
+    body = None
+    if os.path.exists(body_path):
+        with open(body_path, encoding='utf-8') as stream:
+            body = stream.read().strip()
+        if not body:
+            raise ValueError(f'curated release notes are empty: {body_path}')
+    previous = prepared['previous']
     revision = f'{previous}..{tag}' if previous else tag
-    log = run('git', 'log', '--no-merges', '--format=%s', revision)
+    # Curated notes replace the change list, while release metadata stays dynamic.
+    log = '' if body is not None else run('git', 'log', '--no-merges', '--format=%s', revision)
     categories = {'feat': [], 'fix': [], 'perf': [], 'remove': []}
     ignored = {'chore', 'ci', 'docs', 'style', 'test', 'build'}
     unmatched = []
@@ -192,6 +213,8 @@ def render(tag, prerelease, apk, repo, releases):
         out.extend(['**测试版**：适合愿意参与测试的用户，更新内容仍可能调整。', ''])
     if previous:
         out.extend([f'本次更新汇总 **{previous} 之后至 {tag}** 的改动。', ''])
+    if body is not None:
+        out.extend([body, ''])
     for kind, heading, icon in [('feat', '新增', '✨'), ('perf', '优化', '⚡'),
                                 ('fix', '修复', '🐛'), ('remove', '其他', '🗑️')]:
         if categories[kind]:
@@ -214,6 +237,8 @@ def main():
     subparsers = parser.add_subparsers(dest='command', required=True)
     check = subparsers.add_parser('check', help='classify a release tag')
     check.add_argument('tag')
+    preflight = subparsers.add_parser('preflight', help='check release eligibility before building an APK')
+    preflight.add_argument('tag')
     notes = subparsers.add_parser('notes', help='check existing releases and render notes')
     notes.add_argument('tag')
     notes.add_argument('apk')
@@ -229,8 +254,10 @@ def main():
             payload = json.loads(run('gh', 'api', '--paginate', '--slurp',
                                      f'repos/{repo}/releases?per_page=100'))
             releases = releases_from_json(payload)
-            classify(args.tag, releases)
-            print(render(args.tag, prerelease, args.apk, repo, releases), end='')
+            if args.command == 'preflight':
+                print(json.dumps(validate_release(args.tag, releases)))
+            else:
+                print(render(args.tag, prerelease, args.apk, repo, releases), end='')
     except (ValueError, OSError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
         print(f'ERROR: could not prepare release: {exc}', file=sys.stderr)
         return 1
