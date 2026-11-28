@@ -10,27 +10,18 @@ import com.limelight.nvstream.http.NvHTTP
 import com.limelight.utils.ResolutionTransitionOverlay
 
 /**
- * Owns the hot-switch attempt, retained frame and lifecycle recovery on the UI thread.
- * The native control thread may only read [acceptsNotification].
+ * Runs the hot-switch attempt, retained frame and lifecycle recovery on the UI thread. Which
+ * attempt owns the stream is kept in [ownership].
  */
 internal class ResolutionSwitchController(
     private val activity: Activity,
+    private val ownership: StreamResolutionOwnership,
     private val reconnect: () -> Unit,
     private val onPresented: (Int, Int) -> Unit,
 ) {
     private val handler = Handler(Looper.getMainLooper())
-    @Volatile private var current: ResolutionSwitchSession? = null
-    @Volatile private var reconnectOnStart = false
     private var transition: ResolutionTransitionOverlay? = null
     private var pendingRenderer: MediaCodecDecoderRenderer? = null
-
-    val isApplying: Boolean get() = current != null || reconnectOnStart
-
-    /** May be read by the native control thread; notifications cannot complete a switch. */
-    fun acceptsNotification(width: Int, height: Int): Boolean {
-        val attempt = current
-        return !reconnectOnStart && (attempt == null || attempt.isWaitingFor(width, height))
-    }
 
     /** Starts an eligible request; [isCurrentStream] binds callbacks to its originating stream. */
     fun start(
@@ -41,9 +32,9 @@ internal class ResolutionSwitchController(
         surface: SurfaceView?,
         isCurrentStream: () -> Boolean,
     ) {
-        if (isApplying || activity.isFinishing || activity.isDestroyed) return
+        if (activity.isFinishing || activity.isDestroyed) return
         val attempt = ResolutionSwitchSession(requested.width, requested.height)
-        current = attempt
+        if (!ownership.begin(attempt)) return
         pendingRenderer = renderer
         val overlay = ResolutionTransitionOverlay(activity, attempt.width, attempt.height)
         transition = overlay
@@ -96,24 +87,22 @@ internal class ResolutionSwitchController(
 
     /** Called on the UI thread alongside frame completion, before normal termination handling. */
     fun connectionTerminated(errorCode: Int): Boolean {
-        if (reconnectOnStart) return true
-        val attempt = current ?: return false
+        if (ownership.reconnectOnStart) return true
+        val attempt = ownership.current ?: return false
         if (attempt.state != ResolutionSwitchSession.State.WAITING) return false
         fallback(attempt, "connection terminated: $errorCode")
         return true
     }
 
     fun onStop(isReconnecting: Boolean) {
-        val attempt = current ?: return
-        if (isReconnecting) return
-        reconnectOnStart = !activity.isFinishing && attempt.state == ResolutionSwitchSession.State.WAITING
+        if (ownership.current == null || isReconnecting) return
+        ownership.stop(activity.isFinishing)
         cancel()
     }
 
     /** Returns true when foreground recovery has redirected the Activity to reconnect. */
     fun onStart(): Boolean {
-        if (!reconnectOnStart) return false
-        reconnectOnStart = false
+        if (!ownership.takeReconnectOnStart()) return false
         reconnect()
         return true
     }
@@ -122,8 +111,7 @@ internal class ResolutionSwitchController(
 
     fun cancel() {
         handler.removeCallbacksAndMessages(null)
-        current?.cancel()
-        current = null
+        ownership.release()
         pendingRenderer?.cancelResolutionFrameWait()
         pendingRenderer = null
         transition?.dispose()
@@ -131,7 +119,7 @@ internal class ResolutionSwitchController(
     }
 
     private fun isWaiting(attempt: ResolutionSwitchSession): Boolean =
-        current === attempt && attempt.state == ResolutionSwitchSession.State.WAITING &&
+        ownership.current === attempt && attempt.state == ResolutionSwitchSession.State.WAITING &&
             !activity.isFinishing && !activity.isDestroyed
 
     private fun complete(attempt: ResolutionSwitchSession, connection: NvConnection) {
@@ -141,8 +129,7 @@ internal class ResolutionSwitchController(
         onPresented(attempt.width, attempt.height)
         LimeLog.info("Resolution hot switch presented: ${attempt.width}x${attempt.height}")
         transition?.reveal {
-            if (current === attempt) {
-                current = null
+            if (ownership.finish(attempt)) {
                 pendingRenderer = null
                 transition = null
             }

@@ -41,6 +41,8 @@ class ExternalDisplayManager(
     interface ExternalDisplayCallback {
         fun onExternalDisplayConnected(display: Display)
         fun onExternalDisplayDisconnected()
+        /** The display being streamed to changed, e.g. its mode/size. */
+        fun onExternalDisplayChanged() {}
         fun onStreamViewReady(streamView: StreamView)
         fun onExternalDisplayWindowFocusChanged(hasFocus: Boolean) = Unit
     }
@@ -137,6 +139,9 @@ class ExternalDisplayManager(
 
             override fun onDisplayChanged(displayId: Int) {
                 LimeLog.info("Display changed: $displayId")
+                if (isUsingExternalDisplay() && displayId == getTargetDisplay().displayId) {
+                    callback?.onExternalDisplayChanged()
+                }
             }
         }
 
