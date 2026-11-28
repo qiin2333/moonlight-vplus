@@ -16,6 +16,10 @@
       "commit": "bef894e6948e23dedff4edbc922953dffff5fd70",
       "versionCode": 121531006
     },
+    "v12.16": {
+      "commit": "4e202627570362e5ac4fb156e03a784044ceda03",
+      "versionCode": 121531007
+    },
     "v12.16-rc1": {
       "commit": "42a3ce4f8e943cbcf93532f6ab366206a76b251b",
       "versionCode": 121531005
