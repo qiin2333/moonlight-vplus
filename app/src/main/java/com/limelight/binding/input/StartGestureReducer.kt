@@ -11,24 +11,24 @@ import kotlin.math.atan2
  * Everything the Start hold wheel can run, in the clockwise order of its eight sectors from up.
  *
  * The four directions the single-level wheel has always used keep their actions: menu up, mouse
- * right, keyboard down, performance left. The diagonals add gyro, microphone, disconnect and Esc.
+ * right, keyboard down, performance left. The diagonals add gyro, Xbox Game Bar, disconnect and the
+ * Win key.
  */
 enum class StartWheelAction {
     MENU,
     GYRO,
     MOUSE,
-    MIC,
+    GAME_BAR,
     KEYBOARD,
     DISCONNECT,
     PERFORMANCE_TOGGLE,
-    ESC
+    WIN
 }
 
 /** What has to be set up on this device before an item is shown. */
 enum class StartWheelAvailability {
     ALWAYS,
-    GYRO,
-    MIC
+    GYRO
 }
 
 /** One sector of the wheel: what it runs, how it is labelled and when it exists. */
@@ -55,7 +55,7 @@ object StartWheelLayout {
         StartWheelItem(
             StartWheelAction.GYRO,
             R.string.start_wheel_item_gyro,
-            R.drawable.phc_game_controller,
+            R.drawable.phc_device_rotate,
             StartWheelAvailability.GYRO
         ),
         StartWheelItem(
@@ -64,10 +64,9 @@ object StartWheelLayout {
             R.drawable.ic_start_wheel_mouse
         ),
         StartWheelItem(
-            StartWheelAction.MIC,
-            R.string.start_wheel_item_mic,
-            R.drawable.ic_mic_gm,
-            StartWheelAvailability.MIC
+            StartWheelAction.GAME_BAR,
+            R.string.start_wheel_item_game_bar,
+            R.drawable.ic_xbox
         ),
         StartWheelItem(
             StartWheelAction.KEYBOARD,
@@ -86,9 +85,9 @@ object StartWheelLayout {
             R.drawable.phc_layers
         ),
         StartWheelItem(
-            StartWheelAction.ESC,
-            R.string.start_wheel_item_esc,
-            R.drawable.phc_action_exit
+            StartWheelAction.WIN,
+            R.string.start_wheel_item_win,
+            R.drawable.ic_btn_win
         )
     )
 
@@ -135,8 +134,8 @@ internal class StartGestureReducer(
     private val enterThreshold: Float = 0.65f,
     private val exitThreshold: Float = 0.35f,
     /**
-     * Items whose feature is not set up on this device (no controller for the gyro, the microphone
-     * switched off) are left out of the wheel and behave like empty sectors.
+     * Items whose feature is not set up on this device (no controller for the gyro) are left out of
+     * the wheel and behave like empty sectors.
      */
     private val isItemAvailable: (StartWheelAction) -> Boolean = { true }
 ) {

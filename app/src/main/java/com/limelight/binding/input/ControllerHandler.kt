@@ -1114,7 +1114,6 @@ class ControllerHandler(
         return when (item.availability) {
             StartWheelAvailability.ALWAYS -> true
             StartWheelAvailability.GYRO -> hasAnyController()
-            StartWheelAvailability.MIC -> prefConfig.enableMic
         }
     }
 

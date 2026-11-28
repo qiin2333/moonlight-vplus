@@ -3915,7 +3915,6 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             gyroEnabled = GyroAssistantMode.from(prefConfig) != GyroAssistantMode.OFF,
             mouseEmulationActive = startHoldWheelDevice?.mouseEmulationActive == true,
             keyboardVisible = isLocalKeyboardVisible(),
-            micActive = microphoneManager?.isMicrophoneActive() == true,
             // One rule for which items exist, shared with the reducer.
             unavailable = controllerHandler?.let { handler ->
                 StartWheelAction.entries.filterNot(handler::isStartWheelItemAvailable).toSet()
@@ -3937,32 +3936,12 @@ class Game : ThemedComponentActivity(), SurfaceHolder.Callback,
             StartWheelAction.KEYBOARD -> toggleKeyboard()
             StartWheelAction.PERFORMANCE_TOGGLE -> togglePerformanceOverlayVisibility()
             StartWheelAction.GYRO -> toggleGyroAssistant()
-            StartWheelAction.MIC -> toggleStartWheelMicrophone()
-            StartWheelAction.ESC -> startWheelStreamActions.execute("send_esc")
+            StartWheelAction.GAME_BAR -> startWheelStreamActions.execute("open_game_bar")
+            StartWheelAction.WIN -> startWheelStreamActions.execute("send_win")
             StartWheelAction.DISCONNECT -> beginStartWheelDisconnect()
             // The menu opens through the reducer's own request protocol; mouse mode belongs to its controller.
             StartWheelAction.MENU, StartWheelAction.MOUSE -> Unit
         }
-    }
-
-    private fun toggleStartWheelMicrophone() {
-        val manager = microphoneManager
-        if (manager == null) {
-            Toast.makeText(this, getString(R.string.start_wheel_toast_mic_unavailable), Toast.LENGTH_SHORT).show()
-            return
-        }
-        manager.toggleMicrophone()
-        Toast.makeText(
-            this,
-            getString(
-                if (manager.isMicrophoneActive()) {
-                    R.string.start_wheel_toast_mic_on
-                } else {
-                    R.string.start_wheel_toast_mic_off
-                }
-            ),
-            Toast.LENGTH_SHORT
-        ).show()
     }
 
     private fun toggleGyroAssistant() {

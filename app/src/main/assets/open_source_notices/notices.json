@@ -16,6 +16,14 @@
     "licenseFile": "asio-LICENSE.txt"
   },
   {
+    "id": "bootstrap-icons",
+    "name": "Bootstrap Icons",
+    "version": "v1.13.2 (xbox icon)",
+    "url": "https://github.com/twbs/icons",
+    "license": "MIT",
+    "licenseFile": "bootstrap-icons-LICENSE.txt"
+  },
+  {
     "id": "dxbc",
     "name": "dxbc",
     "version": "78ab59a8aaeb43cd1b0a5e91ba86722433a10b78",
