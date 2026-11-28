@@ -7,6 +7,27 @@ Stable notes cover changes since the previous stable ancestor; preview notes use
 the previous reachable release. The generated notes are a commit-based draft
 and should be reviewed for user-facing clarity.
 
+The app compares `versionName` when checking for updates; a higher Android
+`versionCode` alone does not make a lower version name an update. For example,
+after publishing `v12.16-rc1`, `v12.15.46` cannot be the next stable release;
+`v12.16` (also supported without a patch component) or a higher stable version
+passes that version check. Choose a new tag instead of moving an existing one.
+
+After recovering any empty release placeholder, CI checks the version and the
+reachable changelog baseline before reserving a versionCode or building a signed
+APK. Notes generation checks the current release list again before publication.
+For a local check with the proposed tag already present, full history fetched,
+and `gh` authenticated, run:
+
+```sh
+GITHUB_REPOSITORY=qiin2333/moonlight-vplus \
+  python3 .github/release/prepare-release.py preflight v12.16
+```
+
+This command reads release metadata and may fetch missing baseline tags; it does
+not upload or publish anything and does not need an APK. A failed version check
+requires a higher release version; rerunning the same tag cannot fix it.
+
 Release jobs run serially. Each tag and commit reserves a monotonically
 increasing Android versionCode in the public `release-versions` branch. The
 migration floor is 121531001 (v12.15.31); reserved numbers are not reused even

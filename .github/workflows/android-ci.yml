@@ -321,6 +321,15 @@ jobs:
             echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
           fi
 
+      - name: Check release version and changelog baseline
+        if: steps.existing_release.outputs.published != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Check after empty-release recovery, before reserving a versionCode or
+        # loading signing secrets. Notes generation rechecks the live state.
+        run: python3 .github/release/prepare-release.py preflight "$GITHUB_REF_NAME"
+
       - name: Remove local.properties (if present)
         run: rm -f local.properties
 
