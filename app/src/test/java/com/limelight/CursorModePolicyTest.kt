@@ -6,6 +6,62 @@ import org.junit.Test
 
 class CursorModePolicyTest {
     @Test
+    fun `system pointer keeps the default arrow until host cursor state is known`() {
+        assertTrue(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = false,
+                hostCursorVisible = false,
+                hasCursorShape = false,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = false,
+                hasCursorShape = false,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = false,
+                hostCursorVisible = true,
+                hasCursorShape = true,
+                usesSystemMousePointer = false
+            )
+        )
+    }
+
+    @Test
+    fun `visible system cursor without a shape uses the default arrow`() {
+        assertTrue(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = true,
+                hasCursorShape = false,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = true,
+                hasCursorShape = true,
+                usesSystemMousePointer = true
+            )
+        )
+        assertFalse(
+            CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = true,
+                hostCursorVisible = false,
+                hasCursorShape = false,
+                usesSystemMousePointer = true
+            )
+        )
+    }
+
+    @Test
     fun `external mouse uses video cursor even when touchpad local cursor is disabled`() {
         assertFalse(
             CursorModePolicy.shouldUseLocalMode(

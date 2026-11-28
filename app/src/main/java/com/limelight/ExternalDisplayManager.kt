@@ -42,6 +42,7 @@ class ExternalDisplayManager(
         fun onExternalDisplayConnected(display: Display)
         fun onExternalDisplayDisconnected()
         fun onStreamViewReady(streamView: StreamView)
+        fun onExternalDisplayWindowFocusChanged(hasFocus: Boolean) = Unit
     }
 
     var callback: ExternalDisplayCallback? = null
@@ -198,6 +199,11 @@ class ExternalDisplayManager(
         override fun onDisplayRemoved() {
             super.onDisplayRemoved()
             activity.finish()
+        }
+
+        override fun onWindowFocusChanged(hasFocus: Boolean) {
+            super.onWindowFocusChanged(hasFocus)
+            callback?.onExternalDisplayWindowFocusChanged(hasFocus)
         }
 
         fun isForDisplay(displayId: Int): Boolean = presentationDisplayId == displayId

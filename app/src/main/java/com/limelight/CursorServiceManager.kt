@@ -71,8 +71,11 @@ class CursorServiceManager(
     private var localModeActive = false
     @Volatile
     private var destroyed = false
+    @Volatile
+    private var touchCursorVisible = false
 
     private var hostCursorVisible = false
+    private var cursorStateKnown = false
     private var currentShapeId: Int? = null
     private var streamWidth = prefConfig.width.coerceAtLeast(1)
     private var streamHeight = prefConfig.height.coerceAtLeast(1)
@@ -106,6 +109,9 @@ class CursorServiceManager(
     }
 
     fun refreshCursorMode() {
+        if (!prefConfig.usesSystemMousePointer) {
+            touchCursorVisible = false
+        }
         reconcileCursorMode()
         updateRelativeCursorRenderers()
         if (localModeActive) {
@@ -171,6 +177,7 @@ class CursorServiceManager(
                     cancelCursorUpdateTimeout()
                     currentShapeId = shapeId
                     hostCursorVisible = visible
+                    cursorStateKnown = true
                     applyCurrentCursorOnUiThread()
                 }
             }
@@ -209,6 +216,23 @@ class CursorServiceManager(
         postApplyCurrentCursor()
     }
 
+    /** Shows the host cursor for touch because Android only draws PointerIcon for real pointers. */
+    fun showTouchCursorAt(x: Float, y: Float) {
+        if (!localModeActive || !prefConfig.usesSystemMousePointer || cursorOverlay == null) return
+
+        touchCursorVisible = true
+        cursorOverlay?.show()
+        cursorOverlay?.updateCursorPosition(x, y)
+        postApplyCurrentCursor()
+    }
+
+    fun hideTouchCursor() {
+        if (!touchCursorVisible) return
+
+        touchCursorVisible = false
+        cursorOverlay?.hide()
+    }
+
     /** Kept for existing lifecycle call sites while the old socket service is removed. */
     fun stopService() {
         val wasLocal = localModeActive
@@ -218,6 +242,7 @@ class CursorServiceManager(
 
         connected = false
         localModeActive = false
+        touchCursorVisible = false
         sessionGeneration.incrementAndGet()
         cancelCursorUpdateTimeout()
         clearCursorState()
@@ -268,6 +293,7 @@ class CursorServiceManager(
                 MoonBridge.setCursorMode(MoonBridge.LI_CURSOR_MODE_VIDEO)
             }
             localModeActive = false
+            touchCursorVisible = false
             hostCursorVisible = false
             updateRelativeCursorRenderers()
             restoreDefaultCursor()
@@ -287,8 +313,9 @@ class CursorServiceManager(
         if (result == MoonBridge.LI_CURSOR_MODE_OK) {
             localModeActive = true
             hostCursorVisible = false
+            cursorStateKnown = false
             currentShapeId = null
-            hideLocalPresentation()
+            showPlaceholderSystemCursor()
             updateRelativeCursorRenderers()
             scheduleCursorUpdateTimeout()
             LimeLog.info("Cursor: local rendering mode enabled")
@@ -371,19 +398,23 @@ class CursorServiceManager(
             restoreDefaultCursor()
             return
         }
+        val sourceShape = currentShapeId?.let(cursorCache::get)
+        if (CursorModePolicy.shouldShowPlaceholderSystemCursor(
+                cursorStateKnown = cursorStateKnown,
+                hostCursorVisible = hostCursorVisible,
+                hasCursorShape = sourceShape != null,
+                usesSystemMousePointer = prefConfig.usesSystemMousePointer
+            )) {
+            showPlaceholderSystemCursor()
+            return
+        }
         if (!hostCursorVisible) {
             hideLocalPresentation()
             return
         }
 
-        val shapeId = currentShapeId ?: run {
-            hideLocalPresentation()
-            return
-        }
-        val source = cursorCache.get(shapeId) ?: run {
-            hideLocalPresentation()
-            return
-        }
+        val shapeId = currentShapeId ?: return
+        val source = sourceShape ?: return
         val shape = scaleShapeForView(shapeId, source)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
@@ -396,6 +427,8 @@ class CursorServiceManager(
             } catch (e: Exception) {
                 LimeLog.warning("Cursor: failed to apply native pointer: ${e.message}")
             }
+            cursorOverlay?.setCursorBitmap(shape.bitmap, shape.hotspotX, shape.hotspotY)
+            cursorOverlay?.setHostCursorVisible(touchCursorVisible)
         } else if (shouldRenderOverlay()) {
             cursorOverlay?.setCursorBitmap(shape.bitmap, shape.hotspotX, shape.hotspotY)
             cursorOverlay?.setHostCursorVisible(true)
@@ -444,6 +477,24 @@ class CursorServiceManager(
         cursorOverlay?.setHostCursorVisible(false)
     }
 
+    private fun showPlaceholderSystemCursor() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && prefConfig.usesSystemMousePointer) {
+            try {
+                streamView.pointerIcon = PointerIcon.getSystemIcon(
+                    streamView.context,
+                    PointerIcon.TYPE_ARROW
+                )
+            } catch (_: Exception) {
+            }
+        }
+        if (touchCursorVisible) {
+            cursorOverlay?.resetToDefault()
+            cursorOverlay?.setHostCursorVisible(true)
+        } else {
+            cursorOverlay?.setHostCursorVisible(false)
+        }
+    }
+
     private fun restoreDefaultCursor() {
         uiCallback.runOnUi {
             if (!uiCallback.isActivityAlive()) return@runOnUi
@@ -463,6 +514,7 @@ class CursorServiceManager(
 
     private fun clearCursorState() {
         hostCursorVisible = false
+        cursorStateKnown = false
         currentShapeId = null
         cursorCache.evictAll()
         renderedCursorCache.evictAll()
@@ -477,6 +529,16 @@ class CursorServiceManager(
 }
 
 internal object CursorModePolicy {
+    fun shouldShowPlaceholderSystemCursor(
+        cursorStateKnown: Boolean,
+        hostCursorVisible: Boolean,
+        hasCursorShape: Boolean,
+        usesSystemMousePointer: Boolean
+    ): Boolean {
+        return usesSystemMousePointer &&
+                (!cursorStateKnown || (hostCursorVisible && !hasCursorShape))
+    }
+
     fun shouldUseLocalMode(
         nativePointerSupported: Boolean,
         nativePointerEnabled: Boolean,
